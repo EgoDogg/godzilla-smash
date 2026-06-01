@@ -1,0 +1,569 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+<title>Godzilla Smash — World 1 (slice)</title>
+<style>
+  html, body { margin: 0; height: 100%; overflow: hidden; background: #0b0f1a;
+    font-family: -apple-system, "Segoe UI", system-ui, sans-serif; -webkit-user-select: none; user-select: none; }
+  #game { display: block; touch-action: manipulation; cursor: crosshair; }
+</style>
+</head>
+<body>
+<canvas id="game"></canvas>
+<script>
+"use strict";
+
+/* ============================================================
+   GODZILLA SMASH — first vertical slice (World 1)
+   Tap a building -> King Godzilla torches it -> HP drops ->
+   destroyed = bank its HP as money -> spend on upgrades.
+   All tunables live in CONFIG so we can rebalance fast.
+   ============================================================ */
+
+const CONFIG = {
+  startAttack:     100,     // damage per tap at level 0
+  powerGrowth:     1.55,    // attack = startAttack * powerGrowth^level
+  baseUpgradeCost: 500,     // cost of the first upgrade
+  costGrowth:      1.9,     // cost = baseUpgradeCost * costGrowth^level
+  respawnMs:       4500,    // ms before a flattened building rebuilds
+  groundFrac:      0.84,    // ground line as a fraction of canvas height
+};
+
+// --- World 1 slice: 10 buildings spanning the HP tiers from the drawing ---
+const TIERS = {
+  shack:   { w: 52,  h: 60,  roof: true,  body: "#8d6e63", roofC: "#5d4037", win: false },
+  house:   { w: 66,  h: 100, roof: true,  body: "#a1887f", roofC: "#4e342e", win: false },
+  midrise: { w: 78,  h: 170, roof: false, body: "#90a4ae", roofC: null,      win: true  },
+  big:     { w: 92,  h: 240, roof: false, body: "#78909c", roofC: null,      win: true  },
+  tower:   { w: 106, h: 345, roof: false, body: "#607d8b", roofC: null,      win: true  },
+};
+const WORLD1 = [
+  { tier: "shack",   hp: 600 },
+  { tier: "shack",   hp: 1000 },
+  { tier: "house",   hp: 10000 },
+  { tier: "house",   hp: 70000 },
+  { tier: "house",   hp: 120000 },
+  { tier: "midrise", hp: 500000 },
+  { tier: "midrise", hp: 750000 },
+  { tier: "big",     hp: 900000 },
+  { tier: "big",     hp: 1300000 },
+  { tier: "tower",   hp: 4500000 },
+];
+
+// ===== State =====
+const state = {
+  money: 0,
+  level: 0,
+  buildings: [],
+  damageTexts: [],
+  moneyTexts: [],
+  particles: [],
+  shake: 0,
+  beam: null,          // {x, y, t} fire-breath target
+  godzilla: { facing: 1, mouth: 0, lean: 0 },
+  ui: { upgradeBtn: null },
+  introT: 6,           // seconds the "tap to smash" hint stays up
+};
+
+function attackPower() { return Math.round(CONFIG.startAttack * Math.pow(CONFIG.powerGrowth, state.level)); }
+function upgradeCost() { return Math.round(CONFIG.baseUpgradeCost * Math.pow(CONFIG.costGrowth, state.level)); }
+
+// ===== Canvas setup =====
+const canvas = document.getElementById("game");
+const ctx = canvas.getContext("2d");
+let W = 0, H = 0, S = 1, groundY = 0;
+
+function resize() {
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  W = window.innerWidth; H = window.innerHeight;
+  canvas.width = Math.floor(W * dpr); canvas.height = Math.floor(H * dpr);
+  canvas.style.width = W + "px"; canvas.style.height = H + "px";
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  S = clamp(Math.min(W / 1280, H / 780), 0.62, 1.25);  // global UI scale
+  groundY = H * CONFIG.groundFrac;
+  layout();
+}
+window.addEventListener("resize", resize);
+
+// Build / position the buildings along the ground (responsive).
+function layout() {
+  if (state.buildings.length === 0) {
+    state.buildings = WORLD1.map((b) => ({
+      tier: b.tier, maxHp: b.hp, hp: b.hp,
+      destroyed: false, respawnAt: 0, flash: 0, hitShake: 0,
+      win: TIERS[b.tier].win ? Math.floor(Math.random() * 1000) : 0, // window seed
+    }));
+  }
+  const n = state.buildings.length;
+  const margin = 40 * S;
+  const slot = (W - margin * 2) / n;
+  state.buildings.forEach((b, i) => {
+    const t = TIERS[b.tier];
+    b.w = t.w * S; b.h = t.h * S;
+    b.cx = margin + slot * (i + 0.5);
+    b.x = b.cx - b.w / 2;
+    b.y = groundY - b.h;        // top of the rectangular body
+    b.roofH = t.roof ? b.w * 0.55 : 0;
+    b.top = b.y - b.roofH;      // top of roof (for hit-testing)
+  });
+
+  // Upgrade button (top-right)
+  const bw = 220 * S, bh = 64 * S, pad = 18 * S;
+  state.ui.upgradeBtn = { x: W - bw - pad, y: pad, w: bw, h: bh };
+}
+
+// ===== Helpers =====
+function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
+function rand(a, b) { return a + Math.random() * (b - a); }
+function fmt(n) {
+  n = Math.max(0, Math.floor(n));
+  if (n >= 1e9) return trim(n / 1e9) + "B";
+  if (n >= 1e6) return trim(n / 1e6) + "M";
+  if (n >= 1e3) return trim(n / 1e3) + "k";
+  return "" + n;
+}
+function trim(x) { return (Math.round(x * 10) / 10).toString(); }
+
+// ===== Input =====
+function pointTest(px, py) {
+  // UI first
+  const u = state.ui.upgradeBtn;
+  if (u && px >= u.x && px <= u.x + u.w && py >= u.y && py <= u.y + u.h) {
+    buyUpgrade(); return;
+  }
+  // Buildings (front-most last in array = check reverse for top hit)
+  for (let i = state.buildings.length - 1; i >= 0; i--) {
+    const b = state.buildings[i];
+    if (b.destroyed) continue;
+    if (px >= b.x && px <= b.x + b.w && py >= b.top && py <= groundY) {
+      hitBuilding(b, px, py); return;
+    }
+  }
+}
+canvas.addEventListener("pointerdown", (e) => {
+  const r = canvas.getBoundingClientRect();
+  pointTest(e.clientX - r.left, e.clientY - r.top);
+});
+
+function buyUpgrade() {
+  const cost = upgradeCost();
+  if (state.money >= cost) {
+    state.money -= cost;
+    state.level++;
+    addShake(4);
+  } else {
+    // flash the button briefly via shake-lite
+    state.ui.denied = 0.25;
+  }
+}
+
+function hitBuilding(b, px, py) {
+  const dmg = attackPower();
+  b.hp -= dmg;
+  b.flash = 1; b.hitShake = 6 * S;
+  addShake(clamp(2 + dmg / 50000, 2, 9));
+  godzillaAttack(b);
+  state.damageTexts.push({ x: px, y: py - 8, vy: -42, t: 0.9, txt: "-" + fmt(dmg) });
+  spawnDebris(b, 6, b.flash);
+  if (b.hp <= 0) {
+    b.hp = 0; destroyBuilding(b);
+  }
+}
+
+function destroyBuilding(b) {
+  b.destroyed = true;
+  b.respawnAt = nowMs + CONFIG.respawnMs;
+  state.money += b.maxHp;
+  addShake(11);
+  state.moneyTexts.push({ x: b.cx, y: b.top - 6, vy: -36, t: 1.6, txt: "+" + fmt(b.maxHp) });
+  spawnDebris(b, 34, 1);
+}
+
+function spawnDebris(b, count, intensity) {
+  const col = TIERS[b.tier].body;
+  for (let i = 0; i < count; i++) {
+    state.particles.push({
+      x: rand(b.x, b.x + b.w),
+      y: rand(b.top, groundY),
+      vx: rand(-130, 130) * intensity,
+      vy: rand(-260, -40) * intensity,
+      g: 620, size: rand(3, 8) * S, t: rand(0.5, 1.1), col,
+    });
+  }
+}
+
+function addShake(v) { state.shake = Math.max(state.shake, v); }
+
+function godzillaAttack(b) {
+  state.godzilla.facing = b.cx < W / 2 ? -1 : 1;
+  state.godzilla.mouth = 1;
+  state.godzilla.lean = state.godzilla.facing * 0.12;
+  const m = godzillaMouthPos();
+  state.beam = { x: b.cx, y: b.top + b.h * 0.35, t: 0.16, sx: m.x, sy: m.y };
+}
+
+// ===== Update =====
+let nowMs = 0, last = 0;
+function update(dt) {
+  // texts
+  for (const a of [state.damageTexts, state.moneyTexts]) {
+    for (let i = a.length - 1; i >= 0; i--) {
+      const f = a[i]; f.t -= dt; f.y += f.vy * dt; f.vy *= 0.92;
+      if (f.t <= 0) a.splice(i, 1);
+    }
+  }
+  // particles
+  for (let i = state.particles.length - 1; i >= 0; i--) {
+    const p = state.particles[i];
+    p.t -= dt; p.vy += p.g * dt; p.x += p.vx * dt; p.y += p.vy * dt;
+    if (p.y > groundY) { p.y = groundY; p.vy *= -0.35; p.vx *= 0.6; }
+    if (p.t <= 0) state.particles.splice(i, 1);
+  }
+  // buildings: flash/shake decay + respawn
+  for (const b of state.buildings) {
+    b.flash = Math.max(0, b.flash - dt * 4);
+    b.hitShake *= 0.86;
+    if (b.destroyed && nowMs >= b.respawnAt) {
+      b.destroyed = false; b.hp = b.maxHp; b.flash = 0.6;
+      spawnDebris(b, 10, 0.5);
+    }
+  }
+  // godzilla anim
+  const g = state.godzilla;
+  g.mouth = Math.max(0, g.mouth - dt * 3.2);
+  g.lean *= 0.9;
+  if (state.beam) { state.beam.t -= dt; if (state.beam.t <= 0) state.beam = null; }
+  // misc
+  state.shake *= 0.88;
+  if (state.introT > 0) state.introT -= dt;
+  if (state.ui.denied) state.ui.denied = Math.max(0, state.ui.denied - dt);
+}
+
+// ===== Render =====
+function render() {
+  ctx.clearRect(0, 0, W, H);
+  drawSky();
+
+  ctx.save();
+  if (state.shake > 0.2) ctx.translate(rand(-state.shake, state.shake), rand(-state.shake, state.shake));
+
+  drawDistantSkyline();
+  drawGodzilla();          // behind the front buildings
+  for (const b of state.buildings) drawBuilding(b);
+  drawBeam();
+  drawGround();
+  drawParticles();
+  drawFloatingTexts();
+  ctx.restore();
+
+  drawHUD();               // not shaken
+}
+
+function drawSky() {
+  const grd = ctx.createLinearGradient(0, 0, 0, H);
+  grd.addColorStop(0, "#1a2540");
+  grd.addColorStop(0.55, "#3b2f54");
+  grd.addColorStop(1, "#7a4a63");
+  ctx.fillStyle = grd; ctx.fillRect(0, 0, W, H);
+  // moon
+  ctx.fillStyle = "rgba(255,243,205,0.85)";
+  ctx.beginPath(); ctx.arc(W * 0.82, H * 0.18, 46 * S, 0, Math.PI * 2); ctx.fill();
+}
+
+function drawDistantSkyline() {
+  ctx.fillStyle = "rgba(20,24,46,0.55)";
+  const base = groundY + 2;
+  let x = -20;
+  // deterministic-ish silhouette
+  for (let i = 0; x < W + 40; i++) {
+    const w = 28 + ((i * 53) % 60) * S;
+    const h = (40 + ((i * 91) % 130)) * S;
+    ctx.fillRect(x, base - h, w, h);
+    x += w + 6 * S;
+  }
+}
+
+function drawGround() {
+  ctx.fillStyle = "#241a2b"; ctx.fillRect(0, groundY, W, H - groundY);
+  ctx.strokeStyle = "rgba(255,255,255,0.06)"; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.moveTo(0, groundY + 0.5); ctx.lineTo(W, groundY + 0.5); ctx.stroke();
+}
+
+function drawBuilding(b) {
+  if (b.destroyed) { drawRubble(b); return; }
+  const jx = b.hitShake ? rand(-b.hitShake, b.hitShake) : 0;
+  const t = TIERS[b.tier];
+  ctx.save();
+  ctx.translate(jx, 0);
+
+  // body
+  ctx.fillStyle = t.body;
+  ctx.fillRect(b.x, b.y, b.w, b.h);
+  // damage darkening from missing HP
+  const dmgFrac = 1 - b.hp / b.maxHp;
+  if (dmgFrac > 0.02) {
+    ctx.fillStyle = "rgba(0,0,0," + (dmgFrac * 0.45).toFixed(3) + ")";
+    ctx.fillRect(b.x, b.y, b.w, b.h);
+  }
+  // windows
+  if (t.win) drawWindows(b);
+  // roof
+  if (t.roof) {
+    ctx.fillStyle = t.roofC;
+    ctx.beginPath();
+    ctx.moveTo(b.x - 3 * S, b.y);
+    ctx.lineTo(b.cx, b.y - b.roofH);
+    ctx.lineTo(b.x + b.w + 3 * S, b.y);
+    ctx.closePath(); ctx.fill();
+  }
+  // outline
+  ctx.strokeStyle = "rgba(0,0,0,0.35)"; ctx.lineWidth = 2;
+  ctx.strokeRect(b.x, b.y, b.w, b.h);
+  // hit flash
+  if (b.flash > 0) {
+    ctx.fillStyle = "rgba(255,255,255," + (b.flash * 0.6).toFixed(3) + ")";
+    ctx.fillRect(b.x, b.y, b.w, b.h);
+  }
+
+  // HP label
+  const fs = clamp(b.w * 0.34, 12, 26);
+  ctx.font = "700 " + fs + "px ui-monospace, Menlo, monospace";
+  ctx.textAlign = "center"; ctx.textBaseline = "middle";
+  ctx.fillStyle = "rgba(0,0,0,0.55)";
+  ctx.fillText(fmt(b.hp), b.cx + 1, b.y + b.h / 2 + 1);
+  ctx.fillStyle = "#fff";
+  ctx.fillText(fmt(b.hp), b.cx, b.y + b.h / 2);
+
+  // HP bar when damaged
+  if (dmgFrac > 0.001) {
+    const bw = b.w, bh = 6 * S, by = b.top - 12 * S;
+    ctx.fillStyle = "rgba(0,0,0,0.5)"; ctx.fillRect(b.x, by, bw, bh);
+    ctx.fillStyle = b.hp / b.maxHp > 0.3 ? "#5ad469" : "#e0564b";
+    ctx.fillRect(b.x, by, bw * (b.hp / b.maxHp), bh);
+  }
+  ctx.restore();
+}
+
+function drawWindows(b) {
+  const cols = Math.max(2, Math.floor(b.w / (14 * S)));
+  const rows = Math.max(2, Math.floor(b.h / (20 * S)));
+  const mx = b.w * 0.16, my = b.h * 0.08;
+  const cw = (b.w - mx * 2) / cols, ch = (b.h - my * 2) / rows;
+  for (let r = 0; r < rows; r++) {
+    for (let c = 0; c < cols; c++) {
+      const lit = ((r * 7 + c * 13 + b.win) % 5) < 3;
+      ctx.fillStyle = lit ? "rgba(255,221,128,0.85)" : "rgba(30,40,55,0.7)";
+      ctx.fillRect(b.x + mx + c * cw + cw * 0.18, b.y + my + r * ch + ch * 0.18, cw * 0.64, ch * 0.6);
+    }
+  }
+}
+
+function drawRubble(b) {
+  ctx.fillStyle = "rgba(60,48,52,0.9)";
+  const rw = b.w * 1.05, rh = 16 * S;
+  ctx.beginPath();
+  ctx.moveTo(b.cx - rw / 2, groundY);
+  ctx.quadraticCurveTo(b.cx, groundY - rh * 2.4, b.cx + rw / 2, groundY);
+  ctx.closePath(); ctx.fill();
+  // rebuild countdown ring text
+  const left = Math.max(0, (b.respawnAt - nowMs) / 1000);
+  ctx.font = "600 " + (12 * S) + "px ui-monospace, monospace";
+  ctx.textAlign = "center"; ctx.textBaseline = "bottom";
+  ctx.fillStyle = "rgba(255,255,255,0.5)";
+  ctx.fillText("rebuilding " + left.toFixed(1) + "s", b.cx, groundY - rh * 1.2);
+}
+
+function godzillaMouthPos() {
+  const gx = W / 2, gh = clamp(H * 0.5, 280, 560);
+  const headY = groundY - gh * 0.86;
+  const facing = state.godzilla.facing;
+  return { x: gx + facing * gh * 0.12, y: headY + gh * 0.05 };
+}
+
+function drawGodzilla() {
+  const g = state.godzilla;
+  const gx = W / 2, gh = clamp(H * 0.5, 280, 560), gw = gh * 0.46;
+  const baseY = groundY;
+  ctx.save();
+  ctx.translate(gx, baseY);
+  ctx.rotate(g.lean);
+  ctx.translate(-gx, -baseY);
+
+  const bodyTop = baseY - gh;
+  const cx = gx;
+  ctx.fillStyle = "#2f6b3d";
+  ctx.strokeStyle = "#1c4326"; ctx.lineWidth = 3;
+
+  // legs
+  rrect(cx - gw * 0.32, baseY - gh * 0.34, gw * 0.26, gh * 0.34, 8 * S);
+  rrect(cx + gw * 0.06, baseY - gh * 0.34, gw * 0.26, gh * 0.34, 8 * S);
+  // tail
+  ctx.beginPath();
+  ctx.moveTo(cx + gw * 0.2, baseY - gh * 0.18);
+  ctx.quadraticCurveTo(cx + gw * 1.0, baseY - gh * 0.05, cx + gw * 1.15, baseY - gh * 0.32);
+  ctx.quadraticCurveTo(cx + gw * 0.9, baseY - gh * 0.12, cx + gw * 0.28, baseY - gh * 0.30);
+  ctx.closePath(); ctx.fill(); ctx.stroke();
+  // body
+  rrect(cx - gw * 0.4, baseY - gh * 0.78, gw * 0.8, gh * 0.5, 22 * S);
+  // arms raised (the drawing pose)
+  rrect(cx - gw * 0.62, baseY - gh * 0.82, gw * 0.22, gh * 0.30, 10 * S);
+  rrect(cx + gw * 0.40, baseY - gh * 0.82, gw * 0.22, gh * 0.30, 10 * S);
+  // dorsal spines
+  ctx.fillStyle = "#d9e6dd";
+  for (let i = 0; i < 5; i++) {
+    const sy = baseY - gh * (0.40 + i * 0.085);
+    ctx.beginPath();
+    ctx.moveTo(cx - gw * 0.05, sy);
+    ctx.lineTo(cx, sy - gh * 0.07);
+    ctx.lineTo(cx + gw * 0.08, sy);
+    ctx.closePath(); ctx.fill();
+  }
+  // head
+  ctx.fillStyle = "#2f6b3d";
+  rrect(cx - gw * 0.27, baseY - gh * 0.98, gw * 0.54, gh * 0.24, 18 * S);
+  // eyes
+  ctx.fillStyle = "#fff";
+  dot(cx - gw * 0.12, baseY - gh * 0.9, 6 * S);
+  dot(cx + gw * 0.12, baseY - gh * 0.9, 6 * S);
+  ctx.fillStyle = "#111";
+  dot(cx - gw * 0.12, baseY - gh * 0.9, 3 * S);
+  dot(cx + gw * 0.12, baseY - gh * 0.9, 3 * S);
+  // mouth (opens when attacking)
+  const mo = g.mouth;
+  ctx.fillStyle = "#1a1310";
+  rrect(cx - gw * 0.18, baseY - gh * 0.83, gw * 0.36, gh * (0.03 + 0.06 * mo), 4 * S);
+  // crown (the "King" from the drawing)
+  ctx.fillStyle = "#ffd54a"; ctx.strokeStyle = "#c79a14"; ctx.lineWidth = 2;
+  const crownY = baseY - gh * 1.0, cw2 = gw * 0.46;
+  ctx.beginPath();
+  ctx.moveTo(cx - cw2 / 2, crownY);
+  ctx.lineTo(cx - cw2 / 2, crownY - gh * 0.05);
+  ctx.lineTo(cx - cw2 * 0.25, crownY - gh * 0.012);
+  ctx.lineTo(cx, crownY - gh * 0.06);
+  ctx.lineTo(cx + cw2 * 0.25, crownY - gh * 0.012);
+  ctx.lineTo(cx + cw2 / 2, crownY - gh * 0.05);
+  ctx.lineTo(cx + cw2 / 2, crownY);
+  ctx.closePath(); ctx.fill(); ctx.stroke();
+
+  ctx.restore();
+}
+
+function rrect(x, y, w, h, r) {
+  r = Math.min(r, w / 2, h / 2);
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.arcTo(x + w, y, x + w, y + h, r);
+  ctx.arcTo(x + w, y + h, x, y + h, r);
+  ctx.arcTo(x, y + h, x, y, r);
+  ctx.arcTo(x, y, x + w, y, r);
+  ctx.closePath(); ctx.fill(); ctx.stroke();
+}
+function dot(x, y, r) { ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill(); }
+
+function drawBeam() {
+  if (!state.beam) return;
+  const b = state.beam;
+  const segs = 8;
+  ctx.lineWidth = 7 * S; ctx.strokeStyle = "rgba(255,140,40,0.9)";
+  ctx.beginPath(); ctx.moveTo(b.sx, b.sy);
+  for (let i = 1; i <= segs; i++) {
+    const f = i / segs;
+    ctx.lineTo(b.sx + (b.x - b.sx) * f + rand(-6, 6) * S, b.sy + (b.y - b.sy) * f + rand(-6, 6) * S);
+  }
+  ctx.stroke();
+  ctx.lineWidth = 3 * S; ctx.strokeStyle = "rgba(255,240,180,0.95)"; ctx.stroke();
+  // impact glow
+  ctx.fillStyle = "rgba(255,170,60,0.4)";
+  dot(b.x, b.y, 18 * S);
+}
+
+function drawParticles() {
+  for (const p of state.particles) {
+    ctx.globalAlpha = clamp(p.t, 0, 1);
+    ctx.fillStyle = p.col;
+    ctx.fillRect(p.x, p.y, p.size, p.size);
+  }
+  ctx.globalAlpha = 1;
+}
+
+function drawFloatingTexts() {
+  ctx.textAlign = "center"; ctx.textBaseline = "middle";
+  for (const f of state.damageTexts) {
+    ctx.globalAlpha = clamp(f.t, 0, 1);
+    ctx.font = "800 " + (22 * S) + "px ui-monospace, monospace";
+    ctx.fillStyle = "#ffe08a";
+    ctx.fillText(f.txt, f.x, f.y);
+  }
+  for (const f of state.moneyTexts) {
+    ctx.globalAlpha = clamp(f.t / 1.6, 0, 1);
+    ctx.font = "900 " + (30 * S) + "px ui-monospace, monospace";
+    ctx.fillStyle = "#6dffa0";
+    ctx.fillText(f.txt + " 💰", f.x, f.y);
+  }
+  ctx.globalAlpha = 1;
+}
+
+function drawHUD() {
+  // money (top-left)
+  ctx.textAlign = "left"; ctx.textBaseline = "top";
+  ctx.font = "900 " + (34 * S) + "px ui-monospace, monospace";
+  ctx.fillStyle = "rgba(0,0,0,0.4)"; ctx.fillText("💰 " + fmt(state.money), 20 * S + 1, 18 * S + 1);
+  ctx.fillStyle = "#ffe08a"; ctx.fillText("💰 " + fmt(state.money), 20 * S, 18 * S);
+  ctx.font = "600 " + (15 * S) + "px ui-monospace, monospace";
+  ctx.fillStyle = "rgba(255,255,255,0.6)";
+  ctx.fillText("WORLD 1  ·  ⚔ " + fmt(attackPower()) + " / tap", 22 * S, 60 * S);
+
+  // upgrade button (top-right)
+  const u = state.ui.upgradeBtn, cost = upgradeCost(), can = state.money >= cost;
+  ctx.fillStyle = can ? (state.ui.denied ? "#3a7d4a" : "#43914f") : "#403a4a";
+  rrectFill(u.x, u.y, u.w, u.h, 12 * S);
+  ctx.strokeStyle = can ? "#6dffa0" : "rgba(255,255,255,0.18)"; ctx.lineWidth = 2;
+  rrectStroke(u.x, u.y, u.w, u.h, 12 * S);
+  ctx.textAlign = "center"; ctx.textBaseline = "middle";
+  ctx.fillStyle = can ? "#eafff0" : "rgba(255,255,255,0.55)";
+  ctx.font = "800 " + (18 * S) + "px ui-monospace, monospace";
+  ctx.fillText("⬆ Stronger Claws", u.x + u.w / 2, u.y + u.h * 0.34);
+  ctx.font = "700 " + (14 * S) + "px ui-monospace, monospace";
+  ctx.fillStyle = can ? "#cdebff" : "rgba(255,180,180,0.7)";
+  ctx.fillText("cost " + fmt(cost) + "  →  ⚔ " + fmt(Math.round(CONFIG.startAttack * Math.pow(CONFIG.powerGrowth, state.level + 1))),
+    u.x + u.w / 2, u.y + u.h * 0.7);
+
+  // intro hint
+  if (state.introT > 0) {
+    ctx.globalAlpha = clamp(state.introT / 2, 0, 1);
+    ctx.textAlign = "center"; ctx.textBaseline = "middle";
+    ctx.font = "800 " + (26 * S) + "px ui-monospace, monospace";
+    ctx.fillStyle = "#fff";
+    ctx.fillText("Tap a building to smash it! 🦖", W / 2, groundY + (H - groundY) * 0.45);
+    ctx.globalAlpha = 1;
+  }
+}
+
+function rrectFill(x, y, w, h, r) { ctx.beginPath(); pathRR(x, y, w, h, r); ctx.fill(); }
+function rrectStroke(x, y, w, h, r) { ctx.beginPath(); pathRR(x, y, w, h, r); ctx.stroke(); }
+function pathRR(x, y, w, h, r) {
+  r = Math.min(r, w / 2, h / 2);
+  ctx.moveTo(x + r, y);
+  ctx.arcTo(x + w, y, x + w, y + h, r);
+  ctx.arcTo(x + w, y + h, x, y + h, r);
+  ctx.arcTo(x, y + h, x, y, r);
+  ctx.arcTo(x, y, x + w, y, r);
+}
+
+// ===== Main loop =====
+function frame(ts) {
+  nowMs = ts;
+  let dt = (ts - last) / 1000; last = ts;
+  if (!isFinite(dt) || dt > 0.1) dt = 0.016;  // clamp big gaps (tab switch)
+  update(dt);
+  render();
+  requestAnimationFrame(frame);
+}
+
+resize();
+requestAnimationFrame((ts) => { last = ts; requestAnimationFrame(frame); });
+</script>
+</body>
+</html>

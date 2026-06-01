@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+<title>Godzilla Smash — World 1</title>
+<link rel="manifest" href="./manifest.json" />
+<meta name="theme-color" content="#07080d" />
+<meta name="mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="apple-mobile-web-app-title" content="Godzilla Smash" />
+<link rel="apple-touch-icon" href="./icon-512.png" />
+<style>
+  :root {
+    --blue:#36c9ff; --gold:#ffd24a; --green:#4fe08a; --pink:#ff5fbf;
+    --violet:#b07dff; --red:#ff6a6a; --panel:#12141c; --panel2:#1a1d28;
+    --line:#2a2f3e; --text:#e9edf6; --dim:#9aa3b8;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin:0; height:100%; overflow:hidden; background:#07080d; color:var(--text);
+    font-family:-apple-system,"Segoe UI",system-ui,sans-serif; -webkit-user-select:none; user-select:none; }
+  #scene { display:block; position:fixed; inset:0; touch-action:manipulation; cursor:crosshair; }
+
+  /* ---------- HUD ---------- */
+  #hud { position:fixed; top:0; left:0; right:0; display:flex; align-items:center; gap:12px;
+    padding:calc(12px + env(safe-area-inset-top)) max(14px,env(safe-area-inset-right)) 12px max(14px,env(safe-area-inset-left)); pointer-events:none; z-index:10;
+    background:linear-gradient(180deg, rgba(7,8,13,.75), rgba(7,8,13,0)); }
+  #hud > * { pointer-events:auto; }
+  #money { font:800 clamp(20px,4.5vw,34px)/1 ui-monospace,Menlo,monospace; color:var(--gold);
+    text-shadow:0 2px 0 rgba(0,0,0,.4); letter-spacing:.5px; }
+  #form-badge { font:600 clamp(11px,2.6vw,14px)/1 ui-monospace,monospace; color:var(--text);
+    background:rgba(20,24,34,.7); border:1px solid var(--line); border-radius:999px;
+    padding:7px 12px; white-space:nowrap; }
+  #form-badge b { color:var(--blue); }
+  #hud-right { margin-left:auto; display:flex; gap:8px; }
+  #hud button { font:700 14px/1 system-ui; color:var(--text); background:var(--panel2);
+    border:1px solid var(--line); border-radius:10px; padding:9px 13px; cursor:pointer; }
+  #hud button:hover { border-color:var(--blue); }
+  #shop-btn { background:linear-gradient(180deg,#1f6feb,#1858c4); border-color:#2f7dff; }
+
+  /* ---------- Shop modal ---------- */
+  #shop { position:fixed; inset:0; display:flex; align-items:center; justify-content:center; z-index:20; }
+  #shop.hidden { display:none; }
+  #shop-backdrop { position:absolute; inset:0; background:rgba(4,6,12,.62); backdrop-filter:blur(3px); }
+  #shop-panel { position:relative; width:min(560px,93vw); max-height:86vh; display:flex; flex-direction:column;
+    background:var(--panel); border:1px solid var(--line); border-radius:16px; overflow:hidden;
+    box-shadow:0 24px 60px rgba(0,0,0,.6); }
+  #shop-head { display:flex; align-items:center; justify-content:space-between; padding:14px 16px; border-bottom:1px solid var(--line); }
+  #shop-head h2 { margin:0; font:800 18px/1 system-ui; }
+  #shop-close { background:none; border:none; color:var(--dim); font-size:22px; cursor:pointer; line-height:1; }
+  #shop-close:hover { color:var(--text); }
+  #shop-tabs { display:flex; gap:6px; padding:10px 12px; border-bottom:1px solid var(--line); flex-wrap:wrap; }
+  #shop-tabs button { flex:1; min-width:86px; font:700 13px/1 system-ui; color:var(--dim); background:transparent;
+    border:1px solid transparent; border-radius:10px; padding:9px 6px; cursor:pointer; }
+  #shop-tabs button:hover { color:var(--text); }
+  #shop-tabs button.active { color:#fff; background:var(--panel2); border-color:var(--line); }
+  #shop-body { padding:14px 16px; overflow-y:auto; }
+  .shop-item { display:flex; align-items:center; gap:10px; justify-content:space-between;
+    background:var(--panel2); border:1px solid var(--line); border-radius:12px; padding:11px 13px; margin-bottom:9px; }
+  .shop-item.owned { border-color:#2f5e3f; }
+  .shop-item.locked { opacity:.55; }
+  .si-l { display:flex; align-items:center; gap:11px; min-width:0; }
+  .si-t { font:700 15px/1.2 system-ui; }
+  .si-s { font:500 12px/1.35 system-ui; color:var(--dim); margin-top:3px; }
+  .sw { width:12px; height:36px; border-radius:4px; flex:none; box-shadow:0 0 10px currentColor; }
+  .shop-item button.buy { font:800 14px/1 ui-monospace,monospace; color:#fff; background:#2a2f3e;
+    border:1px solid var(--line); border-radius:10px; padding:11px 13px; cursor:pointer; white-space:nowrap; flex:none; }
+  .shop-item button.buy.aff { background:linear-gradient(180deg,#2bb56a,#1f9a58); border-color:var(--green); }
+  .shop-item button.buy:disabled { background:#23262f; color:var(--dim); cursor:not-allowed; border-color:var(--line); }
+  .shop-item .tag { font:800 12px/1 ui-monospace,monospace; color:var(--dim); background:#0f1118;
+    border:1px solid var(--line); border-radius:999px; padding:7px 11px; flex:none; }
+  .shop-item.owned .tag { color:var(--green); border-color:#2f5e3f; }
+  .hint { font:500 12px/1.5 system-ui; color:var(--dim); margin:4px 2px 12px; }
+
+  /* ---------- Toast ---------- */
+  #toast { position:fixed; left:50%; bottom:40px; transform:translate(-50%,20px); z-index:30;
+    background:var(--panel); border:1px solid var(--blue); color:var(--text); font:700 14px/1 system-ui;
+    padding:12px 18px; border-radius:999px; opacity:0; pointer-events:none; transition:opacity .25s, transform .25s; }
+  #toast.show { opacity:1; transform:translate(-50%,0); }
+</style>
+</head>
+<body>
+<canvas id="scene"></canvas>
+
+<div id="hud">
+  <div id="money">💰 0</div>
+  <div id="form-badge">🦖 Godzilla <b>2014</b></div>
+  <div id="hud-right">
+    <button id="mute-btn" title="Sound">🔊</button>
+    <button id="shop-btn">🛒 Shop</button>
+  </div>
+</div>
+
+<div id="shop" class="hidden">
+  <div id="shop-backdrop"></div>
+  <div id="shop-panel">
+    <div id="shop-head"><h2>Shop</h2><button id="shop-close">✕</button></div>
+    <div id="shop-tabs">
+      <button data-tab="upgrades" class="active">Upgrades</button>
+      <button data-tab="evolutions">Evolutions</button>
+      <button data-tab="characters">Characters</button>
+      <button data-tab="worlds">Worlds</button>
+    </div>
+    <div id="shop-body"></div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script src="game.js"></script>
+<script>if('serviceWorker' in navigator){window.addEventListener('load',function(){navigator.serviceWorker.register('./sw.js').catch(function(){});});}</script>
+</body>
+</html>
