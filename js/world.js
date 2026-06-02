@@ -55,7 +55,7 @@ window.GAME = window.GAME || {};
 
     var L = Config.LAYOUT;
     var tier = Math.min(L.bands - 1, Math.floor(row / (L.blockD + L.street)));  // depth band 0..18
-    var maxHp = ROW_HP[tier] | 0;
+    var maxHp = Math.floor(ROW_HP[tier]) || 0;   // Math.floor (not `| 0`) so HP can exceed 2.1B
 
     // Footprint: deep rows trend wider. Mostly 1×1, with a chance at 2-WIDE
     // (2×1) for the back-rows so downtown reads denser. Footprints are kept
@@ -315,8 +315,8 @@ window.GAME = window.GAME || {};
   // -------------------------------------------------------------------------
   function hitBuilding(b, rawDamage) {
     if (!b || b.state !== 'standing') return 0;     // only standing takes damage
-    var dmg = rawDamage | 0;
-    if (dmg <= 0) return 0;
+    var dmg = Math.floor(rawDamage);   // NOT `| 0`: bitwise truncates to 32-bit and wraps
+    if (!(dmg > 0)) return 0;          // huge damage (>2.1B, e.g. Supernova+claws) to negative
 
     b.hp -= dmg;
 
