@@ -1,5 +1,8 @@
 # Get Godzilla Smash onto an iPad (or any phone/tablet)
 
+> **✅ Live now:** https://egodogg.github.io/godzilla-smash/
+> On the iPad, open that in **Safari → Share → Add to Home Screen**. Repo: `EgoDogg/godzilla-smash`.
+
 It's a **PWA** (installable web app) — no App Store needed. Host the files at an HTTPS
 URL, open it in Safari on the iPad, and **Add to Home Screen**. You get a real icon,
 fullscreen launch, and it works offline after the first load.
