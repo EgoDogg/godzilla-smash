@@ -188,16 +188,20 @@ window.GAME = window.GAME || {};
     return null; // not standing → fall through to facing/nearest at attack time
   }
 
-  // Explicit aim at a raw client point: a standing ground building, else a flyer
-  // (plane) whose sprite is near the point. Returns {col,row} or null.
+  // Explicit aim at a raw client point. Sprite-hitbox first: the building whose
+  // DRAWN sprite is under the point (so ANY part of a tall building targets it, not
+  // just its base), else a flyer (plane) at altitude. Returns {col,row} or null
+  // (null → caller falls to faced/nearest at fire time).
   function resolveAimAt(cx, cy) {
-    var cell = (G.iso && G.iso.pickTile) ? G.iso.pickTile(cx, cy) : null;
-    var t = cell ? resolveClickTarget(cell.col, cell.row) : null;
-    if (!t && G.World && G.World.pickFlyer) {
-      var f = G.World.pickFlyer(cx, cy);
-      if (f && f.state === 'standing') t = { col: Math.round(f.col), row: Math.round(f.row) };
+    if (G.World && G.World.pickBuildingAtScreen) {
+      var b = G.World.pickBuildingAtScreen(cx, cy);
+      if (b && b.state === 'standing') return { col: b.col, row: b.row };
     }
-    return t;
+    if (G.World && G.World.pickFlyer) {
+      var f = G.World.pickFlyer(cx, cy);
+      if (f && f.state === 'standing') return { col: Math.round(f.col), row: Math.round(f.row) };
+    }
+    return null;
   }
 
   // World position of the player, if discoverable (entities own the unit; we ask
@@ -308,17 +312,15 @@ window.GAME = window.GAME || {};
         e.preventDefault();
         return;
       }
-      // Touch elsewhere (right/upper zone, not on a control disc): TAP A BUILDING to
-      // target it — so a ranged form zaps a distant tapped building instead of only the
-      // nearest. (Left zone is the joystick; discs handled above.) Empty ground → no-op.
-      var tcell = (G.iso && G.iso.pickTile) ? G.iso.pickTile(e.clientX, e.clientY) : null;
-      if (tcell) {
-        var ttgt = resolveClickTarget(tcell.col, tcell.row);   // standing building → explicit target
-        if (ttgt) {
-          pendingTarget = ttgt;
-          faceTowardCell(tcell.col, tcell.row);
-          fireAttack();
-        }
+      // Touch elsewhere (right/upper zone, not on a control disc): TAP a structure to
+      // target it — sprite-hitbox pick, so ANY part of a (tall) building counts, not
+      // just its base; planes too. (Left zone is the joystick; discs handled above.)
+      // Empty street → no target → no-op (the disc smashes what's in front).
+      var ttgt = resolveAimAt(e.clientX, e.clientY);
+      if (ttgt) {
+        pendingTarget = ttgt;
+        faceTowardCell(ttgt.col, ttgt.row);
+        fireAttack();
       }
       e.preventDefault();
       return;

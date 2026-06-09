@@ -715,6 +715,37 @@ window.GAME = window.GAME || {};
     return best;
   }
 
+  // Pick the STANDING building whose DRAWN SPRITE is under a raw client point —
+  // height-aware so you can hit ANY part of a tall building, not just its base.
+  // Mirrors drawBuilding's rect math (worldToScreen + the assets sprite stamps);
+  // frontmost (largest col+row, i.e. painter-order top) wins where sprites overlap.
+  function pickBuildingAtScreen(clientX, clientY) {
+    var iso = G.iso, cam = G.camera, A = G.Assets;
+    if (!iso || !iso.worldToScreen || !cam || !A || typeof A.buildingSprite !== 'function') return null;
+    var sx = clientX, sy = clientY;
+    var cv = cam._canvas;
+    if (cv && cv.getBoundingClientRect) { var r = cv.getBoundingClientRect(); sx = clientX - r.left; sy = clientY - r.top; }
+    var wx = sx - cam.x, wy = sy - cam.y;   // → world-screen space (undo camera translate)
+    var best = null, bestDK = -Infinity;
+    for (var i = 0; i < buildings.length; i++) {
+      var b = buildings[i];
+      if (b.state !== 'standing') continue;
+      var spr = A.buildingSprite(b);
+      if (!spr || !spr.width) continue;
+      var p = iso.worldToScreen(b.col, b.row, 0);
+      var cw = (spr._cssW != null) ? spr._cssW : spr.width;
+      var ch = (spr._cssH != null) ? spr._cssH : spr.height;
+      var ax = (spr._anchorX != null) ? spr._anchorX : (cw / 2);
+      var ay = (spr._anchorY != null) ? spr._anchorY : ch;
+      var dx = p.x - ax, dy = p.y - ay;
+      if (wx >= dx && wx < dx + cw && wy >= dy && wy < dy + ch) {
+        var dk = b.col + b.row;           // monotonic with painter order → frontmost wins
+        if (dk > bestDK) { bestDK = dk; best = b; }
+      }
+    }
+    return best;
+  }
+
   // Explicit-aim target resolver: the ground building at a cell, else a standing
   // flyer occupying that rounded cell (so a tapped/aimed plane resolves to the plane).
   function getTargetAt(col, row) {
@@ -753,6 +784,7 @@ window.GAME = window.GAME || {};
     getBuildingAt: getBuildingAt,
     getTargetAt: getTargetAt,
     pickFlyer: pickFlyer,
+    pickBuildingAtScreen: pickBuildingAtScreen,
     footprintsNear: footprintsNear,
     tileToWorld: tileToWorld,
     buildingCenter: buildingCenter,
