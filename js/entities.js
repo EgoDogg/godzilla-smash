@@ -1325,16 +1325,23 @@ window.GAME = window.GAME || {};
 
   /* muzzle position */
   var _muz = { x: 0, y: 0 };
+  // Muzzle = the MOUTH on screen. Must match the breath-glow drawn in drawGlow()
+  // EXACTLY: local mouth = ( headX·BW + BW·(0.5+snout), -BH·0.77 ), scaled by
+  // drawScale() and mirrored for facings 5-7. (The old version used a crude fixed
+  // ±22 side-offset + fixed head height that ignored per-facing geometry and broke
+  // when the tile/sprite scale changed — beam appeared to leave the back.)
   Kaiju.prototype.muzzle = function (out) {
     out = out || _muz;
-    projectInto(this.pos.wx, this.pos.wy, this.pos.z, out);
-    var bodyTopPx = SPR_H * 0.74 * 0.84;
-    var fwd = facingToWorldVec(this.facing);
-    out.x += fwd.wx === 0 && fwd.wy === 0 ? 0 : (sign(fwd.wx - fwd.wy) * 22);
-    out.y -= bodyTopPx;
+    projectInto(this.pos.wx, this.pos.wy, this.pos.z, out);  // (sx,sy) at the sprite anchor
+    var scale = this.drawScale();
+    var BH = SPR_H * 0.74, BW = BH * 0.5;
+    var fm = FACING_MAP[this.facing & 7];
+    var fg = facingGeom(fm.base);
+    var lx = (fg.headX * BW) + BW * (0.5 + fg.snout);
+    out.x += (fm.mir ? -1 : 1) * scale * lx;
+    out.y += scale * (-BH * 0.77);
     return out;
   };
-  function sign(x) { return x < 0 ? -1 : (x > 0 ? 1 : 0); }
 
   function buildingScreen(b, out) {
     out = out || { x: 0, y: 0 };

@@ -294,8 +294,18 @@ window.GAME = window.GAME || {};
         e.preventDefault();
         return;
       }
-      // Touch elsewhere (e.g. right zone, not on a button): ignore but still prevent
-      // the browser's default gesture on the canvas.
+      // Touch elsewhere (right/upper zone, not on a control disc): TAP A BUILDING to
+      // target it — so a ranged form zaps a distant tapped building instead of only the
+      // nearest. (Left zone is the joystick; discs handled above.) Empty ground → no-op.
+      var tcell = (G.iso && G.iso.pickTile) ? G.iso.pickTile(e.clientX, e.clientY) : null;
+      if (tcell) {
+        var ttgt = resolveClickTarget(tcell.col, tcell.row);   // standing building → explicit target
+        if (ttgt) {
+          pendingTarget = ttgt;
+          faceTowardCell(tcell.col, tcell.row);
+          fireAttack();
+        }
+      }
       e.preventDefault();
       return;
     }

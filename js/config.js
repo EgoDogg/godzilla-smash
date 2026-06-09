@@ -2,7 +2,7 @@
 window.GAME = window.GAME || {};
 window.GAME.Config = {
   saveKey: 'godzilla-save-v3',
-  CACHE_VERSION: 'gz-v7',
+  CACHE_VERSION: 'gz-v8',
 
   // --- Isometric grid (world units = tiles). Wide, open, zoomed-out city:
   //     21 cols of 2×2 blocks split by wide streets; 58 rows. TILE_*/WZ_PX are
@@ -16,7 +16,7 @@ window.GAME.Config = {
   //     2-tile streets, with long sightline "runways". `tierRows` decouples the
   //     HP/difficulty depth-band from street width: tier = floor(row / tierRows),
   //     still 0..18 over 58 rows regardless of how wide the streets get. ---
-  LAYOUT: { blockW: 2, blockD: 2, street: 3, streetW: 4, bands: 19, tierRows: 3 },
+  LAYOUT: { blockW: 2, blockD: 2, street: 2, streetW: 3, bands: 19, tierRows: 3 },
 
   // --- Building HP ladder by TIER (depth band). HP === money payout. 19 tiers,
   //     SMOOTHED ~2.3×/tier (expert flow-channel curve), 10 → 1e9 at tier 18. ---

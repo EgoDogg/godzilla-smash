@@ -23,6 +23,18 @@ window.GAME = window.GAME || {};
   var INV_X = 1 / (2 * HW);   // 1/64
   var INV_Y = 1 / (2 * HH);   // 1/32
 
+  // --- Trauma-based screen shake. trauma∈[0,1] CLAMPED on add → sustained 8/sec
+  //     autofire can NEVER compound into a quake (the old additive cap-64 bug).
+  //     Offset = MAX·trauma (linear — scales evenly across the wide form range so
+  //     early forms still register and GvK is a moderate rumble, not crushed like a
+  //     squared curve would). EXPONENTIAL decay → a stable mid steady-state under
+  //     repeated fire (linear decay is bistable: 0 or clamp). Legacy call magnitudes
+  //     (~3..15) map to trauma via SHAKE_TRAUMA_K. ---
+  var SHAKE_MAX_PX = 12;          // peak screen offset (hard ceiling via the trauma clamp; tablet-safe)
+  var SHAKE_DECAY = 0.02;         // trauma *= SHAKE_DECAY^dt  (half-life ~0.18s)
+  var SHAKE_TRAUMA_K = 1 / 85;    // mag→trauma: gz2014(3)→.035, GvK(9)→.106, supernova(13)→.153
+                                  // sustained 8/sec ≈ trauma/0.38 → ~1.1px / 3.3px / 4.8px; clamp caps at 12px
+
   // ======================================================================
   // GAME.camera — screen-space origin offset (ox,oy) + decaying shake.
   // apply(ctx) translates so the followed world point sits at the focus
@@ -36,8 +48,8 @@ window.GAME = window.GAME || {};
     dpr: 1,                // capped device pixel ratio (set by resize)
     focusX: 0.5,           // horizontal focus anchor (fraction of W)
     focusY: 0.66,          // vertical focus anchor (corridor-ahead bias; lowered for the wider/zoomed-out city)
-    shakeX: 0, shakeY: 0,  // current shake offset
-    shakeMag: 0,           // current shake amplitude (decays each frame)
+    shakeX: 0, shakeY: 0,  // current shake offset (applied to x/y)
+    trauma: 0,             // trauma-based shake amplitude [0,1] (decays linearly)
     _init: false,          // snap to target on first follow (no easing pop-in)
 
     // Reusable visible-AABB result (no per-call alloc for cull()).
@@ -118,26 +130,28 @@ window.GAME = window.GAME || {};
     }
     clampOrigin();
 
-    // --- Decay + integrate additive shake (skipped under reduced-motion). ---
-    if (camera.shakeMag > 0.01 && !U.reducedMotion) {
-      // Exponential decay (~ -7/s); jitter scaled by current amplitude.
-      camera.shakeMag *= Math.pow(0.0009, Math.max(0, dt));
-      if (camera.shakeMag < 0.01) camera.shakeMag = 0;
-      camera.shakeX = (Math.random() * 2 - 1) * camera.shakeMag;
-      camera.shakeY = (Math.random() * 2 - 1) * camera.shakeMag;
+    // --- Trauma shake: exponential decay (stable steady-state under rapid fire),
+    //     linear offset, clamped amplitude. Skipped under reduced-motion. ---
+    if (camera.trauma > 0.004 && !U.reducedMotion) {
+      camera.trauma *= Math.pow(SHAKE_DECAY, Math.max(0, dt));
+      if (camera.trauma < 0.004) camera.trauma = 0;
+      var off = SHAKE_MAX_PX * camera.trauma;
+      camera.shakeX = (Math.random() * 2 - 1) * off;
+      camera.shakeY = (Math.random() * 2 - 1) * off;
     } else {
-      camera.shakeMag = 0; camera.shakeX = 0; camera.shakeY = 0;
+      camera.trauma = 0; camera.shakeX = 0; camera.shakeY = 0;
     }
 
     camera.x = camera.ox + camera.shakeX;
     camera.y = camera.oy + camera.shakeY;
   };
 
-  // Add an impulse to the shake amplitude (stomp, evolve, AOE). No-op under
-  // reduced-motion. Additive so rapid hits stack, then decay in follow().
+  // Add trauma from an impulse (hit/stomp/evolve/AOE). Callers pass legacy
+  // magnitudes (~3..15); map to a small trauma increment and CLAMP at 1.0 so
+  // sustained ~8/sec autofire can't compound into a quake. No-op under reduced-motion.
   camera.shake = function (mag) {
     if (U.reducedMotion || !(mag > 0)) return;
-    camera.shakeMag = Math.min(camera.shakeMag + mag, 64); // clamp runaway
+    camera.trauma = Math.min(camera.trauma + mag * SHAKE_TRAUMA_K, 1);
   };
 
   // Translate the context into world-screen space (call inside save/restore).
