@@ -996,7 +996,11 @@ window.GAME = window.GAME || {};
       }
     }
 
-    if (sp > WALK_SPEED) {
+    // Take facing from movement ONLY when not mid-attack — so while blasting he faces
+    // the TARGET (set by startAttack→facingTo), not his walk direction. (startAttack
+    // runs after this each fire; this keeps the attack facing steady between shots
+    // during autofire instead of flickering back to the movement heading.)
+    if (sp > WALK_SPEED && this.attackT <= 0) {
       if (G.Input && typeof G.Input.facing === 'number') {
         this.facing = G.Input.facing;
       } else {

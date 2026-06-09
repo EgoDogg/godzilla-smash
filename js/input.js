@@ -124,10 +124,15 @@ window.GAME = window.GAME || {};
    * ------------------------------------------------------------------------ */
   function facingFromWorld(wx, wy) {
     if (wx === 0 && wy === 0) return Input.facing;
-    var a = Math.atan2(wy, wx);              // 0 = +wx, PI/2 = +wy(forward)
-    var idx = Math.round(a / (Math.PI / 4)); // 8-way snap
-    idx = ((idx % 8) + 8) % 8;
-    return idx;
+    // The sprite poses (FACING_MAP) live in SCREEN space, and world→screen is the
+    // 2:1 iso SKEW — not a rotation. Indexing the raw world angle gave facings ~opposite
+    // to the real on-screen motion (push right → faced down-left). So project the world
+    // heading to screen first, then index in the sprite basis (matches entities
+    // headingToFacing: atan2(screenX, screenY), 0=S/down, 2=E/right).
+    var GG = window.GAME.Config.GRID, HW = GG.TILE_W * 0.5, HH = GG.TILE_H * 0.5;
+    var sx = (wx - wy) * HW, sy = (wx + wy) * HH;
+    var idx = Math.round(Math.atan2(sx, sy) / (Math.PI / 4));
+    return ((idx % 8) + 8) % 8;
   }
 
   // ---- Geometry helpers -------------------------------------------------------
