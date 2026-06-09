@@ -73,6 +73,8 @@ window.GAME = window.GAME || {};
     var missiles = [];
     var texts = [];
     var shakeMag = 0;
+    var hitStopMs = 0;     // pending hit-stop the game loop consumes (max-wins)
+    var flashA = 0;        // full-screen white flash alpha (decays); drawn untransformed by render
 
     fx.shake = function (mag) {
       if (REDUCED) return;
@@ -81,9 +83,19 @@ window.GAME = window.GAME || {};
     };
     fx.shakeAmount = function () { return shakeMag; };
 
+    // Brief freeze-frame on a satisfying kill. Max-wins so overlapping kills
+    // don't stack into a long stall. No-op under reduced-motion.
+    fx.hitStop = function (ms) { if (REDUCED) return; if (ms > hitStopMs) hitStopMs = ms; };
+    fx.consumeHitStop = function () { var v = hitStopMs; hitStopMs = 0; return v; };
+
+    // Full-screen white flash on destroy. Render reads flashAmount() and draws
+    // an untransformed rect over the scene; this just owns the value + decay.
+    fx.screenFlash = function (a) { if (REDUCED) return; if (a > flashA) flashA = a; };
+    fx.flashAmount = function () { return flashA; };
+
     fx.debris = function (b) {
       if (!b) return;
-      var count = REDUCED ? 6 : (18 + Math.min(b.row || b.tier || 0, 12));
+      var count = REDUCED ? 6 : (24 + Math.min(b.row || b.tier || 0, 16));
       var col = (b.style && b.style.body) || b.bodyColor || '#6f6a63';
       projectInto((b.col || 0) + 0.5, (b.row || 0) + 0.5, 0, _proj);
       var ax = _proj.x, ay = _proj.y;
@@ -93,11 +105,11 @@ window.GAME = window.GAME || {};
         p.live = true;
         p.sx = ax + rand(-HALF_W * 0.7, HALF_W * 0.7);
         p.sy = ay - rand(0, h);
-        p.vx = rand(-150, 150);
-        p.vy = rand(-300, -60);
+        p.vx = rand(-180, 180);
+        p.vy = rand(-360, -80);
         p.g = 900;
-        p.size = rand(3, 8);
-        p.life = p.t = rand(0.45, 1.05);
+        p.size = rand(4, 11);
+        p.life = p.t = rand(0.6, 1.4);
         p.col = (k & 3) === 0 ? U.shade(col, 1.25) : col;
         p.shape = 0;
         p.floorY = ay;
@@ -172,6 +184,7 @@ window.GAME = window.GAME || {};
     fx.update = function (dt) {
       if (shakeMag > 0.05) { shakeMag *= Math.pow(0.0015, dt); if (shakeMag < 0.05) shakeMag = 0; }
       else shakeMag = 0;
+      if (flashA > 0) { flashA -= dt / 0.12; if (flashA < 0) flashA = 0; }   // ~120ms linear fade
 
       for (var i = 0; i < MAX_P; i++) {
         var p = pool[i];
@@ -827,6 +840,7 @@ window.GAME = window.GAME || {};
     this.hurtT = 0;
     this._glowPhase = 0;
     this._flash = 0;
+    this.aimBuilding = null;  // building the aim-highlight ring tracks (set in update)
     this._prevAttack = false;
     this._prevJump = false;   // edge detector for jump intent
     // Resolve palette from unified form def
@@ -1003,6 +1017,11 @@ window.GAME = window.GAME || {};
     if (attackEdge && this.atkCooldown <= 0 && this.attackT <= 0) {
       this.fireAttack(intent.target);
     }
+
+    // Track the building we'd hit next for the aim-highlight ring. Recompute
+    // only when not mid-attack so the ring holds steady through a smash instead
+    // of flickering off (the rendered ring re-checks state==='standing').
+    if (this.attackT <= 0) this.aimBuilding = this.aimTarget();
   };
 
   var EMPTY_INTENT = { moveX: 0, moveY: 0, attack: false, target: null, jump: false };
@@ -1044,7 +1063,8 @@ window.GAME = window.GAME || {};
     }
 
     // 3) nearest standing (on ground: prefer ground; airborne: prefer flying)
-    var near = (W.footprintsNear ? W.footprintsNear(this.pos.wx, this.pos.wy, 2.2) : []) || [];
+    //    Band widened 2.2→2.6 for a more forgiving "grab what's near me" pick.
+    var near = (W.footprintsNear ? W.footprintsNear(this.pos.wx, this.pos.wy, 2.6) : []) || [];
     if (!primary) {
       var best = null, bestD = Infinity;
       for (var i = 0; i < near.length; i++) {
@@ -1090,6 +1110,31 @@ window.GAME = window.GAME || {};
   };
   function sq(x) { return x * x; }
 
+  /* Lightweight primary-target pick for the aim highlight ring — mirrors steps
+     2-3 of acquireTargets (faced building, else nearest standing) but allocates
+     nothing and skips the multi-target sort. Returns a ground building or null.
+     (Airborne aims at planes — no ground ring then.) */
+  Kaiju.prototype.aimTarget = function () {
+    var W = G.World;
+    if (!W || this.isAirborne()) return null;
+
+    var fwd = facingToWorldVec(this.facing);
+    if (W.getBuildingAt) {
+      var fb = W.getBuildingAt(Math.floor(this.pos.wx + fwd.wx * 0.7), Math.floor(this.pos.wy + fwd.wy * 0.7));
+      if (fb && fb.state === 'standing' && !fb.flying) return fb;
+    }
+    var near = (W.footprintsNear ? W.footprintsNear(this.pos.wx, this.pos.wy, 2.6) : []) || [];
+    var best = null, bestD = Infinity;
+    for (var i = 0; i < near.length; i++) {
+      var b = near[i];
+      if (!b || b.state !== 'standing' || b.flying) continue;
+      var dx = (b.col + 0.5) - this.pos.wx, dy = (b.row + 0.5) - this.pos.wy;
+      var d = dx * dx + dy * dy;
+      if (d < bestD) { bestD = d; best = b; }
+    }
+    return best;
+  };
+
   /* ------------- data-driven targetCount / cooldown passthrough ------------- */
   Kaiju.prototype.targetCount = function () { return targetCountFor(this); };
   Kaiju.prototype.attackCooldownFor = function () { return attackCooldownFor(this); };
@@ -1133,7 +1178,7 @@ window.GAME = window.GAME || {};
       FX.bolt(mz.x + (i - 1) * 10, mz.y, bs.x, bs.y, boltsCol, pal.plateGlow);
       dealDamage(b, power);
     }
-    FX.shake(atkDef && atkDef.shake != null ? atkDef.shake : 4.5);
+    FX.shake(atkDef && atkDef.shake != null ? atkDef.shake : 6);
   }
 
   function fireCloud(kaiju, targets, power, atkDef) {
@@ -1161,7 +1206,7 @@ window.GAME = window.GAME || {};
       applyDot(b, perTick, ticks, intervalMs);
       dealDamage(b, Math.round(power * 0.4));
     }
-    FX.shake(atkDef && atkDef.shake != null ? atkDef.shake : 2.6);
+    FX.shake(atkDef && atkDef.shake != null ? atkDef.shake : 3.5);
   }
 
   function fireDive(kaiju, targets, power, atkDef) {
@@ -1209,7 +1254,7 @@ window.GAME = window.GAME || {};
       FX.missile(mz.x + (i - 2) * 6, mz.y, bs.x, bs.y, pal.eye);
       dealDamage(b, power);
     }
-    FX.shake(REDUCED ? 0 : (atkDef && atkDef.shake != null ? atkDef.shake : 5.5));
+    FX.shake(REDUCED ? 0 : (atkDef && atkDef.shake != null ? atkDef.shake : 7));
   }
 
   /* Public registry — archetypes/external callers can read this. */
@@ -1238,6 +1283,11 @@ window.GAME = window.GAME || {};
     this.fsm = 'attack';
 
     if (targets.length && targets[0]) this.facingTo(targets[0].col + 0.5, targets[0].row + 0.5);
+
+    // Crisp per-smash thud — ONE per attack action (not per target: a 5-6 missile
+    // volley calling smash() per hit would clip at the same currentTime). This is
+    // the per-hit sound that was previously unwired (only crumble fired, on destroy).
+    if (targets.length && G.Audio && typeof G.Audio.smash === 'function') G.Audio.smash();
 
     var power = (G.Economy && G.Economy.attackPower) ? G.Economy.attackPower() : Cfg.START_ATTACK;
 

@@ -2,15 +2,18 @@
 window.GAME = window.GAME || {};
 window.GAME.Config = {
   saveKey: 'godzilla-save-v3',
-  CACHE_VERSION: 'gz-v3',
+  CACHE_VERSION: 'gz-v5',
 
-  // --- Isometric grid (world units = tiles). Sized for a block-and-street city:
-  //     19 depth bands × (blockD 2 + street 1) ≈ 58 rows; ~4 blocks wide. ---
-  GRID: { cols: 13, rows: 58, TILE_W: 64, TILE_H: 32, WZ_PX: 44 },
+  // --- Isometric grid (world units = tiles). Wider + slightly zoomed-out city:
+  //     17 cols of 2×2 blocks split by 2-wide streets; 58 rows. TILE_*/WZ_PX are
+  //     the zoom lever (smaller = pulled back); iso + sprite baking both read these. ---
+  GRID: { cols: 17, rows: 58, TILE_W: 56, TILE_H: 28, WZ_PX: 40 },
 
   // --- Block-and-street layout. A cell is a STREET when its index within the
-  //     period (block + street) lands on the street lane. Tier = depth band. ---
-  LAYOUT: { blockW: 2, blockD: 2, street: 1, bands: 19 },
+  //     period (block + street) lands on the street lane. `tierRows` decouples the
+  //     HP/difficulty depth-band size from street width, so wide (2-tile) streets
+  //     don't stretch the curve: tier = floor(row / tierRows), still 0..18 over 58 rows. ---
+  LAYOUT: { blockW: 2, blockD: 2, street: 2, bands: 19, tierRows: 3 },
 
   // --- Building HP ladder by TIER (depth band). HP === money payout. 19 tiers,
   //     SMOOTHED ~2.3×/tier (expert flow-channel curve), 10 → 1e9 at tier 18. ---

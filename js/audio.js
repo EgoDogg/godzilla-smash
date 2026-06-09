@@ -20,6 +20,7 @@ window.GAME = window.GAME || {};
   var ctx = null;          // AudioContext, created lazily in unlock()
   var master = null;       // master GainNode (everything routes through here)
   var noiseBuf = null;     // shared mono white-noise AudioBuffer (built once)
+  var keepAlive = null;    // silent looping source that keeps iOS from suspending the ctx
   var localMuted = false;  // fallback mute flag when GAME.Economy is absent
 
   var MASTER_GAIN = 0.5;   // global headroom so stacked SFX never clip hard
@@ -49,6 +50,27 @@ window.GAME = window.GAME || {};
     noiseBuf = ctx.createBuffer(1, len, ctx.sampleRate);
     var d = noiseBuf.getChannelData(0);
     for (var i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
+  }
+
+  // ---- iOS keepalive ------------------------------------------------------
+  // A truly-silent (gain 0) looping 1-sample buffer source keeps the context's
+  // render graph active so iOS Safari is far less likely to idle-suspend it.
+  // That kills the "first SFX after a few idle seconds lags on async resume()"
+  // problem. Connected straight to destination (not master) so mute can't stop
+  // it. Started once on unlock; iOS still suspends on backgrounding, which the
+  // per-frame Audio.tick()/resume-on-visibility path recovers.
+  function startKeepAlive() {
+    if (keepAlive || !ctx) return;
+    try {
+      var src = ctx.createBufferSource();
+      src.buffer = ctx.createBuffer(1, 1, ctx.sampleRate);
+      src.loop = true;
+      var g = ctx.createGain();
+      g.gain.value = 0.0;
+      src.connect(g).connect(ctx.destination);
+      src.start(0);
+      keepAlive = src;
+    } catch (e) { /* keepalive is best-effort */ }
   }
 
   // ---- Tiny node factories ------------------------------------------------
@@ -110,9 +132,21 @@ window.GAME = window.GAME || {};
           master.gain.value = MASTER_GAIN;
           master.connect(ctx.destination);
           buildNoise();
+          startKeepAlive();
         }
-        if (ctx.state === 'suspended' && ctx.resume) ctx.resume();
+        if (ctx.state !== 'running' && ctx.resume) ctx.resume();
       } catch (e) { /* never let audio break the game */ }
+    },
+
+    // Per-frame cheap nudge from the game loop. iOS can move the context to
+    // 'suspended' OR the non-standard 'interrupted' state (call, route change,
+    // backgrounding) — both are non-'running', so resume whenever it isn't
+    // running. Resume is async: the frame that fires it still reads !live(), so
+    // a single SFX may drop on the recovery frame; that's expected iOS behavior.
+    tick: function () {
+      if (ctx && ctx.state !== 'running' && ctx.resume) {
+        try { ctx.resume(); } catch (e) { /* ignore */ }
+      }
     },
 
     // Per-hit thud — short pitched body + a click transient. Plays on every

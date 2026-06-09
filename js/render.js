@@ -745,6 +745,11 @@ window.GAME = window.GAME || {};
     // 7) Contact-shadow pass (ground ellipses under kaiju and planes).
     drawContactShadows();
 
+    // 7b) Aim-highlight ring — a flat ground decal under the building the player
+    //     is about to smash. Drawn here (not in the entity list) so it never
+    //     touches the depth sort.
+    drawAimRing();
+
     // 8) Visible list → depth sort → blit.
     buildVisible();
     if (visCount > 1) {
@@ -763,8 +768,44 @@ window.GAME = window.GAME || {};
     // 10) Leave world space.
     ctx.restore();
 
+    // 10b) Full-screen kill flash (untransformed, over the scene, under the HUD).
+    drawScreenFlash(w, h);
+
     // 11) HUD overlay (untransformed): combo pip, floating damage text, touch controls.
     drawHud(w, h);
+  }
+
+  // Aim-highlight ring: a breathing gold ellipse at the target footprint base.
+  // World-space (call inside the camera transform). Skips non-standing targets.
+  function drawAimRing() {
+    if (!player || !player.aimBuilding) return;
+    var b = player.aimBuilding;
+    if (b.state !== 'standing') return;
+    var fw = (b.footprint && b.footprint.w) || 1;
+    var fh = (b.footprint && b.footprint.h) || 1;
+    var p = G.iso.worldToScreen(b.col + fw * 0.5, b.row + fh * 0.5, 0);
+    var pulse = reduced ? 0.6 : (0.55 + 0.45 * Math.sin(performance.now() * 0.006));
+    ctx.save();
+    ctx.globalAlpha = pulse * 0.9;
+    ctx.strokeStyle = '#ffe08a';
+    ctx.lineWidth = 2.5;
+    ctx.beginPath();
+    ctx.ellipse(p.x, p.y, TILE_W * 0.42 * fw, TILE_H * 0.42 * fh, 0, 0, 6.2832);
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  // Full-screen white flash on a kill — alpha owned + decayed by FX.
+  function drawScreenFlash(w, h) {
+    var FX = G.FX;
+    if (!FX || typeof FX.flashAmount !== 'function') return;
+    var a = FX.flashAmount();
+    if (!(a > 0)) return;
+    ctx.save();
+    ctx.globalAlpha = U.clamp(a, 0, 1);
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, w, h);
+    ctx.restore();
   }
 
   // Insertion sort over the live slice (mostly-presorted; beats Array.sort for ~40-60 items).

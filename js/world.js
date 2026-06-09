@@ -63,8 +63,11 @@ window.GAME = window.GAME || {};
     var rnd = Utils.rng(seed);
 
     var L = Config.LAYOUT;
-    // Depth band: which of the 19 HP tiers this row belongs to.
-    var tier = Math.min(L.bands - 1, Math.floor(row / (L.blockD + L.street)));
+    // Depth band: which of the 19 HP tiers this row belongs to. `tierRows`
+    // decouples band depth from street width (falls back to the old block+street
+    // period when absent) so widening streets doesn't stretch the HP curve.
+    var period = L.tierRows || (L.blockD + L.street);
+    var tier = Math.min(L.bands - 1, Math.floor(row / period));
     var maxHp = Math.floor(ROW_HP[tier]) || 0;
 
     // Footprint: deep rows trend wider (2×1 at higher tiers). Kept 1-tall.
@@ -501,6 +504,10 @@ window.GAME = window.GAME || {};
 
     if (G.FX && typeof G.FX.debris === 'function') G.FX.debris(b);
     if (G.Audio && typeof G.Audio.crumble === 'function') G.Audio.crumble(b.tier);
+    // Kill juice: a brief freeze-frame + screen flash (scaled by tier). Both are
+    // no-ops under reduced-motion (guarded inside FX). Destroy only — never per-hit.
+    if (G.FX && typeof G.FX.hitStop === 'function') G.FX.hitStop(40 + Math.min(b.tier || 0, 18) * 3);
+    if (G.FX && typeof G.FX.screenFlash === 'function') G.FX.screenFlash((b.tier || 0) >= 14 ? 0.28 : 0.18);
 
     b.hp = 0;
     b.dot = null;

@@ -35,7 +35,7 @@ window.GAME = window.GAME || {};
     W: 1, H: 1,            // viewport CSS pixels
     dpr: 1,                // capped device pixel ratio (set by resize)
     focusX: 0.5,           // horizontal focus anchor (fraction of W)
-    focusY: 0.62,          // vertical focus anchor (corridor-ahead bias)
+    focusY: 0.66,          // vertical focus anchor (corridor-ahead bias; lowered for the wider/zoomed-out city)
     shakeX: 0, shakeY: 0,  // current shake offset
     shakeMag: 0,           // current shake amplitude (decays each frame)
     _init: false,          // snap to target on first follow (no easing pop-in)

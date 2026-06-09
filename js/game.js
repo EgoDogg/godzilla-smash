@@ -9,6 +9,7 @@ window.GAME = window.GAME || {};
 
   let canvas, ctx, W = 0, H = 0, dpr = 1;
   let player = null, last = 0, acc = 0, running = true, booted = false;
+  let freezeUntil = 0;            // hit-stop: real-time (rAF ts) until which the sim is frozen
 
   function resize() {
     const nd = Math.min(window.devicePixelRatio || 1, 2);
@@ -69,7 +70,10 @@ window.GAME = window.GAME || {};
     window.addEventListener('keydown', unlock, { passive: true });
 
     const pause = function () { running = false; };
-    const run = function () { running = true; last = performance.now(); };
+    const run = function () {
+      running = true; last = performance.now();
+      if (G.Audio && G.Audio.unlock) G.Audio.unlock();   // re-arm/resume audio on focus/visibility
+    };
     window.addEventListener('blur', pause);
     window.addEventListener('focus', run);
     document.addEventListener('visibilitychange', function () { document.hidden ? pause() : run(); });
@@ -81,19 +85,29 @@ window.GAME = window.GAME || {};
 
   function loop(ts) {
     requestAnimationFrame(loop);
+    if (G.Audio && G.Audio.tick) G.Audio.tick();   // keep iOS ctx alive (cheap; resumes if not running)
     let dt = (ts - last) / 1000; last = ts;
     if (!isFinite(dt) || dt < 0) dt = 0;
     if (dt > 0.1) dt = 0.1;                        // clamp big gaps (tab switch)
     if (!running) return;                          // hard pause (blur/hidden): freeze frame
 
     const paused = !!(G.UI && G.UI.isPaused);       // shop open / Esc — sim frozen, scene still drawn
-    if (!paused) {
+
+    // Hit-stop: a brief real-time freeze on a satisfying kill. We skip the sim
+    // (kaiju, debris, particles, shake all hold for a beat) but keep RENDERING
+    // so the frozen frame is visible. Consume every frame to clear the flag.
+    const hs = (G.FX && G.FX.consumeHitStop) ? G.FX.consumeHitStop() : 0;
+    if (hs > 0) freezeUntil = ts + hs;
+    const frozen = ts < freezeUntil;
+
+    if (!paused && !frozen) {
       acc += dt;
       const intent = G.Input.consume();             // attack/target edge-true for this frame only
       let steps = 0;
       while (acc >= STEP && steps < MAX_SUBSTEPS) {
         player.update(STEP, intent);
         G.World.updateBuildings(STEP_MS);
+        if (G.World.updateFlyers) G.World.updateFlyers(STEP_MS);  // airplanes drift + wrap
         if (G.Economy.tickCombo) G.Economy.tickCombo(STEP_MS);
         if (G.FX && G.FX.update) G.FX.update(STEP);
         if (G.camera && G.camera.follow) G.camera.follow(player, STEP);
@@ -102,8 +116,8 @@ window.GAME = window.GAME || {};
       }
       if (steps === MAX_SUBSTEPS) acc = 0;           // spiral-of-death guard
     } else if (G.Input.consume) {
-      G.Input.consume();                              // drain input edges while paused
-      acc = 0;
+      G.Input.consume();                              // drain input edges while paused/frozen
+      acc = 0;                                        // prevent an accumulator catch-up burst on resume
     }
 
     G.UI.refresh();
