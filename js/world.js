@@ -600,6 +600,8 @@ window.GAME = window.GAME || {};
         var spec = SPEC[entry.special];
         if (!spec) continue;
         b.special = entry.special;
+        if (spec.sprite)  b.sprite = spec.sprite;   // route to the gold/rainbow/diamond art
+                                                     // (was missing → the rare house rendered as a plain prism)
         if (spec.tint)    b.tint = spec.tint;
         if (typeof spec.hpMult === 'number') {
           // Rebase maxHp and current hp to the rare multiplier.
@@ -661,6 +663,7 @@ window.GAME = window.GAME || {};
             if (wasRare) {
               // Re-derive base maxHp from the tier (strip the rare hpMult).
               b.special = null;
+              b.sprite = null;
               b.tint = null;
               b.maxHp = Math.floor(ROW_HP[b.tier]) || 0;
             }

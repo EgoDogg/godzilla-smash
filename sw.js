@@ -1,5 +1,5 @@
 /* Godzilla Smash — offline service worker (cache-first app shell) */
-const CACHE = 'gz-v12';
+const CACHE = 'gz-v13';
 const ASSETS = ['./', './index.html', './manifest.json', './icon-512.png', './icon-192.png',
   './js/config.js', './js/utils.js', './js/iso.js', './js/assets.js', './js/archetypes.js', './js/sprites_special.js',
   './js/audio.js', './js/economy.js', './js/entities.js', './js/world.js', './js/world_events.js',
