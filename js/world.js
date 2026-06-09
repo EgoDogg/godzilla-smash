@@ -206,7 +206,7 @@ window.GAME = window.GAME || {};
 
     var cols = GRID.cols, rows = GRID.rows;
     var L = Config.LAYOUT;
-    var pcol = L.blockW + L.street, prow = L.blockD + L.street;
+    var pcol = L.blockW + (L.streetW != null ? L.streetW : L.street), prow = L.blockD + L.street;
     var SPEC = Config.SPECIALS || {};
 
     // --- Determine special cell reservations before filling generic buildings ---

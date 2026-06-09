@@ -791,8 +791,8 @@ window.GAME = window.GAME || {};
      ===================================================================== */
 
   var PX_PER_TILE = TILE_W;
-  var ACCEL = 900 / PX_PER_TILE;
-  var MAX_SPEED = 220 / PX_PER_TILE;
+  var ACCEL = 1060 / PX_PER_TILE;     // +18% — keep pace with the wider city / faster smashing
+  var MAX_SPEED = 260 / PX_PER_TILE;  // +18% roam speed so more separation isn't more walking
   var FRICTION = 12;
   var COLLIDE_R = 18 / PX_PER_TILE;
   var WALK_SPEED = 0.22;
@@ -811,6 +811,20 @@ window.GAME = window.GAME || {};
       case 'ghidorah': return 0.42;
       default:         return 0.30;
     }
+  }
+
+  /* Re-fire GATE — how soon the NEXT attack may start. Decoupled from the attack
+     animation length (attackCooldownFor): a short, clamped fraction so tapping/
+     holding feels rapid and responsive without becoming mush. Tunable via Config. */
+  function attackGateFor(kaiju) {
+    var base = attackCooldownFor(kaiju);
+    var scale = (Cfg.COOLDOWN_SCALE != null) ? Cfg.COOLDOWN_SCALE : 0.42;
+    var floor = (Cfg.COOLDOWN_FLOOR != null) ? Cfg.COOLDOWN_FLOOR : 0.11;
+    var cap = (Cfg.COOLDOWN_CAP != null) ? Cfg.COOLDOWN_CAP : 0.20;
+    var g = base * scale;
+    if (g < floor) g = floor;
+    if (g > cap) g = cap;
+    return g;
   }
 
   /* Number of direct targets: reads from form.attack.hits. */
@@ -1012,9 +1026,11 @@ window.GAME = window.GAME || {};
       this.walkPhase = 0;
     }
 
-    var attackEdge = !!intent.attack && !this._prevAttack;
+    // Level-triggered (not edge): fire whenever attack is held/tapped AND the
+    // re-fire gate is open. Enables hold-to-autofire + rapid tapping, and no longer
+    // waits for the attack ANIMATION (attackT) to finish, so smashes are interruptible.
     this._prevAttack = !!intent.attack;
-    if (attackEdge && this.atkCooldown <= 0 && this.attackT <= 0) {
+    if (intent.attack && this.atkCooldown <= 0) {
       this.fireAttack(intent.target);
     }
 
@@ -1275,10 +1291,10 @@ window.GAME = window.GAME || {};
     var atkDef = (fd && fd.attack) ? fd.attack : {};
     var kindStr = atkDef.kind || 'beam';
 
-    var dur = attackCooldownFor(this);
-    this._attackDur = dur;
-    this.attackT = dur;
-    this.atkCooldown = dur;
+    var animDur = attackCooldownFor(this);
+    this._attackDur = animDur;
+    this.attackT = animDur;                  // visual pose length (per-form; interruptible)
+    this.atkCooldown = attackGateFor(this);  // re-fire gate — short + decoupled from the anim
     this.attackFrame = 0;
     this.fsm = 'attack';
 

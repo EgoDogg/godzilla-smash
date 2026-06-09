@@ -154,12 +154,15 @@ window.GAME = window.GAME || {};
     smash: function () {
       if (!live()) return;
       var t = now();
+      // ±6% pitch + ±8% level variance so rapid-fire smashes don't sound robotic.
+      var v = 1 + (Math.random() * 2 - 1) * 0.06;
+      var gv = 1 + (Math.random() * 2 - 1) * 0.08;
       // Low body thump that drops in pitch.
-      osc('sine', 150, 60, 0.13, 0.55, t);
+      osc('sine', 150 * v, 60 * v, 0.13, 0.55 * gv, t);
       // Mid "knock" for impact definition.
-      osc('triangle', 320, 150, 0.07, 0.22, t);
+      osc('triangle', 320 * v, 150 * v, 0.07, 0.22 * gv, t);
       // Tight low-noise crack transient.
-      noise('lowpass', 1200, 1, 0.06, 0.30, t);
+      noise('lowpass', 1200 * v, 1, 0.06, 0.30 * gv, t);
     },
 
     // Building destroyed. Bigger / lower / longer boom as the tier climbs.

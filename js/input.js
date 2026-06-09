@@ -81,6 +81,7 @@ window.GAME = window.GAME || {};
   // ---- Keyboard state (8-way digital + jump) --------------------------------
   var keyUp = false, keyDown = false, keyLeft = false, keyRight = false;
   var keyJump = false;                // Shift or KeyJ
+  var spaceHeld = false;              // Space held → autofire (rate-gated downstream by the kaiju)
 
   /* --------------------------------------------------------------------------
    * SCREEN → WORLD direction mapping  (blueprint §6: "up-screen = forward (+wy)").
@@ -419,9 +420,10 @@ window.GAME = window.GAME || {};
       case 'KeyA': case 'ArrowLeft':  keyLeft = true; break;
       case 'KeyD': case 'ArrowRight': keyRight = true; break;
       case 'Space':
-        if (e.repeat) return;          // ignore auto-repeat (one attack per press)
-        fireAttack();
         e.preventDefault();
+        if (e.repeat) return;          // OS key-repeat ignored; autofire is handled in consume()
+        spaceHeld = true;              // held → autofire each consume (gate rate-limits)
+        fireAttack();                  // immediate first hit on the press frame
         return;
       case 'ShiftLeft': case 'ShiftRight': case 'KeyJ':
         if (e.repeat) return;          // ignore auto-repeat (one jump per press)
@@ -440,6 +442,9 @@ window.GAME = window.GAME || {};
       case 'KeyS': case 'ArrowDown':  keyDown = false; break;
       case 'KeyA': case 'ArrowLeft':  keyLeft = false; break;
       case 'KeyD': case 'ArrowRight': keyRight = false; break;
+      case 'Space':
+        spaceHeld = false;             // release → autofire stops
+        return;
       case 'ShiftLeft': case 'ShiftRight': case 'KeyJ':
         keyJump = false;
         return;
@@ -543,6 +548,11 @@ window.GAME = window.GAME || {};
   Input.consume = function () {
     _intent.moveX = moveX;
     _intent.moveY = moveY;
+
+    // Hold-to-autofire: while the SMASH disc (touch) or Space (kbd) is held, keep
+    // the attack latched every frame. The kaiju's re-fire gate rate-limits it, so
+    // this just means "smash continuously at the gate cadence" — no input throttle here.
+    if (smashPointerId !== null || spaceHeld) attackLatched = true;
 
     var atk = attackLatched;
     var tgt = pendingTarget;

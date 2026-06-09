@@ -2,18 +2,21 @@
 window.GAME = window.GAME || {};
 window.GAME.Config = {
   saveKey: 'godzilla-save-v3',
-  CACHE_VERSION: 'gz-v5',
+  CACHE_VERSION: 'gz-v6',
 
-  // --- Isometric grid (world units = tiles). Wider + slightly zoomed-out city:
-  //     17 cols of 2×2 blocks split by 2-wide streets; 58 rows. TILE_*/WZ_PX are
+  // --- Isometric grid (world units = tiles). Wide, open, zoomed-out city:
+  //     21 cols of 2×2 blocks split by wide streets; 58 rows. TILE_*/WZ_PX are
   //     the zoom lever (smaller = pulled back); iso + sprite baking both read these. ---
-  GRID: { cols: 17, rows: 58, TILE_W: 56, TILE_H: 28, WZ_PX: 40 },
+  GRID: { cols: 21, rows: 58, TILE_W: 56, TILE_H: 28, WZ_PX: 40 },
 
   // --- Block-and-street layout. A cell is a STREET when its index within the
-  //     period (block + street) lands on the street lane. `tierRows` decouples the
-  //     HP/difficulty depth-band size from street width, so wide (2-tile) streets
-  //     don't stretch the curve: tier = floor(row / tierRows), still 0..18 over 58 rows. ---
-  LAYOUT: { blockW: 2, blockD: 2, street: 2, bands: 19, tierRows: 3 },
+  //     period (block + street) lands on the street lane. ASYMMETRIC streets (real
+  //     NYC-grid feel): `streetW` = wide avenues on the col axis, `street` = narrower
+  //     cross-streets on the row axis — averaging +75% more separation than the old
+  //     2-tile streets, with long sightline "runways". `tierRows` decouples the
+  //     HP/difficulty depth-band from street width: tier = floor(row / tierRows),
+  //     still 0..18 over 58 rows regardless of how wide the streets get. ---
+  LAYOUT: { blockW: 2, blockD: 2, street: 3, streetW: 4, bands: 19, tierRows: 3 },
 
   // --- Building HP ladder by TIER (depth band). HP === money payout. 19 tiers,
   //     SMOOTHED ~2.3×/tier (expert flow-channel curve), 10 → 1e9 at tier 18. ---
@@ -31,6 +34,13 @@ window.GAME.Config = {
   // --- Combo: the only damage multiplier (chain smashes to ramp ×1 → ×2) ---
   COMBO: { WINDOW_MS: 1600, STEP: 0.04, MAX: 2.0 },
   PASSIVE: 0,                // no passive income (would trivialize deep rows)
+
+  // --- Attack cadence: the re-fire GATE is decoupled from the attack ANIMATION.
+  //     gate = clamp(form.attack.cooldown × SCALE, FLOOR, CAP) seconds. Much shorter
+  //     than the old "wait for the whole animation" gate → rapid, responsive tapping
+  //     (and hold-to-autofire). FLOOR/CAP keep every form snappy without becoming
+  //     audio/visual mush (~75-80ms is the perceptual mush floor; we sit above it). ---
+  COOLDOWN_SCALE: 0.42, COOLDOWN_FLOOR: 0.11, COOLDOWN_CAP: 0.20,
 
   // --- Destruction / respawn timing (ms) ---
   RESPAWN: { CRUMBLE_MS: 550, RUBBLE_MS: 6500, RUBBLE_PER_TIER: 450, RISE_MS: 700 },
