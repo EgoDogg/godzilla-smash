@@ -1299,7 +1299,14 @@ window.GAME = window.GAME || {};
     this.attackFrame = 0;
     this.fsm = 'attack';
 
-    if (targets.length && targets[0]) this.facingTo(targets[0].col + 0.5, targets[0].row + 0.5);
+    if (targets.length && targets[0]) {
+      this.facingTo(targets[0].col + 0.5, targets[0].row + 0.5);
+      // Track the building we're ACTUALLY attacking (close, ranged, or autofire) so the
+      // top HP bar + aim ring follow it. Without this, aimBuilding only refreshed when
+      // attackT<=0 (never, under rapid autofire) and only tracked faced/nearest — so the
+      // bar went stale / showed the wrong building when zapping at range.
+      this.aimBuilding = targets[0];
+    }
 
     // Crisp per-smash thud — ONE per attack action (not per target: a 5-6 missile
     // volley calling smash() per hit would clip at the same currentTime). This is
