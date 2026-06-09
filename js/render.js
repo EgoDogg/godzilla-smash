@@ -1,31 +1,28 @@
-/* GAME.Render — the painter's loop for World 1 v2 (2.5D isometric, procedural Canvas2D).
+/* GAME.Render — painter's loop for Godzilla Smash v3 (2.5D isometric, Canvas2D).
  *
- * Owns NOTHING but drawing: every number comes from GAME.Config, every helper from
- * GAME.Utils, every coordinate from GAME.iso/GAME.camera, every sprite from GAME.Assets,
- * every entity from GAME.World / the player unit / GAME.FX, every HUD value from
- * GAME.Economy / GAME.Input.
+ * Owns NOTHING but drawing: every number from GAME.Config, helpers from GAME.Utils,
+ * coordinates from GAME.iso / GAME.camera, sprites from GAME.Assets,
+ * entities from GAME.World / player unit / GAME.FX, HUD values from
+ * GAME.Economy / GAME.Input, day/night phase from GAME.Env.
  *
- * Contract (blueprint §2): GAME.Render.frame(dt) and GAME.Render.setPlayer(unit).
+ * Contract (v3-build-contract §3):
+ *   GAME.Render.frame(dt) — paint one frame
+ *   GAME.Render.setPlayer(unit) — called once at boot
  *
- * Per-frame order (blueprint §5):
- *   1. clear in device px (full backing store, transform-independent)
- *   2. cached parallax skyline — 3 layers, x-scrolled by camera.x (untransformed)
- *   3. ctx.save + GAME.camera.apply(ctx)  → enter world space
- *   4. blit cached ground (single island image, else tile GAME.Assets.groundTile)
- *   5. build visible list (culled buildings + player unit), set ._dk = iso.depthKey,
- *      sort ascending, blit (buildings via Assets.buildingSprite, kaiju via unit.draw)
- *   6. world-space FX  (GAME.FX.draw)   → debris / particles inside the camera transform
- *   7. ctx.restore  → leave world space
- *   8. untransformed HUD overlay: combo pip (Economy.comboMult), floating damage text
- *      (GAME.FX), touch controls (GAME.Input.joystick / .smashBtn)
- *
- * Performance discipline:
- *   - imageSmoothingEnabled=false (crisp pixels)
- *   - NO per-frame allocations in the hot path: the visible list, the depth-key scratch
- *     object, and the cull AABB are all module-level and reused every frame.
- *   - NO ctx.shadowBlur anywhere (glows are baked by GAME.Assets / drawn live by entities).
- *   - DPR / setTransform is owned by GAME.Main; frame() inherits whatever transform Main
- *     installed on resize and never touches it (except a transient identity reset to clear).
+ * Per-frame order:
+ *   1. Clear full backing store (device px, transform-independent)
+ *   2. Sky: dynamic gradient from Env.phase() (or static fallback) + sun/moon disc
+ *   3. Parallax skyline (3 baked layers, x-scrolled by camera.x)
+ *   4. Ambient tint rect (one full-screen rgba overlay from Env.phase())
+ *   5. ctx.save + camera.apply → enter world space
+ *   6. Ground (island image or tiled diamond)
+ *   7. Contact-shadow pass: ground ellipses under kaiju and flying buildings
+ *   8. Build visible list (culled buildings + player), depth-sort, blit
+ *      (buildings via Assets.buildingSprite(b); kaiju via unit.draw)
+ *   9. World-space FX (GAME.FX.draw)
+ *  10. ctx.restore → leave world space
+ *  11. HUD overlay: combo pip, floating damage text, touch controls
+ *      (joystick + smash + optional jump disc if Input exposes one)
  */
 window.GAME = window.GAME || {};
 (function (G) {
@@ -42,31 +39,32 @@ window.GAME = window.GAME || {};
   var reduced = !!U.reducedMotion;
 
   // --- Module-level mutable state (no per-frame allocation) -----------------
-  var canvas = null;                   // #scene, looked up lazily on first frame
+  var canvas = null;
   var ctx = null;
-  var player = null;                   // the active kaiju unit (set via setPlayer)
+  var player = null;
 
-  // Cached parallax skyline layers (built once, on first frame, sized to the canvas).
-  var sky = null;                      // { layers:[{cv, speed, y}], w, h, dpr }
+  // Cached parallax skyline layers (built once per logical size).
+  var sky = null;                      // { layers:[{cv, speed}], w, h }
 
   // Reused per-frame scratch so the hot loop allocates nothing.
-  var visible = [];                    // entries pushed/cleared each frame
-  var visCount = 0;                    // live length (we never shrink the array)
-  var dkProbe = { wx: 0, wy: 0, wz: 0, depthBias: 0 }; // fed to iso.depthKey
-  var aabb = { minCol: 0, maxCol: 0, minRow: 0, maxRow: 0 }; // world cull box (tiles)
-  var scrCorner = { x: 0, y: 0 };      // reused screen-point for un-projection
+  var visible = [];
+  var visCount = 0;
+  var dkProbe = { wx: 0, wy: 0, wz: 0, depthBias: 0 };
+  var aabb = { minCol: 0, maxCol: 0, minRow: 0, maxRow: 0 };
+  var scrCorner = { x: 0, y: 0 };     // unused scratch kept for compat
 
-  // Tallest building rise in *rows* — used to pad the cull box so a tall tower whose
-  // footprint sits just below the viewport still draws its top. ROWS rises ≈ tier height;
-  // a generous constant (worst tower ≈ 9 world-Z → 9*44/32 ≈ 12 rows of screen rise).
-  var CULL_PAD = 3;                    // base padding in tiles on every side
-  var CULL_RISE_ROWS = 14;            // extra rows added to the "far" edge for tall towers
+  var CULL_PAD = 3;
+  var CULL_RISE_ROWS = 14;
+
+  // Pre-allocated corner scratch for computeCull.
+  var TMP_CORNERS = [
+    { x: 0, y: 0 }, { x: 0, y: 0 }, { x: 0, y: 0 }, { x: 0, y: 0 }
+  ];
 
   // ------------------------------------------------------------------------
   // Boot helpers
   // ------------------------------------------------------------------------
 
-  // Resolve the canvas/context the first time we draw (Main may attach late).
   function ensureCtx() {
     if (ctx) return true;
     canvas = document.getElementById('scene');
@@ -77,22 +75,101 @@ window.GAME = window.GAME || {};
     return true;
   }
 
-  // Backing-store pixel size (device px). Falls back to CSS size if unset.
   function deviceW() { return canvas.width || Math.round(canvas.clientWidth || window.innerWidth); }
   function deviceH() { return canvas.height || Math.round(canvas.clientHeight || window.innerHeight); }
-  // Logical (CSS) size — the coordinate space the DPR base transform draws in.
   function cssW() { return canvas.clientWidth || window.innerWidth; }
   function cssH() { return canvas.clientHeight || window.innerHeight; }
 
   // ------------------------------------------------------------------------
-  // Parallax skyline — three baked gradient/silhouette layers (blueprint §5/§7).
+  // Day/night phase — read GAME.Env.phase(); defensive fallback to static night.
+  // Returns { sky:[c1,c2], tint:'rgba()', sun?:{col}, moon?:{col}, ambient:0..1 }
+  // ------------------------------------------------------------------------
+  var _fallbackPhase = {
+    sky: ['#05070f', '#142a55'],
+    tint: 'rgba(0,0,0,0)',
+    moon: { col: '#cfe0ff' },
+    ambient: 0.8
+  };
+
+  function envPhase() {
+    var Env = G.Env;
+    if (Env && typeof Env.phase === 'function') {
+      var p = Env.phase();
+      if (p) return p;
+    }
+    return _fallbackPhase;
+  }
+
+  // ------------------------------------------------------------------------
+  // Sky gradient — dynamic sky colours from Env.phase(), drawn behind everything.
+  // Two-stop vertical gradient across the full CSS canvas.
+  // ------------------------------------------------------------------------
+  function drawSkyClear(w, h, phase) {
+    var cols = (phase && phase.sky) ? phase.sky : _fallbackPhase.sky;
+    var g = ctx.createLinearGradient(0, 0, 0, h);
+    g.addColorStop(0, cols[0] || '#05070f');
+    g.addColorStop(1, cols[1] || '#142a55');
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, w, h);
+  }
+
+  // Sun or moon disc (drawn in screen space above the horizon, un-transformed).
+  // phase.sun / phase.moon = { col } — whichever is present gets drawn.
+  function drawCelestialDisc(w, h, phase) {
+    var disc = null;
+    var isSun = false;
+    if (phase && phase.sun && phase.sun.col) { disc = phase.sun; isSun = true; }
+    else if (phase && phase.moon && phase.moon.col) { disc = phase.moon; isSun = false; }
+    if (!disc) return;
+
+    // Anchor: upper-left quadrant for sun, upper-right for moon.
+    var cx = isSun ? (w * 0.25) : (w * 0.72);
+    var cy = h * 0.15;
+    var r = Math.round(w * 0.038);
+    if (r < 8) r = 8;
+
+    ctx.save();
+    ctx.globalAlpha = isSun ? 0.92 : 0.75;
+
+    if (isSun) {
+      // Radial glow then disc.
+      var sg = ctx.createRadialGradient(cx, cy, r * 0.3, cx, cy, r * 2.2);
+      sg.addColorStop(0, disc.col);
+      sg.addColorStop(1, 'rgba(0,0,0,0)');
+      ctx.fillStyle = sg;
+      ctx.beginPath();
+      ctx.arc(cx, cy, r * 2.2, 0, Math.PI * 2);
+      ctx.fill();
+    } else {
+      // Soft glow for moon.
+      var mg = ctx.createRadialGradient(cx, cy, r * 0.2, cx, cy, r * 2.0);
+      mg.addColorStop(0, disc.col);
+      mg.addColorStop(0.45, disc.col);
+      mg.addColorStop(1, 'rgba(0,0,0,0)');
+      ctx.fillStyle = mg;
+      ctx.beginPath();
+      ctx.arc(cx, cy, r * 2.0, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    // Solid disc on top.
+    ctx.globalAlpha = isSun ? 0.95 : 0.70;
+    ctx.beginPath();
+    ctx.arc(cx, cy, r, 0, Math.PI * 2);
+    ctx.fillStyle = disc.col;
+    ctx.fill();
+
+    ctx.restore();
+  }
+
+  // ------------------------------------------------------------------------
+  // Parallax skyline — three baked gradient/silhouette layers.
   // Built to CSS dimensions; x-scrolled by camera.x, tiled horizontally.
-  // Rebuilt only when the logical size changes (resize handled by Main).
+  // Rebuilt only when the logical size changes.
+  // Colours are static (the sky gradient behind already provides day/night hue).
   // ------------------------------------------------------------------------
   function buildSky(w, h) {
     var layers = [];
-    // Layer descriptors: parallax speed (fraction of camera.x), silhouette palette,
-    // building band height, and vertical anchor (0..1 of screen height).
     var defs = [
       { speed: 0.18, top: '#0a1430', bot: '#142a55', sil: '#0c1838', minH: 0.10, maxH: 0.20, density: 26, y: 0.46 },
       { speed: 0.34, top: '#0c1c44', bot: '#1d3e74', sil: '#10224a', minH: 0.16, maxH: 0.34, density: 20, y: 0.54 },
@@ -100,7 +177,6 @@ window.GAME = window.GAME || {};
     ];
     for (var d = 0; d < defs.length; d++) {
       var def = defs[d];
-      // Each layer canvas is one screen-width wide; we tile it horizontally to scroll.
       var lw = Math.max(2, Math.ceil(w));
       var lh = Math.max(2, Math.ceil(h));
       var cv = document.createElement('canvas');
@@ -109,15 +185,11 @@ window.GAME = window.GAME || {};
       var c = cv.getContext('2d');
       c.imageSmoothingEnabled = false;
 
-      // Sky gradient for the deepest layer only (others are transparent overlays).
+      // Layer 0: the silhouette is dark, drawn transparently over the dynamic sky.
+      // We skip filling a background gradient here so the live sky shows through.
+
+      // Faint stars in the upper band (layer 0 only; hidden by sun in daytime via tint).
       if (d === 0) {
-        var g = c.createLinearGradient(0, 0, 0, lh);
-        g.addColorStop(0, '#05070f');
-        g.addColorStop(0.42, def.top);
-        g.addColorStop(1, def.bot);
-        c.fillStyle = g;
-        c.fillRect(0, 0, lw, lh);
-        // Faint stars in the upper band.
         var sr = U.rng(0x5747 + d);
         c.fillStyle = 'rgba(180,205,255,0.55)';
         for (var s = 0; s < 70; s++) {
@@ -130,10 +202,9 @@ window.GAME = window.GAME || {};
         c.globalAlpha = 1;
       }
 
-      // Building silhouette band — deterministic per layer so tiling seams line up.
+      // Building silhouette band.
       var baseY = Math.floor(lh * def.y);
       var rng = U.rng(0x1000 * (d + 1) + 0x33);
-      // Silhouette fill with a soft top→bottom darkening for depth.
       var sg = c.createLinearGradient(0, baseY - lh * def.maxH, 0, lh);
       sg.addColorStop(0, U.shade(def.sil, 1.35));
       sg.addColorStop(1, U.shade(def.sil, 0.7));
@@ -145,42 +216,49 @@ window.GAME = window.GAME || {};
         if (bw < 6) bw = 6;
         var bh = Math.floor(lh * (def.minH + rng() * (def.maxH - def.minH)));
         var by = baseY - bh;
-        c.fillRect(x, by, bw - 2, bh + lh); // +lh so the band reaches the bottom edge
-        // Sparse lit windows for the nearer two layers (cheap rects, baked once).
+        c.fillRect(x, by, bw - 2, bh + lh);
         if (d > 0 && rng() < 0.8) {
           c.fillStyle = (d === 2) ? 'rgba(120,200,255,0.30)' : 'rgba(110,170,255,0.22)';
-          var cols = Math.max(1, Math.floor((bw - 6) / 7));
-          var rowsW = Math.max(2, Math.floor(bh / 9));
-          for (var wy = 0; wy < rowsW; wy++) {
-            for (var wx = 0; wx < cols; wx++) {
+          var wcols = Math.max(1, Math.floor((bw - 6) / 7));
+          var wrows = Math.max(2, Math.floor(bh / 9));
+          for (var wy = 0; wy < wrows; wy++) {
+            for (var wx = 0; wx < wcols; wx++) {
               if (rng() < 0.5) continue;
               c.fillRect(x + 3 + wx * 7, by + 4 + wy * 9, 3, 3);
             }
           }
-          c.fillStyle = sg; // restore silhouette fill for the next tower
+          c.fillStyle = sg;
         }
         x += bw;
       }
-      layers.push({ cv: cv, speed: def.speed, y: 0 });
+      layers.push({ cv: cv, speed: def.speed });
     }
     return { layers: layers, w: w, h: h };
   }
 
-  // Draw the parallax skyline, untransformed (device-independent CSS space).
-  // camX = camera world-x scroll; we tile each layer so it wraps seamlessly.
-  function drawSky(camX, w, h) {
+  // Draw the parallax skyline (untransformed CSS space).
+  function drawSkyLayers(camX, w, h) {
     if (!sky || sky.w !== w || sky.h !== h) sky = buildSky(w, h);
     var L = sky.layers;
     for (var i = 0; i < L.length; i++) {
       var layer = L[i];
       var lw = layer.cv.width;
-      // Horizontal offset from camera; modulo into [0,lw) and draw two copies to wrap.
       var off = -((camX * layer.speed) % lw);
       if (off > 0) off -= lw;
-      // Two blits cover the whole width regardless of scroll phase.
       ctx.drawImage(layer.cv, off, 0);
       ctx.drawImage(layer.cv, off + lw, 0);
     }
+  }
+
+  // One full-screen ambient tint rect over the world (drawn untransformed,
+  // after the parallax but before the camera transform).
+  function drawAmbientTint(w, h, phase) {
+    var tint = (phase && phase.tint) ? phase.tint : null;
+    if (!tint || tint === 'rgba(0,0,0,0)') return;
+    ctx.save();
+    ctx.fillStyle = tint;
+    ctx.fillRect(0, 0, w, h);
+    ctx.restore();
   }
 
   // ------------------------------------------------------------------------
@@ -191,8 +269,6 @@ window.GAME = window.GAME || {};
     var A = G.Assets;
     if (!A) return;
 
-    // Preferred: a single pre-composited island image (1 drawImage). Assets may expose
-    // it as a getter, a property, or via get('island'); support all without assuming.
     var island =
       (typeof A.islandImage === 'function' ? A.islandImage() : A.islandImage) ||
       (typeof A.island === 'function' ? A.island() : A.island) ||
@@ -200,9 +276,6 @@ window.GAME = window.GAME || {};
       (typeof A.get === 'function' ? A.get('island') : null);
 
     if (island && island.width) {
-      // The island image is authored anchored so its world-origin tile (col0,row0 top)
-      // sits at the image's stored anchor. Assets convention: anchorX/anchorY mark where
-      // world point (0,0,0) lands inside the image; default to the image's natural top.
       var ax = (island.anchorX != null) ? island.anchorX : (island.width >> 1);
       var ay = (island.anchorY != null) ? island.anchorY : 0;
       var origin = G.iso.worldToScreen(0, 0, 0);
@@ -210,15 +283,11 @@ window.GAME = window.GAME || {};
       return;
     }
 
-    // Fallback: tile the ground diamond across the whole grid (cull to AABB so we only
-    // blit visible tiles). One cached tile, many cheap drawImage calls.
     var tile =
       (typeof A.groundTile === 'function' ? A.groundTile() : A.groundTile) ||
       (typeof A.get === 'function' ? A.get('ground') : null);
     if (!tile || !tile.width) return;
 
-    // The diamond tile is TILE_W wide, (TILE_H + a small rise) tall; its top-apex maps to
-    // the cell's worldToScreen point. Center the tile on that apex.
     var tw = tile.width;
     var th = tile.height;
     var halfW = tw >> 1;
@@ -230,30 +299,66 @@ window.GAME = window.GAME || {};
     for (var r = minR; r <= maxR; r++) {
       for (var cc = minC; cc <= maxC; cc++) {
         p = G.iso.worldToScreen(cc, r, 0);
-        // Anchor: tile's horizontal center on the cell apex; small vertical nudge so the
-        // diamond's top edge meets the apex (apex sits TILE_H/2 below the tile top).
         ctx.drawImage(tile, p.x - halfW, p.y - (th - TILE_H));
       }
     }
   }
 
   // ------------------------------------------------------------------------
-  // Cull box — un-project the four viewport corners to a world-tile AABB,
-  // padded for safety + tall-tower rise. Camera position is read indirectly
-  // via iso.screenToWorld (camera-relative ground plane), so we never need
-  // the camera's private fields. Result written into module-level `aabb`.
+  // Contact-shadow pass — drawn in world space, BEFORE the entity blit, so
+  // shadows appear under buildings/kaiju. One soft ellipse per kaiju (and per
+  // flying building) at its ground-projected cell.
+  // ------------------------------------------------------------------------
+  var _shadowRX = TILE_W * 0.38;      // ellipse half-width  (world x extent)
+  var _shadowRY = TILE_H * 0.32;      // ellipse half-height (world y extent)
+
+  function drawContactShadows() {
+    if (reduced) return;
+
+    // Kaiju shadow.
+    if (player && player.pos) {
+      var pos = player.pos;
+      var gp = G.iso.worldToScreen(pos.wx, pos.wy, 0); // project at z=0 (ground)
+      drawEllipseShadow(gp.x | 0, gp.y | 0, _shadowRX, _shadowRY, 0.45);
+    }
+
+    // Flying buildings (planes) — project their col/row to ground (wz=0).
+    var World = G.World;
+    if (World && typeof World.getFlyers === 'function') {
+      var flyers = World.getFlyers();
+      if (flyers) {
+        for (var i = 0; i < flyers.length; i++) {
+          var b = flyers[i];
+          if (!b || b.state === 'destroyed') continue;
+          var fp = G.iso.worldToScreen(b.col + 0.5, b.row + 0.5, 0);
+          drawEllipseShadow(fp.x | 0, fp.y | 0, _shadowRX * 0.55, _shadowRY * 0.55, 0.28);
+        }
+      }
+    }
+  }
+
+  // Draw a single dark ellipse at (cx,cy) in world space.
+  function drawEllipseShadow(cx, cy, rx, ry, alpha) {
+    ctx.save();
+    ctx.globalAlpha = alpha;
+    ctx.fillStyle = 'rgba(0,0,0,1)';
+    ctx.beginPath();
+    ctx.ellipse(cx, cy, rx, ry, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
+
+  // ------------------------------------------------------------------------
+  // Cull box — un-project four viewport corners to a world-tile AABB.
   // ------------------------------------------------------------------------
   function computeCull(w, h) {
     var iso = G.iso;
-    // If the inverse projection isn't available (e.g. iso loaded out of order), fall back
-    // to the full grid so we never crash the loop — correctness over cull tightness.
     if (!iso || typeof iso.screenToWorld !== 'function') {
       aabb.minCol = 0; aabb.maxCol = COLS - 1;
       aabb.minRow = 0; aabb.maxRow = ROWS - 1;
       return;
     }
     var minCol = Infinity, maxCol = -Infinity, minRow = Infinity, maxRow = -Infinity;
-    // Four corners; screenToWorld returns {wx,wy} on the ground plane.
     var corners = TMP_CORNERS;
     corners[0].x = 0; corners[0].y = 0;
     corners[1].x = w; corners[1].y = 0;
@@ -270,28 +375,18 @@ window.GAME = window.GAME || {};
       if (p.wy > maxRow) maxRow = p.wy;
     }
     if (!ok) {
-      // screenToWorld unavailable — fall back to the entire grid (correctness over cull).
       aabb.minCol = 0; aabb.maxCol = COLS - 1;
       aabb.minRow = 0; aabb.maxRow = ROWS - 1;
       return;
     }
-    // Pad: base padding all sides; extra rows on the bottom (far) edge so tall towers
-    // whose footprint is just past the bottom of the screen still draw their crown.
     aabb.minCol = Math.floor(minCol) - CULL_PAD;
     aabb.maxCol = Math.ceil(maxCol) + CULL_PAD;
-    aabb.minRow = Math.floor(minRow) - CULL_PAD - CULL_RISE_ROWS; // top edge: towers rise up
+    aabb.minRow = Math.floor(minRow) - CULL_PAD - CULL_RISE_ROWS;
     aabb.maxRow = Math.ceil(maxRow) + CULL_PAD;
   }
-  // Pre-allocated corner scratch for computeCull (no per-frame alloc).
-  var TMP_CORNERS = [
-    { x: 0, y: 0 }, { x: 0, y: 0 }, { x: 0, y: 0 }, { x: 0, y: 0 }
-  ];
 
   // ------------------------------------------------------------------------
-  // Visible list — gather culled standing/animating buildings + the player unit.
-  // Buildings come from World.getBuildingAt(col,row) over the culled cell range
-  // (contract-only; no private "all buildings" accessor assumed). Each entry gets
-  // a ._dk depth key, then we sort ascending and blit back-to-front.
+  // Visible list — gather culled buildings + player unit, depth-sorted.
   // ------------------------------------------------------------------------
   function buildVisible() {
     visCount = 0;
@@ -307,32 +402,43 @@ window.GAME = window.GAME || {};
         for (var c = minC; c <= maxC; c++) {
           var b = World.getBuildingAt(c, r);
           if (!b) continue;
-          // A building can span a footprint; getBuildingAt may return the same object for
-          // several cells. De-dupe by only accepting it from its anchor cell (col===c,row===r).
           if (b.col !== c || b.row !== r) continue;
-          // 'respawning'/'rubble' still draw (rubble pile, rising shell); Assets decides the
-          // stage sprite. We render every non-null building in range.
-          push(b);
+          pushBuilding(b);
         }
       }
     }
 
-    // Player unit (kaiju). Drawn via unit.draw; depth-biased +1 so it sorts in front of a
-    // building sharing its tile (blueprint §5 depthKey note).
+    // Flyers (planes) — they live at altitude and are NOT in the grid cell scan.
+    // World exposes getFlyers() so we add them to the depth-sorted list separately.
+    var World2 = G.World;
+    if (World2 && typeof World2.getFlyers === 'function') {
+      var flyers = World2.getFlyers();
+      if (flyers) {
+        for (var fi = 0; fi < flyers.length; fi++) {
+          var fb = flyers[fi];
+          if (!fb) continue;
+          // De-dup: flyers are unique objects; always push (they won't be in grid scan).
+          pushBuilding(fb);
+        }
+      }
+    }
+
     if (player && player.pos) {
       pushPlayer(player);
     }
   }
 
-  // Push a building entry, computing its depth key from its world tile (z=0 base).
-  function push(b) {
+  // Push a building entry with the correct depth key.
+  // For flying buildings: use b.altitude as wz so they sort into the sky layer.
+  function pushBuilding(b) {
     dkProbe.wx = b.col;
     dkProbe.wy = b.row;
-    dkProbe.wz = 0;
+    // Flyers sort by altitude (world-Z), ground buildings sort at z=0.
+    dkProbe.wz = (b.flying && b.altitude != null) ? b.altitude : 0;
     dkProbe.depthBias = 0;
     var dk = G.iso.depthKey(dkProbe);
     var e = pool(visCount);
-    e.kind = 0;          // 0 = building
+    e.kind = 0;
     e.ref = b;
     e._dk = dk;
     visCount++;
@@ -344,32 +450,28 @@ window.GAME = window.GAME || {};
     dkProbe.wx = pos.wx;
     dkProbe.wy = pos.wy;
     dkProbe.wz = pos.z || 0;
-    dkProbe.depthBias = 1;             // kaiju sorts ahead of co-tile buildings
+    dkProbe.depthBias = 1;
     var dk = G.iso.depthKey(dkProbe);
     var e = pool(visCount);
-    e.kind = 1;          // 1 = kaiju
+    e.kind = 1;
     e.ref = unit;
     e._dk = dk;
     visCount++;
   }
 
-  // Reusable entry pool: grow on demand, never shrink. Each entry is a stable object.
   function pool(i) {
     var e = visible[i];
     if (!e) { e = { kind: 0, ref: null, _dk: 0 }; visible[i] = e; }
     return e;
   }
 
-  // Ascending depth-key comparator (back-to-front). Operates on the live slice only.
-  function byDepth(a, b) { return a._dk - b._dk; }
-
   // ------------------------------------------------------------------------
-  // Building blit — fetch the cached sprite from Assets and draw it anchored so the
-  // building's ground-tile apex (worldToScreen at z=0) meets the sprite's foot anchor.
-  // Assets owns the sprite cache keyed by tier|w|stage; we pass the building so Assets
-  // can read tier/footprint/stage/seed, with a positional fallback for a leaner API.
+  // Building blit — fetch the cached sprite from Assets.buildingSprite(b)
+  // and draw it anchored so the building's ground-tile apex meets the sprite foot.
+  // Assets v3 API: buildingSprite(b) — passes the whole building object so assets
+  // can read sprite/tier/footprint/stage/tint/seed etc.
+  // Fallback: positional buildingSprite(tier, fw, stage) for a v2 assets.js.
   // ------------------------------------------------------------------------
-  // Damage stage (0 healthy → 2 wrecked) from current HP fraction. World owns hp; we derive.
   function stageFor(b) {
     var f = b.maxHp ? (b.hp / b.maxHp) : 1;
     return f > 0.66 ? 0 : (f > 0.33 ? 1 : 2);
@@ -378,15 +480,23 @@ window.GAME = window.GAME || {};
   function drawBuilding(b) {
     var A = G.Assets;
     if (!A || typeof A.buildingSprite !== 'function') return;
-    // Positional call: Assets keys the cache by tier|footprintW|stage (NOT the object).
-    var fw = (b.footprint && b.footprint.w) || 1;
-    var spr = A.buildingSprite(b.tier, fw, stageFor(b));
+
+    // v3 contract: pass the full building object.
+    var spr = A.buildingSprite(b);
+
+    // Fallback to v2 positional API if the v3 call returned falsy
+    // (assets.js not yet updated — graceful degradation during integration).
+    if (!spr || !spr.width) {
+      var fw = (b.footprint && b.footprint.w) || 1;
+      spr = A.buildingSprite(b.tier, fw, stageFor(b));
+    }
     if (!spr || !spr.width) return;
 
-    var p = G.iso.worldToScreen(b.col, b.row, 0);
-    // Sprites are baked at device-pixel resolution; Assets stamps the CSS-unit size
-    // (_cssW/_cssH) and foot anchor (_anchorX/_anchorY). Blit at CSS size so the dpr
-    // transform isn't double-counted, and anchor the foot on the cell apex.
+    // For flying buildings: project at their altitude so they appear airborne.
+    var wz = (b.flying && b.altitude != null) ? b.altitude : 0;
+    var p = G.iso.worldToScreen(b.col, b.row, wz);
+
+    // _cssW/_cssH/_anchorX/_anchorY: the oversize/anchor fix (dpr blit).
     var cw = (spr._cssW != null) ? spr._cssW : spr.width;
     var ch = (spr._cssH != null) ? spr._cssH : spr.height;
     var ax = (spr._anchorX != null) ? spr._anchorX : (cw / 2);
@@ -395,7 +505,6 @@ window.GAME = window.GAME || {};
     var dx = p.x - ax;
     var dy = p.y - ay;
 
-    // Optional hit-flash / shake jitter the building itself reports (World writes b.shake).
     if (!reduced && b.shake) {
       var s = b.shake;
       dx += (((b.col * 13 + b.row * 7) & 3) - 1.5) * s;
@@ -406,15 +515,13 @@ window.GAME = window.GAME || {};
   }
 
   // ------------------------------------------------------------------------
-  // Kaiju blit — delegate to the unit's own iso renderer. We compute the screen
-  // anchor (foot centroid) and pass a constant scaleBucket (no dynamic zoom in W1).
-  // The unit draws its cached body + live glow overlay internally.
+  // Kaiju blit — delegate to unit.draw.
   // ------------------------------------------------------------------------
   function drawKaiju(unit) {
     if (typeof unit.draw !== 'function') return;
     var pos = unit.pos;
     var p = G.iso.worldToScreen(pos.wx, pos.wy, pos.z || 0);
-    unit.draw(ctx, p.x | 0, p.y | 0, 1); // scaleBucket = 1
+    unit.draw(ctx, p.x | 0, p.y | 0, 1);
   }
 
   // ------------------------------------------------------------------------
@@ -427,29 +534,26 @@ window.GAME = window.GAME || {};
     drawTouchControls(w, h);
   }
 
-  // Combo pip — a small ring at top-center that fills 0→1 as comboMult goes 1→MAX,
-  // tinted from gold→red. Hidden at rest (mult ≈ 1). Pure rects/arcs, no shadowBlur.
+  // Combo pip — small ring at mid-screen, fills as combo ramps.
   function drawComboPip(w, h) {
     var Eco = G.Economy;
     if (!Eco || typeof Eco.comboMult !== 'function') return;
     var mult = Eco.comboMult();
     var maxMult = (Cfg.COMBO && Cfg.COMBO.MAX) || 2.0;
-    var t = (mult - 1) / Math.max(0.0001, (maxMult - 1)); // 0..1
-    if (t <= 0.001) return;                                 // idle → nothing to show
+    var t = (mult - 1) / Math.max(0.0001, (maxMult - 1));
+    if (t <= 0.001) return;
     t = U.clamp(t, 0, 1);
 
     var cx = w * 0.5;
-    var cy = (h * 0.5) - 4;          // mid-screen, just above center (out of the action)
+    var cy = (h * 0.5) - 4;
     var R = 22;
     ctx.save();
     ctx.globalAlpha = 0.9;
-    // Track ring (dim).
     ctx.lineWidth = 5;
     ctx.strokeStyle = 'rgba(20,24,34,0.85)';
     ctx.beginPath();
     ctx.arc(cx, cy, R, 0, Math.PI * 2);
     ctx.stroke();
-    // Filled arc proportional to combo, gold→red.
     var col = mixHex('#ffd24a', '#ff4a4a', t);
     ctx.strokeStyle = col;
     ctx.lineWidth = 5;
@@ -457,7 +561,6 @@ window.GAME = window.GAME || {};
     ctx.beginPath();
     ctx.arc(cx, cy, R, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * t);
     ctx.stroke();
-    // Multiplier readout in the middle.
     ctx.globalAlpha = 1;
     ctx.fillStyle = col;
     ctx.font = '800 15px ui-monospace, Menlo, monospace';
@@ -467,37 +570,28 @@ window.GAME = window.GAME || {};
     ctx.restore();
   }
 
-  // Floating damage text — owned by GAME.FX. FX may draw it itself in world-space via
-  // FX.draw(ctx) OR expose a screen-space overlay. We prefer an explicit overlay hook so
-  // numbers stay crisp and un-shaken; if absent, FX.draw already handled it in-world.
+  // Floating damage text layer.
   function drawDamageText() {
     var FX = G.FX;
     if (!FX) return;
     if (typeof FX.drawOverlay === 'function') {
-      FX.drawOverlay(ctx);              // FX renders its floating-text layer, screen-space
+      FX.drawOverlay(ctx);
     } else if (typeof FX.drawText === 'function') {
-      FX.drawText(ctx);                 // alternate name some builds may use
+      FX.drawText(ctx);
     }
-    // If neither exists, damage text is part of FX.draw(ctx) (already called in-world) —
-    // nothing to do here. We never reach into FX's internal particle arrays.
   }
 
-  // Touch controls — render the floating joystick and SMASH disc reported by GAME.Input.
-  // Input owns the state (position/pressed/visibility); we only paint. Skipped entirely
-  // when Input reports non-touch (desktop) or the controls are inactive.
+  // Touch controls — joystick, SMASH disc, optional jump disc.
   function drawTouchControls(w, h) {
     var Input = G.Input;
     if (!Input) return;
-    // Only paint touch controls on touch devices.
     if (Input.isTouch === false) return;
 
     var j = Input.joystick;
     if (j && (j.active || j.visible)) {
-      // base position + knob; tolerate a few field-name conventions defensively.
       var bx = (j.baseX != null ? j.baseX : (j.cx != null ? j.cx : j.x)) || 0;
       var by = (j.baseY != null ? j.baseY : (j.cy != null ? j.cy : j.y)) || 0;
       var rad = (j.radius != null ? j.radius : (j.r != null ? j.r : 70));
-      // Input exposes a normalized offset dx/dy; derive the knob travel from it.
       var kx = (j.knobX != null ? j.knobX : (j.kx != null ? j.kx : bx + (j.dx || 0) * rad));
       var ky = (j.knobY != null ? j.knobY : (j.ky != null ? j.ky : by + (j.dy || 0) * rad));
       drawJoystick(bx, by, kx, ky, rad);
@@ -511,12 +605,21 @@ window.GAME = window.GAME || {};
       var pressed = !!(sb.pressed || sb.down || sb.active);
       drawSmash(sx, sy, sr, pressed);
     }
+
+    // Jump disc — only shown if Input exposes a jumpBtn (contract §3 / input §44).
+    var jb = Input.jumpBtn;
+    if (jb) {
+      var jx = (jb.x != null ? jb.x : (jb.cx != null ? jb.cx : (w - 200)));
+      var jy = (jb.y != null ? jb.y : (jb.cy != null ? jb.cy : (h - 92)));
+      var jr = (jb.r != null ? jb.r : (jb.radius != null ? jb.radius : 36));
+      var jPressed = !!(jb.pressed || jb.down || jb.active);
+      drawJump(jx, jy, jr, jPressed);
+    }
   }
 
-  // Floating joystick: translucent base ring + brighter knob.
+  // Floating joystick.
   function drawJoystick(bx, by, kx, ky, rad) {
     ctx.save();
-    // Base ring.
     ctx.beginPath();
     ctx.arc(bx, by, rad, 0, Math.PI * 2);
     ctx.fillStyle = 'rgba(20,28,46,0.30)';
@@ -524,7 +627,6 @@ window.GAME = window.GAME || {};
     ctx.lineWidth = 2;
     ctx.strokeStyle = 'rgba(120,160,220,0.45)';
     ctx.stroke();
-    // Knob.
     var kr = Math.max(18, rad * 0.42);
     ctx.beginPath();
     ctx.arc(kx, ky, kr, 0, Math.PI * 2);
@@ -536,7 +638,7 @@ window.GAME = window.GAME || {};
     ctx.restore();
   }
 
-  // SMASH disc: bottom-right, brightens when pressed.
+  // SMASH disc.
   function drawSmash(sx, sy, sr, pressed) {
     ctx.save();
     ctx.beginPath();
@@ -546,7 +648,6 @@ window.GAME = window.GAME || {};
     ctx.lineWidth = 3;
     ctx.strokeStyle = pressed ? 'rgba(255,200,180,0.95)' : 'rgba(255,140,120,0.7)';
     ctx.stroke();
-    // Label.
     ctx.fillStyle = 'rgba(255,255,255,0.92)';
     ctx.font = '800 ' + Math.round(sr * 0.46) + 'px system-ui, sans-serif';
     ctx.textAlign = 'center';
@@ -555,9 +656,26 @@ window.GAME = window.GAME || {};
     ctx.restore();
   }
 
+  // Jump disc — a green-tinted disc to the left of SMASH.
+  function drawJump(jx, jy, jr, pressed) {
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(jx, jy, jr, 0, Math.PI * 2);
+    ctx.fillStyle = pressed ? 'rgba(80,220,130,0.85)' : 'rgba(40,140,80,0.55)';
+    ctx.fill();
+    ctx.lineWidth = 2.5;
+    ctx.strokeStyle = pressed ? 'rgba(180,255,210,0.95)' : 'rgba(120,220,160,0.7)';
+    ctx.stroke();
+    ctx.fillStyle = 'rgba(255,255,255,0.92)';
+    ctx.font = '800 ' + Math.round(jr * 0.50) + 'px system-ui, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('JUMP', jx, jy + 1);
+    ctx.restore();
+  }
+
   // ------------------------------------------------------------------------
-  // Small color helpers (hex→hex lerp) for the combo pip tint. No allocation in
-  // steady state beyond a short string; only runs while a combo is active.
+  // Color helpers (hex lerp for combo pip tint).
   // ------------------------------------------------------------------------
   function hx2(h) {
     h = ('' + h).replace('#', '');
@@ -575,52 +693,61 @@ window.GAME = window.GAME || {};
   }
 
   // ------------------------------------------------------------------------
-  // PUBLIC: setPlayer(unit) — Main calls this once at boot with the active kaiju.
+  // PUBLIC API
   // ------------------------------------------------------------------------
   function setPlayer(unit) {
     player = unit || null;
   }
 
-  // ------------------------------------------------------------------------
-  // PUBLIC: frame(dt) — paint one frame. dt is seconds (clamped by Main).
-  // ------------------------------------------------------------------------
   function frame(dt) {
     if (!ensureCtx()) return;
 
     var w = cssW();
     var h = cssH();
 
-    // 1) Clear the full backing store in device px, transform-independent. We reset to
-    //    identity just for the clear so Main's DPR base transform is untouched afterward.
+    // 1) Clear the full backing store in device px, transform-independent.
     ctx.save();
     ctx.setTransform(1, 0, 0, 1, 0, 0);
     ctx.clearRect(0, 0, deviceW(), deviceH());
     ctx.restore();
 
-    // Re-assert crisp pixels (cheap; guards against external state churn).
     ctx.imageSmoothingEnabled = false;
 
-    // 2) Parallax skyline, untransformed. Scroll by camera.x (world units → pixels via the
-    //    layer speeds). camera.x may be undefined very early; default to 0.
+    // Read the environment phase once per frame.
+    var phase = envPhase();
+
+    // Camera scroll reference for parallax.
     var cam = G.camera;
     var camX = (cam && typeof cam.x === 'number') ? cam.x : 0;
-    drawSky(camX, w, h);
 
-    // Compute the world-tile cull AABB once per frame (used by ground + buildings).
+    // 2) Dynamic sky gradient (full screen, behind everything).
+    drawSkyClear(w, h, phase);
+
+    // 3) Celestial disc (sun or moon) above the horizon.
+    drawCelestialDisc(w, h, phase);
+
+    // 4) Parallax silhouette skyline layers.
+    drawSkyLayers(camX, w, h);
+
+    // Compute the world-tile cull AABB once per frame.
     computeCull(w, h);
 
-    // 3) Enter world space.
+    // 4b) Full-screen ambient tint rect (one rgba fill over the whole canvas).
+    drawAmbientTint(w, h, phase);
+
+    // 5) Enter world space.
     ctx.save();
     if (cam && typeof cam.apply === 'function') cam.apply(ctx);
 
-    // 4) Ground (island image or tiled diamond).
+    // 6) Ground (island image or tiled diamond).
     drawGround();
 
-    // 5) Visible list → depth sort → blit.
+    // 7) Contact-shadow pass (ground ellipses under kaiju and planes).
+    drawContactShadows();
+
+    // 8) Visible list → depth sort → blit.
     buildVisible();
     if (visCount > 1) {
-      // Sort only the live slice. We splice a temporary length so Array.sort touches just
-      // the populated entries, then the array retains its capacity (no realloc next frame).
       sortLive();
     }
     for (var i = 0; i < visCount; i++) {
@@ -629,19 +756,18 @@ window.GAME = window.GAME || {};
       else drawBuilding(e.ref);
     }
 
-    // 6) World-space FX (debris, particles, signature-attack effects) inside the transform.
+    // 9) World-space FX (debris, particles, signature-attack effects).
     var FX = G.FX;
     if (FX && typeof FX.draw === 'function') FX.draw(ctx);
 
-    // 7) Leave world space.
+    // 10) Leave world space.
     ctx.restore();
 
-    // 8) HUD overlay (untransformed): combo pip, floating damage text, touch controls.
+    // 11) HUD overlay (untransformed): combo pip, floating damage text, touch controls.
     drawHud(w, h);
   }
 
-  // Insertion sort over the live slice — for ~40-60 mostly-presorted entries this beats
-  // Array.prototype.sort (no comparator-call overhead, no temp array, stable, no GC).
+  // Insertion sort over the live slice (mostly-presorted; beats Array.sort for ~40-60 items).
   function sortLive() {
     for (var i = 1; i < visCount; i++) {
       var cur = visible[i];

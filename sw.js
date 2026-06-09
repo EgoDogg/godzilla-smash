@@ -1,8 +1,9 @@
 /* Godzilla Smash — offline service worker (cache-first app shell) */
-const CACHE = 'gz-v3';
+const CACHE = 'gz-v4';
 const ASSETS = ['./', './index.html', './manifest.json', './icon-512.png', './icon-192.png',
-  './js/config.js', './js/utils.js', './js/iso.js', './js/assets.js', './js/audio.js', './js/economy.js',
-  './js/entities.js', './js/world.js', './js/input.js', './js/render.js', './js/ui.js', './js/game.js'];
+  './js/config.js', './js/utils.js', './js/iso.js', './js/assets.js', './js/archetypes.js', './js/sprites_special.js',
+  './js/audio.js', './js/economy.js', './js/entities.js', './js/world.js', './js/world_events.js',
+  './js/input.js', './js/render.js', './js/ui.js', './js/game.js'];
 
 self.addEventListener('install', (e) => {
   e.waitUntil(caches.open(CACHE).then((c) => c.addAll(ASSETS)).then(() => self.skipWaiting()));

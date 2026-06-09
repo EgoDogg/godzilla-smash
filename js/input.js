@@ -1,14 +1,15 @@
 /* GAME.Input — Pointer + keyboard collapsed into ONE intent struct (blueprint §6).
  *
- * Public surface (API contract §2):
+ * Public surface (API contract §3):
  *   GAME.Input.init(canvas, camera)
- *   GAME.Input.consume() -> { moveX, moveY, attack:bool, target:{col,row}|null }
+ *   GAME.Input.consume() -> { moveX, moveY, attack:bool, target:{col,row}|null, jump:bool }
  *   GAME.Input.isTouch        (bool — true once any touch/pen pointer is seen)
  *   GAME.Input.facing         (0..7 — last meaningful heading, for the player/HUD)
  *
  * Control-visual state for the renderer (read-only, read once per frame):
  *   GAME.Input.joystick = { active, baseX, baseY, dx, dy }   // screen-space, normalized dx/dy
  *   GAME.Input.smashBtn = { x, y, r }                         // screen-space disc
+ *   GAME.Input.jumpBtn  = { x, y, r }                         // screen-space jump disc
  *   GAME.Input.hovered  = {col,row}|null                     // desktop hover highlight
  *
  * Deps (called by name, never constructed here):
@@ -32,6 +33,8 @@
  *     cooldown is the economy/kaiju's job, not Input's.
  *   - `target` is the clicked/SMASH-resolved building cell (or null); it is also one-shot,
  *     cleared on consume so a stale target never re-fires.
+ *   - `jump` is edge-true for exactly ONE consume(): it latches on Shift/KeyJ / jump-disc-press,
+ *     and clears the instant consume() reads it. Rate-gating is the kaiju's job.
  */
 window.GAME = window.GAME || {};
 (function (G) {
@@ -43,7 +46,9 @@ window.GAME = window.GAME || {};
   var JOY_RADIUS = 70;     // px throw of the floating stick
   var JOY_DEADZONE = 0.18; // fraction of radius ignored near center
   var SMASH_MIN = 64;      // min SMASH disc diameter (so radius >= 32)
+  var JUMP_MIN = 56;       // min JUMP disc diameter (so radius >= 28)
   var LEFT_ZONE = 0.55;    // left 55% of width spawns the joystick
+  var RIGHT_ZONE = 0.55;   // right 55% of width is the button area (SMASH/JUMP)
   var FACE_AHEAD_PX = 28;  // how far ahead (world px) we probe a faced building
   var NEAR_TARGET_PX = 40; // fallback: nearest standing building within this world-px
 
@@ -56,6 +61,7 @@ window.GAME = window.GAME || {};
   // Desired world-space move direction, already un-projected through iso.
   var moveX = 0, moveY = 0;
   var attackLatched = false;          // edge-true; cleared on consume
+  var jumpLatched = false;            // edge-true; cleared on consume
   var pendingTarget = null;           // {col,row}; cleared on consume
 
   // ---- Public visual state ----------------------------------------------------
@@ -63,15 +69,18 @@ window.GAME = window.GAME || {};
   Input.facing = 2;                   // default look forward (+wy); see facing table below
   Input.joystick = { active: false, baseX: 0, baseY: 0, dx: 0, dy: 0 };
   Input.smashBtn = { x: 0, y: 0, r: 0 };
+  Input.jumpBtn = { x: 0, y: 0, r: 0 };
   Input.hovered = null;
 
-  // ---- Pointer bookkeeping (two-thumb: joystick id vs smash id) ---------------
+  // ---- Pointer bookkeeping (multi-thumb: joystick id vs smash id vs jump id) -----
   var joyPointerId = null;            // pointerId driving the joystick
   var joyCurX = 0, joyCurY = 0;       // current touch position for that pointer
   var smashPointerId = null;          // pointerId holding the SMASH disc
+  var jumpPointerId = null;           // pointerId holding the JUMP disc
 
-  // ---- Keyboard state (8-way digital) -----------------------------------------
+  // ---- Keyboard state (8-way digital + jump) --------------------------------
   var keyUp = false, keyDown = false, keyLeft = false, keyRight = false;
+  var keyJump = false;                // Shift or KeyJ
 
   /* --------------------------------------------------------------------------
    * SCREEN → WORLD direction mapping  (blueprint §6: "up-screen = forward (+wy)").
@@ -128,16 +137,31 @@ window.GAME = window.GAME || {};
   }
 
   function layoutSmash() {
-    // Fixed bottom-right disc, >=64px, inset from safe edges.
+    // Fixed bottom-right discs: SMASH (lower) and JUMP (upper).
+    // Both >=min px, inset from safe edges. JUMP stacked above SMASH.
     var r = Math.max(SMASH_MIN / 2, Math.round(Math.min(W, H) * 0.085));
-    var inset = r + 26;
+    var insetX = r + 26;
+    var insetY = r + 26;
+
     Input.smashBtn.r = r;
-    Input.smashBtn.x = W - inset;
-    Input.smashBtn.y = H - inset;
+    Input.smashBtn.x = W - insetX;
+    Input.smashBtn.y = H - insetY;
+
+    var rj = Math.max(JUMP_MIN / 2, Math.round(Math.min(W, H) * 0.075));
+    var gapVertical = r + rj + 24;  // space between disc centres
+    Input.jumpBtn.r = rj;
+    Input.jumpBtn.x = W - insetX;
+    Input.jumpBtn.y = H - insetY - gapVertical;
   }
 
   function inSmash(x, y) {
     var b = Input.smashBtn;
+    var dx = x - b.x, dy = y - b.y;
+    return (dx * dx + dy * dy) <= (b.r * b.r);
+  }
+
+  function inJump(x, y) {
+    var b = Input.jumpBtn;
     var dx = x - b.x, dy = y - b.y;
     return (dx * dx + dy * dy) <= (b.r * b.r);
   }
@@ -241,7 +265,14 @@ window.GAME = window.GAME || {};
     var p = localPoint(e);
 
     if (Input.isTouch) {
-      // ---- Touch: two-thumb. SMASH disc claims its own pointerId. ----
+      // ---- Touch: multi-thumb. JUMP and SMASH discs claim their own pointerIds. ----
+      if (inJump(p.x, p.y) && jumpPointerId === null) {
+        jumpPointerId = e.pointerId;
+        fireJump();                         // press-to-jump (rate-gated downstream)
+        capture(e);
+        e.preventDefault();
+        return;
+      }
       if (inSmash(p.x, p.y) && smashPointerId === null) {
         smashPointerId = e.pointerId;
         fireAttack();                       // press-to-smash (rate-gated downstream)
@@ -262,7 +293,7 @@ window.GAME = window.GAME || {};
         e.preventDefault();
         return;
       }
-      // Touch elsewhere (e.g. right zone, not on SMASH): ignore but still prevent
+      // Touch elsewhere (e.g. right zone, not on a button): ignore but still prevent
       // the browser's default gesture on the canvas.
       e.preventDefault();
       return;
@@ -282,7 +313,7 @@ window.GAME = window.GAME || {};
   }
 
   function onPointerMove(e) {
-    if (!isControlPointer(e) && e.pointerId !== joyPointerId && e.pointerId !== smashPointerId) {
+    if (!isControlPointer(e) && e.pointerId !== joyPointerId && e.pointerId !== smashPointerId && e.pointerId !== jumpPointerId) {
       // Move that isn't over the canvas and isn't one of our captured control
       // pointers → ignore (let DOM handle hover/scroll).
       return;
@@ -298,6 +329,12 @@ window.GAME = window.GAME || {};
 
     if (e.pointerId === smashPointerId) {
       // Holding SMASH; nothing positional to do, just swallow.
+      e.preventDefault();
+      return;
+    }
+
+    if (e.pointerId === jumpPointerId) {
+      // Holding JUMP; nothing positional to do, just swallow.
       e.preventDefault();
       return;
     }
@@ -322,12 +359,19 @@ window.GAME = window.GAME || {};
       e.preventDefault();
       return;
     }
+    if (e.pointerId === jumpPointerId) {
+      jumpPointerId = null;
+      release(e);
+      e.preventDefault();
+      return;
+    }
   }
 
   function onPointerCancel(e) {
     // Treat cancel/leave like up for our control pointers (robust against OS gestures).
     if (e.pointerId === joyPointerId) { releaseJoystick(); release(e); return; }
     if (e.pointerId === smashPointerId) { smashPointerId = null; release(e); return; }
+    if (e.pointerId === jumpPointerId) { jumpPointerId = null; release(e); return; }
   }
 
   function capture(e) { try { canvas.setPointerCapture(e.pointerId); } catch (_) {} }
@@ -366,7 +410,7 @@ window.GAME = window.GAME || {};
   }
 
   /* ==========================================================================
-   * KEYBOARD  (WASD / arrows → 8-way digital, rotated into iso; Space = attack)
+   * KEYBOARD  (WASD / arrows → 8-way digital, rotated into iso; Space = attack; Shift/J = jump)
    * ======================================================================== */
   function onKeyDown(e) {
     switch (e.code) {
@@ -377,6 +421,11 @@ window.GAME = window.GAME || {};
       case 'Space':
         if (e.repeat) return;          // ignore auto-repeat (one attack per press)
         fireAttack();
+        e.preventDefault();
+        return;
+      case 'ShiftLeft': case 'ShiftRight': case 'KeyJ':
+        if (e.repeat) return;          // ignore auto-repeat (one jump per press)
+        fireJump();
         e.preventDefault();
         return;
       default: return;
@@ -391,6 +440,9 @@ window.GAME = window.GAME || {};
       case 'KeyS': case 'ArrowDown':  keyDown = false; break;
       case 'KeyA': case 'ArrowLeft':  keyLeft = false; break;
       case 'KeyD': case 'ArrowRight': keyRight = false; break;
+      case 'ShiftLeft': case 'ShiftRight': case 'KeyJ':
+        keyJump = false;
+        return;
       default: return;
     }
     updateKeyboardVector();
@@ -408,9 +460,11 @@ window.GAME = window.GAME || {};
   }
 
   /* ==========================================================================
-   * ATTACK latching + facing helpers
+   * ATTACK latching + JUMP latching + facing helpers
    * ======================================================================== */
   function fireAttack() { attackLatched = true; }
+
+  function fireJump() { jumpLatched = true; }
 
   function faceTowardCell(col, row) {
     var p = playerWorldPos();
@@ -476,13 +530,15 @@ window.GAME = window.GAME || {};
 
   function clearAllHeld() {
     keyUp = keyDown = keyLeft = keyRight = false;
+    keyJump = false;
     moveX = 0; moveY = 0;
     if (joyPointerId !== null) releaseJoystick();
     smashPointerId = null;
+    jumpPointerId = null;
   }
 
   // Reusable intent object — one allocation total, never per-frame.
-  var _intent = { moveX: 0, moveY: 0, attack: false, target: null };
+  var _intent = { moveX: 0, moveY: 0, attack: false, target: null, jump: false };
 
   Input.consume = function () {
     _intent.moveX = moveX;
@@ -490,6 +546,7 @@ window.GAME = window.GAME || {};
 
     var atk = attackLatched;
     var tgt = pendingTarget;
+    var jmp = jumpLatched;
 
     if (atk && !tgt) {
       // No explicit standing click-target: resolve faced → nearest at fire time,
@@ -499,10 +556,12 @@ window.GAME = window.GAME || {};
 
     _intent.attack = atk;
     _intent.target = tgt;
+    _intent.jump = jmp;
 
     // One-shot edge signals reset after each consume.
     attackLatched = false;
     pendingTarget = null;
+    jumpLatched = false;
 
     return _intent;
   };

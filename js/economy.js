@@ -1,49 +1,69 @@
-/* GAME.Economy — money, claws, evolutions, titans, active-unit power, combo, save v2, shop DOM.
- * Deps: GAME.Config (all balance/costs/forms/titans), GAME.Utils (fmt/safeSave/safeLoad/clamp),
- *       GAME.Audio (buy/evolve/recruit/deny SFX + mute), and the existing #shop DOM in index.html.
+/* GAME.Economy — money, claws, active-unit power, combo, save v3, shop DOM.
+ * Deps: GAME.Config (Config.FORMS + all balance/costs), GAME.Utils (fmt/safeSave/safeLoad/clamp),
+ *       GAME.Audio (buy/evolve/recruit/deny SFX + mute), existing #shop DOM in index.html.
  *
- * Single source of truth for the economy: power formula, combo multiplier, the persisted save,
- * all purchase gating, and the shop UI (reuses #shop / #shop-tabs / #shop-body / .shop-item CSS).
+ * v3 changes (contract §0 + §3):
+ *   - attackPower() = activeForm.base × CLAWS_MULT^clawsLevel  (UNIVERSAL claws — every form)
+ *   - activeUnit() / shop built from Config.FORMS grouped by family
+ *   - Save key 'godzilla-save-v3' (FRESH — no migration from v2)
+ *   - Default save: money 0, ownedFormIds ['gz2014'], activeFormId 'gz2014'
+ *   - Shop: Evolutions tab = wyrm (Godzilla) forms gated in tier order
+ *           Characters tab = the 4 Titan families (buy base form to unlock character,
+ *                            then buy each evolution in tier order; switch any owned form)
  */
 window.GAME = window.GAME || {};
 (function (G) {
   'use strict';
 
   var Cfg = G.Config;
-  var U = G.Utils;
+  var U   = G.Utils;
 
-  // ---- Persistent state (mirrors Save v2 in the blueprint §3) -------------------------------
-  // money         : current cash (HP===payout, so this scales into the trillions)
-  // clawsLevel    : Stronger-Claws purchases (each DOUBLES Godzilla damage)
-  // evoTier       : Godzilla evolution index into Cfg.EVOLUTIONS (0..4), gated by cost + order
-  // ownedTitans   : array of titan ids the player has recruited
-  // activeChar    : 'gz' (Godzilla) or a titan id — which unit is currently controlled
-  // maxReachedRow : deepest row reached (frontier); World clamps movement, UI reads depth
-  // world2Unlocked: capstone purchase → World 2 "Coming soon" stub
-  // muted         : persisted audio-mute flag (Economy owns it; Audio.mute applies it)
+  // ---- FORMS helpers -------------------------------------------------------------------------
+  // formDef(id) — look up a form by id in Config.FORMS.
+  function formDef(id) {
+    var F = Cfg.FORMS;
+    for (var i = 0; i < F.length; i++) { if (F[i].id === id) return F[i]; }
+    return null;
+  }
+
+  // formsByFamily(family) — all forms with matching family, sorted ascending by tier.
+  function formsByFamily(family) {
+    return Cfg.FORMS.filter(function (f) { return f.family === family; })
+                    .sort(function (a, b) { return a.tier - b.tier; });
+  }
+
+  // wyrm forms = Godzilla evolution chain (family:'wyrm')
+  function wyrmForms() { return formsByFamily('wyrm'); }
+
+  // Titan families = the four non-wyrm families, each as an ordered array of forms.
+  var TITAN_FAMILIES = ['mothra', 'ghidorah', 'rodan', 'mecha'];
+
+  // ---- Persistent state ----------------------------------------------------------------------
+  // ownedFormIds  : array of form ids the player owns
+  // activeFormId  : the id of the currently active form
+  // clawsLevel    : Stronger-Claws purchases (each ×CLAWS_MULT = ×2 by default)
+  // maxReachedRow : frontier depth
+  // world2Unlocked: capstone purchase flag
+  // muted         : persisted audio-mute flag
   var state = {
-    money: 0,
-    clawsLevel: 0,
-    evoTier: 0,
-    ownedTitans: [],
-    activeChar: 'gz',
-    maxReachedRow: 0,
+    money:          0,
+    clawsLevel:     0,
+    ownedFormIds:   ['gz2014'],
+    activeFormId:   'gz2014',
+    maxReachedRow:  0,
     world2Unlocked: false,
-    muted: false
+    muted:          false
   };
 
-  // HUD dirty flag — UI module polls this and repaints money/form readouts when set.
+  // HUD dirty flag — UI polls and repaints when set.
   var hudDirty = true;
 
-  // ---- Combo (the ONLY damage multiplier; lives here as the single source of truth) ----------
-  // comboT counts DOWN in ms from COMBO.WINDOW_MS after each banked destroy; while > 0 the
-  // multiplier ramps by COMBO.STEP per destroy toward COMBO.MAX. When it hits 0 the chain resets.
-  var comboT = 0;            // ms remaining in the current combo window
-  var comboMultVal = 1;      // current multiplier, clamped to [1, COMBO.MAX]
+  // ---- Combo ---------------------------------------------------------------------------------
+  var comboT       = 0;   // ms remaining in the current combo window
+  var comboMultVal = 1;   // current multiplier, clamped to [1, COMBO.MAX]
 
   // ===========================================================================================
-  // Helpers — safe Audio dispatch (the contract guarantees evolve/recruit/mute; buy/deny are
-  // optional flourishes, so we guard every call and never throw if Audio or a method is absent).
+  // Audio helpers
   // ===========================================================================================
   function audio(method, arg) {
     var A = G.Audio;
@@ -51,57 +71,51 @@ window.GAME = window.GAME || {};
       try { A[method](arg); } catch (e) { /* never let SFX break gameplay */ }
     }
   }
-  // "buy" / "deny" are not in the hard contract; fall back gracefully if unavailable.
   function sfxBuy()  { if (G.Audio && typeof G.Audio.buy  === 'function') audio('buy');  else audio('recruit'); }
-  function sfxDeny() { if (G.Audio && typeof G.Audio.deny === 'function') audio('deny'); /* else: silent */ }
-
-  function evoDef(tier) { return Cfg.EVOLUTIONS[tier]; }
-  function titanDef(id) {
-    var T = Cfg.TITANS;
-    for (var i = 0; i < T.length; i++) { if (T[i].id === id) return T[i]; }
-    return null;
-  }
+  function sfxDeny() { if (G.Audio && typeof G.Audio.deny === 'function') audio('deny'); }
 
   // ===========================================================================================
-  // Power
+  // Power  (contract §0 — UNIVERSAL claws)
+  // attackPower() = activeForm.base × CLAWS_MULT^clawsLevel
   // ===========================================================================================
-
-  // Godzilla power = START_ATTACK * EVOLUTIONS[evoTier].mult * CLAWS_MULT^clawsLevel.
-  function godzillaPower() {
-    return Cfg.START_ATTACK * evoDef(state.evoTier).mult * Math.pow(Cfg.CLAWS_MULT, state.clawsLevel);
-  }
-
-  // attackPower() -> n : Godzilla uses the evo/claws formula; an active Titan uses its flat base.
   function attackPower() {
-    if (state.activeChar === 'gz') return godzillaPower();
-    var t = titanDef(state.activeChar);
-    return t ? t.base : godzillaPower(); // defensive: unknown active char falls back to Godzilla
+    var f = formDef(state.activeFormId);
+    var base = f ? f.base : Cfg.START_ATTACK;
+    return base * Math.pow(Cfg.CLAWS_MULT, state.clawsLevel);
   }
 
-  // activeUnit() -> {kind, formId|titanId, signature, base}
+  // activeUnit() → {kind, formId, family, signature, base, attack}
   // Describes the currently controlled unit for the entities/render layer.
-  //  - Godzilla:  {kind:'gz',    formId, signature:'breath', base}
-  //  - Titan:     {kind:titanId, titanId, signature:<sig>,   base}
+  //   kind = activeFormId (always a form id; callers that previously tested ==='gz' should
+  //          check family==='wyrm' instead, but 'gz2014'/'burning'/etc. are distinct)
+  //   For backward compat with callers that tested kind==='gz', expose formId as well.
   function activeUnit() {
-    if (state.activeChar === 'gz') {
-      var ev = evoDef(state.evoTier);
-      return { kind: 'gz', formId: ev.id, signature: 'breath', base: godzillaPower() };
+    var f = formDef(state.activeFormId);
+    if (!f) {
+      // Defensive: fall back to first wyrm form.
+      var fallback = wyrmForms()[0];
+      return { kind: fallback.id, formId: fallback.id, family: fallback.family,
+               signature: fallback.attack ? fallback.attack.kind : 'beam',
+               base: attackPower(), attack: fallback.attack };
     }
-    var t = titanDef(state.activeChar);
-    if (t) return { kind: t.id, titanId: t.id, signature: t.sig, base: t.base };
-    // Fallback (should not happen): treat as Godzilla so callers always get a valid unit.
-    var ev0 = evoDef(state.evoTier);
-    return { kind: 'gz', formId: ev0.id, signature: 'breath', base: godzillaPower() };
+    // For entities.js compatibility: if the form is wyrm family, expose kind='gz' as well
+    // so legacy callers can still test kind==='gz'.
+    var kind = (f.family === 'wyrm') ? 'gz' : f.id;
+    return {
+      kind:      kind,
+      formId:    f.id,
+      family:    f.family,
+      signature: f.attack ? f.attack.kind : 'beam',
+      base:      attackPower(),
+      attack:    f.attack
+    };
   }
 
   // ===========================================================================================
   // Combo
   // ===========================================================================================
-
-  // comboMult() -> current multiplier in [1, COMBO.MAX].
   function comboMult() { return comboMultVal; }
 
-  // tickCombo(dtMs) : decay the combo window; reset to ×1 when it lapses.
   function tickCombo(dtMs) {
     if (comboT > 0) {
       comboT -= dtMs;
@@ -109,7 +123,6 @@ window.GAME = window.GAME || {};
     }
   }
 
-  // Bump the combo on a successful destroy: refresh the window and step the multiplier up.
   function bumpCombo() {
     var C = Cfg.COMBO;
     comboT = C.WINDOW_MS;
@@ -119,16 +132,11 @@ window.GAME = window.GAME || {};
   // ===========================================================================================
   // Banking destroys
   // ===========================================================================================
-
-  // bankDestroy(rowHp) -> payout
-  // Called by World.hitBuilding when a building is fully destroyed. rowHp IS the base payout
-  // (HP===payout). We multiply by the live combo, add to money, step the combo, persist, and
-  // flag the HUD. Returns the actual credited payout (so callers can show floaters).
   function bankDestroy(rowHp) {
-    var base = Math.max(0, Math.floor(rowHp));
+    var base   = Math.max(0, Math.floor(rowHp));
     var payout = Math.floor(base * comboMultVal);
     state.money += payout;
-    bumpCombo();      // reward chaining: step AFTER computing this payout
+    bumpCombo();
     hudDirty = true;
     save();
     return payout;
@@ -137,26 +145,35 @@ window.GAME = window.GAME || {};
   // ===========================================================================================
   // Affordability + costs
   // ===========================================================================================
-
   function canAfford(n) { return state.money >= n; }
 
-  // clawsCost() : cost of the NEXT Stronger-Claws level = round(CLAWS_BASE * CLAWS_GROWTH^level).
   function clawsCost() {
     return Math.round(Cfg.CLAWS_BASE * Math.pow(Cfg.CLAWS_GROWTH, state.clawsLevel));
   }
 
-  // nextEvo() -> evolution def for the next tier, or null if already at the final form.
-  function nextEvo() {
-    var n = state.evoTier + 1;
-    return n < Cfg.EVOLUTIONS.length ? Cfg.EVOLUTIONS[n] : null;
+  // ===========================================================================================
+  // Ownership helpers
+  // ===========================================================================================
+  function ownsForm(id) { return state.ownedFormIds.indexOf(id) !== -1; }
+
+  // isFormUnlocked(form) — a form can be purchased when:
+  //   - all lower-tier forms in its family are already owned
+  //   - it is not yet owned
+  function isFormUnlocked(form) {
+    if (ownsForm(form.id)) return false; // already owned
+    var chain = formsByFamily(form.family);
+    // Every form with a lower tier index must be owned.
+    for (var i = 0; i < chain.length; i++) {
+      if (chain[i].tier >= form.tier) break;
+      if (!ownsForm(chain[i].id)) return false;
+    }
+    return true; // immediate next in order
   }
 
   // ===========================================================================================
-  // Purchases — each deducts money, mutates state, plays SFX, persists, flags HUD, refreshes shop.
-  // Every buy returns true on success / false on denial (insufficient funds or invalid request).
+  // Purchases
   // ===========================================================================================
 
-  // buyClaws() : +1 Stronger-Claws level (doubles Godzilla damage).
   function buyClaws() {
     var cost = clawsCost();
     if (!canAfford(cost)) { sfxDeny(); return false; }
@@ -167,52 +184,39 @@ window.GAME = window.GAME || {};
     return true;
   }
 
-  // buyEvolution() : advance Godzilla one evolution tier. Gated by cost AND strict order
-  // (you can only buy the immediate next tier).
-  function buyEvolution() {
-    var next = nextEvo();
-    if (!next) { sfxDeny(); return false; }            // already maxed
-    if (!canAfford(next.cost)) { sfxDeny(); return false; }
-    state.money -= next.cost;
-    state.evoTier += 1;
-    audio('evolve');                                    // dedicated evolution SFX
-    afterPurchase();
-    return true;
-  }
-
-  // buyTitan(id) : recruit a Titan (one-time purchase). Does NOT auto-switch — the player
-  // switches via switchChar(id) afterward (matches the shop's "buy then switch" flow).
-  function buyTitan(id) {
-    var t = titanDef(id);
-    if (!t) { sfxDeny(); return false; }
-    if (state.ownedTitans.indexOf(id) !== -1) { sfxDeny(); return false; } // already owned
-    if (!canAfford(t.cost)) { sfxDeny(); return false; }
-    state.money -= t.cost;
-    state.ownedTitans.push(id);
-    audio('recruit');                                   // dedicated recruit SFX
-    afterPurchase();
-    return true;
-  }
-
-  // switchChar(id) : set the active controlled unit. 'gz' is always available; a titan id must
-  // be owned. Returns true if the active char actually changed to a valid unit.
-  function switchChar(id) {
-    if (id === 'gz') {
-      if (state.activeChar === 'gz') return false;      // already active
-      state.activeChar = 'gz';
-      sfxBuy();
-      afterPurchase();
-      return true;
+  // buyForm(id) — buy any form that passes the unlock gate.
+  //   Wyrm forms: play 'evolve' SFX (Godzilla evolution).
+  //   Titan base forms (tier 1): play 'recruit' SFX (new character unlocked).
+  //   Titan evolution forms: play 'evolve' SFX.
+  function buyForm(id) {
+    var f = formDef(id);
+    if (!f) { sfxDeny(); return false; }
+    if (!isFormUnlocked(f)) { sfxDeny(); return false; }
+    if (!canAfford(f.cost)) { sfxDeny(); return false; }
+    state.money -= f.cost;
+    state.ownedFormIds.push(id);
+    var chain = formsByFamily(f.family);
+    var isBaseForm = (chain[0] && chain[0].id === f.id);
+    if (f.family !== 'wyrm' && isBaseForm) {
+      audio('recruit');
+    } else {
+      audio('evolve');
     }
-    if (state.ownedTitans.indexOf(id) === -1) { sfxDeny(); return false; } // not owned
-    if (state.activeChar === id) return false;          // already active
-    state.activeChar = id;
+    afterPurchase();
+    return true;
+  }
+
+  // switchForm(id) — switch active form to any owned form.
+  function switchForm(id) {
+    if (!ownsForm(id)) { sfxDeny(); return false; }
+    if (state.activeFormId === id) return false; // already active
+    state.activeFormId = id;
     sfxBuy();
     afterPurchase();
     return true;
   }
 
-  // buyWorld2() : capstone unlock (12B). On success the Worlds tab shows the "Coming soon" stub.
+  // buyWorld2() — capstone unlock.
   function buyWorld2() {
     if (state.world2Unlocked) { sfxDeny(); return false; }
     if (!canAfford(Cfg.WORLD2_COST)) { sfxDeny(); return false; }
@@ -223,102 +227,110 @@ window.GAME = window.GAME || {};
     return true;
   }
 
-  // Common tail for every purchase: persist, flag HUD, and repaint the open shop.
+  // Legacy shim: buyEvolution() and buyTitan()/switchChar() for any caller that hasn't yet
+  // been updated to the v3 API. They delegate to buyForm/switchForm.
+  function buyEvolution() {
+    var chain = wyrmForms();
+    for (var i = 0; i < chain.length; i++) {
+      if (isFormUnlocked(chain[i])) return buyForm(chain[i].id);
+    }
+    sfxDeny(); return false;
+  }
+
+  function buyTitan(id) { return buyForm(id); }
+
+  function switchChar(id) {
+    // v2 used 'gz' as the key for Godzilla. Map it to the first owned wyrm form.
+    if (id === 'gz') {
+      var chain = wyrmForms();
+      // Switch to the highest-tier owned wyrm form (most natural for "switch to Godzilla").
+      var best = null;
+      for (var i = chain.length - 1; i >= 0; i--) {
+        if (ownsForm(chain[i].id)) { best = chain[i]; break; }
+      }
+      if (!best) { sfxDeny(); return false; }
+      return switchForm(best.id);
+    }
+    return switchForm(id);
+  }
+
   function afterPurchase() {
     hudDirty = true;
     save();
     refreshShop();
-    // Keep the on-screen unit's form/character in sync (position-preserving).
     if (window.GAME.Main && window.GAME.Main.syncForm) window.GAME.Main.syncForm();
   }
 
   // ===========================================================================================
-  // Save / Load (v2 only — no v1 migration)
+  // Save / Load  (v3 FRESH — no migration from v2)
   // ===========================================================================================
+  var SAVE_KEY = 'godzilla-save-v3';
 
   function save() {
-    U.safeSave(Cfg.saveKey, {
-      v: 2,
-      money: state.money,
-      clawsLevel: state.clawsLevel,
-      evoTier: state.evoTier,
-      ownedTitans: state.ownedTitans.slice(),
-      activeChar: state.activeChar,
-      maxReachedRow: state.maxReachedRow,
+    U.safeSave(SAVE_KEY, {
+      v: 3,
+      money:          state.money,
+      clawsLevel:     state.clawsLevel,
+      ownedFormIds:   state.ownedFormIds.slice(),
+      activeFormId:   state.activeFormId,
+      maxReachedRow:  state.maxReachedRow,
       world2Unlocked: state.world2Unlocked,
-      muted: state.muted
+      muted:          state.muted
     });
   }
 
-  // load() -> bool. Returns false (and leaves defaults intact) when there is no save or it isn't
-  // v2 — v1 saves are ignored, not migrated. Validates/sanitizes every field defensively.
+  // load() → bool. Returns false (leaving fresh defaults) when no v3 save exists.
+  // Validates every field defensively; ignores v2 and earlier saves.
   function load() {
-    var s = U.safeLoad(Cfg.saveKey);
-    if (!s || s.v !== 2) return false;
+    var s = U.safeLoad(SAVE_KEY);
+    if (!s || s.v !== 3) return false;
 
-    state.money = (typeof s.money === 'number' && isFinite(s.money)) ? Math.max(0, s.money) : 0;
+    state.money      = (typeof s.money === 'number' && isFinite(s.money)) ? Math.max(0, s.money) : 0;
     state.clawsLevel = (s.clawsLevel | 0) >= 0 ? (s.clawsLevel | 0) : 0;
 
-    var et = s.evoTier | 0;
-    state.evoTier = U.clamp(et, 0, Cfg.EVOLUTIONS.length - 1);
-
-    // Keep only known titan ids, de-duplicated, order preserved.
-    state.ownedTitans = [];
-    if (Array.isArray(s.ownedTitans)) {
-      for (var i = 0; i < s.ownedTitans.length; i++) {
-        var id = s.ownedTitans[i];
-        if (titanDef(id) && state.ownedTitans.indexOf(id) === -1) state.ownedTitans.push(id);
+    // ownedFormIds: keep only known form ids, de-duplicated, ensure gz2014 is always present.
+    var owned = [];
+    if (Array.isArray(s.ownedFormIds)) {
+      for (var i = 0; i < s.ownedFormIds.length; i++) {
+        var id = s.ownedFormIds[i];
+        if (formDef(id) && owned.indexOf(id) === -1) owned.push(id);
       }
     }
+    if (owned.indexOf('gz2014') === -1) owned.unshift('gz2014');
+    state.ownedFormIds = owned;
 
-    // activeChar must be 'gz' or an owned titan; otherwise fall back to Godzilla.
-    if (s.activeChar === 'gz' || state.ownedTitans.indexOf(s.activeChar) !== -1) {
-      state.activeChar = s.activeChar;
+    // activeFormId must be an owned form; otherwise fall back to gz2014.
+    if (typeof s.activeFormId === 'string' && owned.indexOf(s.activeFormId) !== -1) {
+      state.activeFormId = s.activeFormId;
     } else {
-      state.activeChar = 'gz';
+      state.activeFormId = 'gz2014';
     }
 
-    state.maxReachedRow = U.clamp(s.maxReachedRow | 0, 0, Cfg.GRID.rows - 1);
+    state.maxReachedRow  = U.clamp(s.maxReachedRow | 0, 0, Cfg.GRID.rows - 1);
     state.world2Unlocked = !!s.world2Unlocked;
-    state.muted = !!s.muted;
+    state.muted          = !!s.muted;
 
     hudDirty = true;
     return true;
   }
 
   // ===========================================================================================
-  // Mute (persisted in the save; Audio applies the actual gain change)
+  // Mute
   // ===========================================================================================
-
-  function isMuted() { return state.muted; }
-
-  // setMuted(b) : persist + apply via Audio.mute. toggleMute() flips and returns the new state.
-  function setMuted(b) {
-    state.muted = !!b;
-    audio('mute', state.muted);
-    save();
-    hudDirty = true;
-    return state.muted;
-  }
+  function isMuted()    { return state.muted; }
+  function setMuted(b)  { state.muted = !!b; audio('mute', state.muted); save(); hudDirty = true; return state.muted; }
   function toggleMute() { return setMuted(!state.muted); }
 
   // ===========================================================================================
-  // Shop DOM — reuses the existing #shop modal, #shop-tabs, #shop-body and .shop-item CSS.
-  // Tabs: upgrades | evolutions | characters | worlds (matching index.html data-tab values).
+  // Shop DOM
   // ===========================================================================================
-
   var currentTab = 'upgrades';
-  var wired = false;
+  var wired      = false;
 
   function $(id) { return document.getElementById(id); }
 
-  // Build one .shop-item row. opts:
-  //   swatch  : color for the left .sw chip (string) | null
-  //   title   : main label (string)
-  //   sub     : subtitle line (string) | null
-  //   tag     : right-side status pill text (string) | null      (mutually exclusive w/ button)
-  //   button  : { label, affordable, disabled, onClick } | null  (right-side buy button)
-  //   cls     : extra class on the row ('owned' | 'locked') | ''
+  // itemRow(opts) — build one .shop-item row.
+  // opts: swatch, title, sub, tag, button:{label,affordable,disabled,onClick}, cls
   function itemRow(opts) {
     var row = document.createElement('div');
     row.className = 'shop-item' + (opts.cls ? ' ' + opts.cls : '');
@@ -330,7 +342,7 @@ window.GAME = window.GAME || {};
       var sw = document.createElement('div');
       sw.className = 'sw';
       sw.style.background = opts.swatch;
-      sw.style.color = opts.swatch; // .sw uses box-shadow:0 0 10px currentColor
+      sw.style.color = opts.swatch;
       left.appendChild(sw);
     }
 
@@ -375,150 +387,198 @@ window.GAME = window.GAME || {};
     return h;
   }
 
+  // swatch color for a form — prefer plateEdge, fall back to skin, then palette.skin.
+  function formSwatch(f) {
+    if (f.palette) return f.palette.plateEdge || f.palette.skin || '#888';
+    return f.plateEdge || f.skin || '#888';
+  }
+
   // ---- Tab builders --------------------------------------------------------------------------
 
-  // Upgrades: Stronger Claws. Shows the ×2 jump in attack power as the subtitle.
+  // Upgrades: Stronger Claws.
+  // Subtitle shows current attack → next attack so the player sees the universal boost.
   function buildUpgrades(body) {
-    var cost = clawsCost();
-    var cur = godzillaPower();
-    var next = cur * Cfg.CLAWS_MULT;
+    var cost   = clawsCost();
+    var curPow = attackPower();
+    var f      = formDef(state.activeFormId);
+    var base   = f ? f.base : Cfg.START_ATTACK;
+    var nxtPow = base * Math.pow(Cfg.CLAWS_MULT, state.clawsLevel + 1);
     body.appendChild(hintLine(
-      'Each level DOUBLES Godzilla’s attack. Power, not cash, is the gate — dig deeper, earn more.'
+      'Each level DOUBLES attack power for EVERY form. Power, not cash, is the gate — dig deeper, earn more.'
     ));
     body.appendChild(itemRow({
       swatch: '#36c9ff',
-      title: 'Stronger Claws · Lv ' + state.clawsLevel,
-      sub: U.fmt(cur) + ' → ' + U.fmt(next) + ' attack (×2)',
+      title:  'Stronger Claws · Lv ' + state.clawsLevel,
+      sub:    U.fmt(curPow) + ' → ' + U.fmt(nxtPow) + ' attack (×2)',
       button: {
-        label: '💰 ' + U.fmt(cost),
+        label:      '💰 ' + U.fmt(cost),
         affordable: canAfford(cost),
-        disabled: !canAfford(cost),
-        onClick: function () { buyClaws(); }
+        disabled:   !canAfford(cost),
+        onClick:    function () { buyClaws(); }
       }
     }));
   }
 
-  // Evolutions: the 5 Godzilla forms. The current/owned tier shows ACTIVE; the immediate next
-  // is buyable when affordable; later tiers are LOCKED (order-gated).
+  // Evolutions tab: all wyrm (Godzilla) forms in tier order.
+  //   - Owned tiers: OWNED tag (or ACTIVE if currently selected)
+  //   - Immediate next unlocked tier: buy button
+  //   - Later locked tiers: LOCKED tag
   function buildEvolutions(body) {
     body.appendChild(hintLine('Evolve Godzilla through the eras. Each form multiplies base attack.'));
-    var forms = Cfg.EVOLUTIONS;
+    var forms = wyrmForms();
     for (var i = 0; i < forms.length; i++) {
-      var f = forms[i];
-      var owned = i <= state.evoTier;          // current + all earlier forms are owned
-      var isNext = i === state.evoTier + 1;    // the only purchasable tier
-      var sub = f.year + ' · ×' + U.fmt(f.mult) + ' attack';
+      (function (f) {
+        var owned    = ownsForm(f.id);
+        var active   = state.activeFormId === f.id;
+        var unlocked = isFormUnlocked(f);  // immediate purchasable next
+        var pal      = f.palette || f;     // support both old EVOLUTIONS shape and new FORMS shape
+        var sub      = (f.year ? f.year + ' · ' : '') + 'base ' + U.fmt(f.base) + ' attack';
 
-      var opts = {
-        swatch: f.plateEdge || f.skin,
-        title: f.name,
-        sub: sub,
-        cls: owned ? 'owned' : (isNext ? '' : 'locked')
-      };
-
-      if (owned) {
-        opts.tag = (i === state.evoTier) ? 'ACTIVE' : 'OWNED';
-      } else if (isNext) {
-        opts.button = {
-          label: '💰 ' + U.fmt(f.cost),
-          affordable: canAfford(f.cost),
-          disabled: !canAfford(f.cost),
-          onClick: function () { buyEvolution(); }
-        };
-      } else {
-        // Locked: needs the prior evolution first.
-        opts.tag = 'LOCKED';
-      }
-      body.appendChild(itemRow(opts));
-    }
-  }
-
-  // Characters: Godzilla + the 4 Titans. Godzilla is always present/owned. Titans: buy → switch.
-  // The active unit shows ACTIVE; owned-but-inactive shows a SWITCH button; unowned shows a buy.
-  function buildCharacters(body) {
-    body.appendChild(hintLine('Recruit Titans, then switch between them. Each has a signature attack.'));
-
-    // Godzilla card (always owned).
-    var gzActive = state.activeChar === 'gz';
-    var ev = evoDef(state.evoTier);
-    var gzOpts = {
-      swatch: ev.plateEdge || ev.skin,
-      title: 'Godzilla · ' + ev.name,
-      sub: 'Atomic breath · ' + U.fmt(godzillaPower()) + ' attack',
-      cls: 'owned'
-    };
-    if (gzActive) {
-      gzOpts.tag = 'ACTIVE';
-    } else {
-      gzOpts.button = {
-        label: 'Switch',
-        affordable: true,
-        disabled: false,
-        onClick: function () { switchChar('gz'); }
-      };
-    }
-    body.appendChild(itemRow(gzOpts));
-
-    // Titan cards.
-    var T = Cfg.TITANS;
-    for (var i = 0; i < T.length; i++) {
-      (function (t) {
-        var owned = state.ownedTitans.indexOf(t.id) !== -1;
-        var active = state.activeChar === t.id;
         var opts = {
-          swatch: t.tint,
-          title: t.name,
-          sub: t.desc + ' · ' + U.fmt(t.base) + ' attack',
-          cls: owned ? 'owned' : ''
+          swatch: formSwatch(f),
+          title:  f.name,
+          sub:    sub,
+          cls:    owned ? 'owned' : (unlocked ? '' : 'locked')
         };
+
         if (active) {
           opts.tag = 'ACTIVE';
         } else if (owned) {
+          // Owned but not active: offer a Switch button.
           opts.button = {
-            label: 'Switch',
+            label:      'Switch',
             affordable: true,
-            disabled: false,
-            onClick: function () { switchChar(t.id); }
+            disabled:   false,
+            onClick:    (function (fid) { return function () { switchForm(fid); }; })(f.id)
+          };
+        } else if (unlocked) {
+          opts.button = {
+            label:      '💰 ' + U.fmt(f.cost),
+            affordable: canAfford(f.cost),
+            disabled:   !canAfford(f.cost),
+            onClick:    (function (fid) { return function () { buyForm(fid); }; })(f.id)
           };
         } else {
-          opts.button = {
-            label: '💰 ' + U.fmt(t.cost),
-            affordable: canAfford(t.cost),
-            disabled: !canAfford(t.cost),
-            onClick: function () { buyTitan(t.id); }
-          };
+          opts.tag = 'LOCKED';
         }
+
         body.appendChild(itemRow(opts));
-      })(T[i]);
+      })(forms[i]);
     }
   }
 
-  // Worlds: World 1 is always ACTIVE. World 2 (12B) is buyable; once unlocked it shows "Coming soon".
+  // Characters tab: the 4 Titan families.
+  //   For each family:
+  //     - If no form owned: show the base (tier-1) form as a recruitable entry.
+  //       All higher tiers in that family are hidden until the base is owned.
+  //     - If the base is owned: show all forms in the family. Owned = ACTIVE or SWITCH;
+  //       immediate next unlocked = buy button; later = LOCKED.
+  //   Family header shows the family display name.
+  function buildCharacters(body) {
+    body.appendChild(hintLine('Recruit Titans and evolve them. Buy the base form to unlock a character.'));
+
+    var FAMILY_LABEL = { mothra: 'Mothra', ghidorah: 'King Ghidorah', rodan: 'Rodan', mecha: 'Mechagodzilla' };
+
+    for (var fi = 0; fi < TITAN_FAMILIES.length; fi++) {
+      var family = TITAN_FAMILIES[fi];
+      var chain  = formsByFamily(family);
+      if (!chain.length) continue;
+
+      var baseForm   = chain[0];
+      var baseOwned  = ownsForm(baseForm.id);
+
+      // Family header.
+      var hdr = document.createElement('div');
+      hdr.className = 'hint';
+      hdr.style.marginTop = '8px';
+      hdr.style.fontWeight = 'bold';
+      hdr.textContent = '— ' + (FAMILY_LABEL[family] || family) + ' —';
+      body.appendChild(hdr);
+
+      if (!baseOwned) {
+        // Recruit entry: only the base form is visible.
+        (function (f) {
+          body.appendChild(itemRow({
+            swatch: formSwatch(f),
+            title:  f.name,
+            sub:    'base ' + U.fmt(f.base) + ' attack · Recruit to unlock',
+            button: {
+              label:      '💰 ' + U.fmt(f.cost),
+              affordable: canAfford(f.cost),
+              disabled:   !canAfford(f.cost),
+              onClick:    function () { buyForm(f.id); }
+            }
+          }));
+        })(baseForm);
+      } else {
+        // Full evolution chain visible.
+        for (var ci = 0; ci < chain.length; ci++) {
+          (function (f) {
+            var owned    = ownsForm(f.id);
+            var active   = state.activeFormId === f.id;
+            var unlocked = isFormUnlocked(f);
+            var sub      = 'base ' + U.fmt(f.base) + ' attack' + (f.attack ? ' · ' + f.attack.kind : '');
+
+            var opts = {
+              swatch: formSwatch(f),
+              title:  f.name,
+              sub:    sub,
+              cls:    owned ? 'owned' : (unlocked ? '' : 'locked')
+            };
+
+            if (active) {
+              opts.tag = 'ACTIVE';
+            } else if (owned) {
+              opts.button = {
+                label:      'Switch',
+                affordable: true,
+                disabled:   false,
+                onClick:    (function (fid) { return function () { switchForm(fid); }; })(f.id)
+              };
+            } else if (unlocked) {
+              opts.button = {
+                label:      '💰 ' + U.fmt(f.cost),
+                affordable: canAfford(f.cost),
+                disabled:   !canAfford(f.cost),
+                onClick:    (function (fid) { return function () { buyForm(fid); }; })(f.id)
+              };
+            } else {
+              opts.tag = 'LOCKED';
+            }
+
+            body.appendChild(itemRow(opts));
+          })(chain[ci]);
+        }
+      }
+    }
+  }
+
+  // Worlds tab.
   function buildWorlds(body) {
-    body.appendChild(hintLine('Conquer World 1, then unlock what’s next.'));
+    body.appendChild(hintLine('Conquer World 1, then unlock what\'s next.'));
 
     body.appendChild(itemRow({
       swatch: '#4fe08a',
-      title: 'World 1 · Smashville',
-      sub: 'The city is yours to level.',
-      cls: 'owned',
-      tag: 'ACTIVE'
+      title:  'World 1 · Smashville',
+      sub:    'The city is yours to level.',
+      cls:    'owned',
+      tag:    'ACTIVE'
     }));
 
     var w2 = {
       swatch: '#b07dff',
-      title: 'World 2',
-      sub: state.world2Unlocked ? 'Unlocked — Coming soon!' : 'Unlock the next frontier.',
-      cls: state.world2Unlocked ? 'owned' : ''
+      title:  'World 2',
+      sub:    state.world2Unlocked ? 'Unlocked — Coming soon!' : 'Unlock the next frontier.',
+      cls:    state.world2Unlocked ? 'owned' : ''
     };
     if (state.world2Unlocked) {
       w2.tag = 'COMING SOON';
     } else {
       w2.button = {
-        label: '💰 ' + U.fmt(Cfg.WORLD2_COST),
+        label:      '💰 ' + U.fmt(Cfg.WORLD2_COST),
         affordable: canAfford(Cfg.WORLD2_COST),
-        disabled: !canAfford(Cfg.WORLD2_COST),
-        onClick: function () { buyWorld2(); }
+        disabled:   !canAfford(Cfg.WORLD2_COST),
+        onClick:    function () { buyWorld2(); }
       };
     }
     body.appendChild(itemRow(w2));
@@ -526,7 +586,6 @@ window.GAME = window.GAME || {};
 
   // ---- Shop render / open --------------------------------------------------------------------
 
-  // Reflect the active tab in #shop-tabs button styling.
   function syncTabButtons() {
     var tabs = $('shop-tabs');
     if (!tabs) return;
@@ -538,26 +597,23 @@ window.GAME = window.GAME || {};
     }
   }
 
-  // refreshShop() : repaint #shop-body for the current tab (no-op if the shop is closed/missing).
   function refreshShop() {
     var shop = $('shop');
     var body = $('shop-body');
     if (!body) return;
-    // Skip the DOM work entirely while hidden — openShop() repaints on show.
     if (shop && shop.classList.contains('hidden')) return;
 
     syncTabButtons();
     body.innerHTML = '';
     switch (currentTab) {
       case 'evolutions': buildEvolutions(body); break;
-      case 'characters': buildCharacters(body); break;
-      case 'worlds':     buildWorlds(body); break;
+      case 'characters': buildCharacters(body);  break;
+      case 'worlds':     buildWorlds(body);      break;
       case 'upgrades':
-      default:           buildUpgrades(body); break;
+      default:           buildUpgrades(body);    break;
     }
   }
 
-  // Wire the static shop chrome once (tab buttons, close button, backdrop, shop button).
   function wireShop() {
     if (wired) return;
     wired = true;
@@ -582,12 +638,10 @@ window.GAME = window.GAME || {};
     if (shopBtn) shopBtn.addEventListener('click', function () { openShop(); });
   }
 
-  // openShop(tab) : show the modal on the given tab (defaults to the last/active tab). Ensures
-  // wiring, unlocks audio (first gesture), then renders.
   function openShop(tab) {
     wireShop();
     if (tab) currentTab = tab;
-    audio('unlock'); // opening the shop is a user gesture — a safe spot to unlock Web Audio
+    audio('unlock');
     var shop = $('shop');
     if (shop) shop.classList.remove('hidden');
     refreshShop();
@@ -599,52 +653,82 @@ window.GAME = window.GAME || {};
   }
 
   // ===========================================================================================
-  // Public API (matches blueprint §2 exactly) + state getters/setters
+  // Public API
   // ===========================================================================================
   G.Economy = {
     // power
     attackPower: attackPower,
-    activeUnit: activeUnit,
+    activeUnit:  activeUnit,
 
     // banking + combo
     bankDestroy: bankDestroy,
-    comboMult: comboMult,
-    tickCombo: tickCombo,
+    comboMult:   comboMult,
+    tickCombo:   tickCombo,
 
-    // costs + purchases
-    clawsCost: clawsCost,
-    buyClaws: buyClaws,
-    nextEvo: nextEvo,
+    // costs + purchases (v3 primary API)
+    clawsCost:  clawsCost,
+    buyClaws:   buyClaws,
+    buyForm:    buyForm,
+    switchForm: switchForm,
+    buyWorld2:  buyWorld2,
+    canAfford:  canAfford,
+
+    // legacy shims (v2 callers — delegate to v3 equivalents)
+    nextEvo:     function () {
+      var chain = wyrmForms();
+      for (var i = 0; i < chain.length; i++) { if (isFormUnlocked(chain[i])) return chain[i]; }
+      return null;
+    },
     buyEvolution: buyEvolution,
-    buyTitan: buyTitan,
-    switchChar: switchChar,
-    buyWorld2: buyWorld2,
-    canAfford: canAfford,
+    buyTitan:     buyTitan,
+    switchChar:   switchChar,
 
     // shop DOM
     refreshShop: refreshShop,
-    openShop: openShop,
-    closeShop: closeShop,
+    openShop:    openShop,
+    closeShop:   closeShop,
 
     // save / load
     save: save,
     load: load,
 
-    // mute (persisted here; Audio applies it)
-    isMuted: isMuted,
-    setMuted: setMuted,
+    // mute
+    isMuted:    isMuted,
+    setMuted:   setMuted,
     toggleMute: toggleMute,
 
-    // ---- state getters (read-only views for HUD/world/render) ----
-    get money() { return state.money; },
-    get clawsLevel() { return state.clawsLevel; },
-    get evoTier() { return state.evoTier; },
-    get activeChar() { return state.activeChar; },
-    get ownedTitans() { return state.ownedTitans.slice(); }, // defensive copy
+    // ---- state getters (read-only views) ----
+    get money()          { return state.money; },
+    get clawsLevel()     { return state.clawsLevel; },
+    get activeFormId()   { return state.activeFormId; },
+    get ownedFormIds()   { return state.ownedFormIds.slice(); },
     get world2Unlocked() { return state.world2Unlocked; },
-    get muted() { return state.muted; },
+    get muted()          { return state.muted; },
 
-    // ---- maxReachedRow: getter + setter (World advances it; persists only on increase) ----
+    // v2-compat getters (entities/render may read these)
+    get evoTier() {
+      // Return the tier index of the active form within its family chain (0-based).
+      var f = formDef(state.activeFormId);
+      if (!f) return 0;
+      var chain = formsByFamily(f.family);
+      for (var i = 0; i < chain.length; i++) { if (chain[i].id === f.id) return i; }
+      return 0;
+    },
+    get activeChar() {
+      // v2 callers expect 'gz' for any Godzilla form, or the titan id.
+      var f = formDef(state.activeFormId);
+      if (!f) return 'gz';
+      return (f.family === 'wyrm') ? 'gz' : f.id;
+    },
+    get ownedTitans() {
+      // v2 callers: return owned non-wyrm form ids.
+      return state.ownedFormIds.filter(function (id) {
+        var f = formDef(id);
+        return f && f.family !== 'wyrm';
+      });
+    },
+
+    // ---- maxReachedRow getter + setter ----
     get maxReachedRow() { return state.maxReachedRow; },
     set maxReachedRow(v) {
       var row = U.clamp(v | 0, 0, Cfg.GRID.rows - 1);
@@ -655,10 +739,10 @@ window.GAME = window.GAME || {};
       }
     },
 
-    // ---- HUD dirty flag (UI polls + clears) ----
-    get hudDirty() { return hudDirty; },
-    clearHudDirty: function () { hudDirty = false; },
-    markHudDirty: function () { hudDirty = true; }
+    // ---- HUD dirty flag ----
+    get hudDirty()    { return hudDirty; },
+    clearHudDirty:    function () { hudDirty = false; },
+    markHudDirty:     function () { hudDirty = true; }
   };
 
 })(window.GAME);
