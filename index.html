@@ -39,6 +39,25 @@
   #hud button:hover { border-color:var(--blue); }
   #shop-btn { background:linear-gradient(180deg,#1f6feb,#1858c4); border-color:#2f7dff; }
 
+  /* ---------- Target HP bar (fixed top-center, under the strip) ---------- */
+  #target-hp { position:fixed; top:calc(56px + env(safe-area-inset-top)); left:50%; transform:translateX(-50%);
+    width:min(480px,62vw); z-index:9; pointer-events:none; opacity:0; transition:opacity .14s ease; }
+  #target-hp.show { opacity:1; }
+  #thp-label { display:flex; justify-content:space-between; align-items:baseline; gap:10px;
+    font:700 12px/1.2 ui-monospace,Menlo,monospace; margin:0 2px 4px; text-shadow:0 1px 2px rgba(0,0,0,.7); }
+  #thp-name { color:var(--dim); letter-spacing:.5px; text-transform:uppercase; white-space:nowrap; }
+  #thp-num { color:var(--gold); white-space:nowrap; }
+  #thp-track { position:relative; height:18px; border-radius:5px; overflow:hidden;
+    background:rgba(8,10,16,.78); border:1px solid rgba(255,255,255,.18); box-shadow:0 2px 6px rgba(0,0,0,.5); }
+  #thp-ghost, #thp-fill { position:absolute; top:0; bottom:0; left:0; border-radius:4px; width:0; }
+  #thp-ghost { background:rgba(255,255,255,.5); transition:width .32s ease-out; }   /* lagging chip-damage trail */
+  #thp-fill  { background:linear-gradient(180deg,#ffe08a,#f0b73c); transition:width .11s linear; }
+  #target-hp.low #thp-fill { background:linear-gradient(180deg,#ff8a4a,#e8431f); } /* <25% → hot */
+  #target-hp.snap #thp-ghost, #target-hp.snap #thp-fill { transition:none; }       /* snap on (re)appear / target switch */
+  @media (prefers-reduced-motion: reduce) {
+    #target-hp, #thp-ghost, #thp-fill { transition:none; }
+  }
+
   /* ---------- Shop modal ---------- */
   #shop { position:fixed; inset:0; display:flex; align-items:center; justify-content:center; z-index:20; }
   #shop.hidden { display:none; }
@@ -90,6 +109,13 @@
     <button id="mute-btn" title="Sound">🔊</button>
     <button id="shop-btn">🛒 Shop</button>
   </div>
+</div>
+
+<!-- Target HP bar: fixed top-center (boss/target-frame convention), shown only while
+     smashing the current target. The gold aim ring is the diegetic "which building". -->
+<div id="target-hp" aria-hidden="true">
+  <div id="thp-label"><span id="thp-name"></span><span id="thp-num"></span></div>
+  <div id="thp-track"><div id="thp-ghost"></div><div id="thp-fill"></div></div>
 </div>
 
 <div id="shop" class="hidden">

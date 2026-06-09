@@ -33,6 +33,8 @@ window.GAME = window.GAME || {};
     shopBackdrop: null,
     shop: null,
     tabs: null,      // NodeList of #shop-tabs button
+    thp: null,       // #target-hp container
+    thpName: null, thpNum: null, thpFill: null, thpGhost: null,
   };
 
   // --- Dirty-flag cache: last DOM-written strings, so refresh() only writes on change. ---
@@ -40,6 +42,8 @@ window.GAME = window.GAME || {};
     money: null,    // formatted money string actually painted
     badge: null,    // full innerHTML of #form-badge actually painted
     muteIcon: null, // mute glyph actually painted
+    // target HP bar:
+    thpShow: false, thpId: null, thpFill: null, thpGhost: null, thpName: null, thpNum: null, thpLow: null,
   };
 
   // --- Local UI state ---
@@ -158,6 +162,61 @@ window.GAME = window.GAME || {};
 
     // Mute icon (stays in sync even if Audio is toggled elsewhere)
     syncMuteIcon();
+
+    // Target HP bar (boss/target-frame; shown only while smashing the current target)
+    syncTargetHp();
+  }
+
+  // Human label for the targeted building (specials get names; generics are "Building").
+  function buildingLabel(b) {
+    if (b.special) {
+      var m = { statue: 'Statue', pyramid: 'Pyramid', sandpile: 'Sand Pile', football: 'Football Field',
+                golden: 'Golden House', rainbow: 'Rainbow House', diamond: 'Diamond House', airplane: 'Airplane' };
+      return m[b.special] || 'Landmark';
+    }
+    return 'Building';
+  }
+
+  // Fixed top-center HP bar bound to player.aimBuilding. Appears once the target is
+  // damaged (first hit), drains with a fast front fill + a lagging white "chip" ghost
+  // (both via CSS transitions), shifts hot under 25%, and snaps on (re)appear / switch.
+  function syncTargetHp() {
+    if (!el.thp) return;
+    var p = (G.Main && G.Main.getPlayer) ? G.Main.getPlayer() : null;
+    var b = p && p.aimBuilding;
+    var show = !!(b && b.state === 'standing' && b.maxHp > 0 && b.hp > 0 && b.hp < b.maxHp);
+
+    if (!show) {
+      if (last.thpShow) { el.thp.classList.remove('show'); last.thpShow = false; last.thpId = null; }
+      return;
+    }
+
+    var frac = b.hp / b.maxHp; if (frac < 0) frac = 0; else if (frac > 1) frac = 1;
+    var pct = (frac * 100).toFixed(1) + '%';
+
+    // First appearance OR target switch → snap both layers (don't animate in from a stale width).
+    if (!last.thpShow || b.id !== last.thpId) {
+      el.thp.classList.add('snap');
+      el.thpFill.style.width = pct;
+      el.thpGhost.style.width = pct;
+      void el.thp.offsetWidth;            // commit the snapped width before re-enabling transitions
+      el.thp.classList.remove('snap');
+      last.thpFill = last.thpGhost = pct;
+      last.thpId = b.id;
+    } else {
+      if (pct !== last.thpFill) { el.thpFill.style.width = pct; last.thpFill = pct; }
+      if (pct !== last.thpGhost) { el.thpGhost.style.width = pct; last.thpGhost = pct; }
+    }
+
+    var name = buildingLabel(b);
+    if (name !== last.thpName) { el.thpName.textContent = name; last.thpName = name; }
+    var num = Utils.fmt(b.hp) + ' / ' + Utils.fmt(b.maxHp);
+    if (num !== last.thpNum) { el.thpNum.textContent = num; last.thpNum = num; }
+
+    var low = frac < 0.25;
+    if (low !== last.thpLow) { el.thp.classList.toggle('low', low); last.thpLow = low; }
+
+    if (!last.thpShow) { el.thp.classList.add('show'); last.thpShow = true; }
   }
 
   function syncMuteIcon() {
@@ -296,6 +355,11 @@ window.GAME = window.GAME || {};
     el.shopBackdrop = document.getElementById('shop-backdrop');
     el.shop = document.getElementById('shop');
     el.tabs = document.querySelectorAll('#shop-tabs button');
+    el.thp = document.getElementById('target-hp');
+    el.thpName = document.getElementById('thp-name');
+    el.thpNum = document.getElementById('thp-num');
+    el.thpFill = document.getElementById('thp-fill');
+    el.thpGhost = document.getElementById('thp-ghost');
 
     // Seed the active tab from whichever button ships marked .active in the HTML.
     if (el.tabs && el.tabs.length) {

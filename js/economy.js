@@ -395,7 +395,7 @@ window.GAME = window.GAME || {};
 
   // ---- Tab builders --------------------------------------------------------------------------
 
-  // Upgrades: Stronger Claws.
+  // Upgrades: Stronger Atomic Breath (internal keys stay `claws*` — display name only).
   // Subtitle shows current attack → next attack so the player sees the universal boost.
   function buildUpgrades(body) {
     var cost   = clawsCost();
@@ -408,7 +408,7 @@ window.GAME = window.GAME || {};
     ));
     body.appendChild(itemRow({
       swatch: '#36c9ff',
-      title:  'Stronger Claws · Lv ' + state.clawsLevel,
+      title:  'Stronger Atomic Breath · Lv ' + state.clawsLevel,
       sub:    U.fmt(curPow) + ' → ' + U.fmt(nxtPow) + ' attack (×2)',
       button: {
         label:      '💰 ' + U.fmt(cost),

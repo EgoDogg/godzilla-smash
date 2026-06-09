@@ -2,7 +2,7 @@
 window.GAME = window.GAME || {};
 window.GAME.Config = {
   saveKey: 'godzilla-save-v3',
-  CACHE_VERSION: 'gz-v6',
+  CACHE_VERSION: 'gz-v7',
 
   // --- Isometric grid (world units = tiles). Wide, open, zoomed-out city:
   //     21 cols of 2×2 blocks split by wide streets; 58 rows. TILE_*/WZ_PX are
@@ -201,7 +201,7 @@ window.GAME.Config = {
       attack: { kind: 'volley', hits: 6, cooldown: 0.42 } }
   ],
 
-  // --- Stronger Claws progression (§0 economy rule) ---
+  // --- Stronger Atomic Breath progression (§0 economy rule; internal keys remain CLAWS/claws) ---
   CLAWS: [
     { level: 0, cost: 0 },
     { level: 1, cost: 12 },
