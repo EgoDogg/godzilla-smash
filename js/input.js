@@ -77,6 +77,8 @@ window.GAME = window.GAME || {};
   var joyCurX = 0, joyCurY = 0;       // current touch position for that pointer
   var smashPointerId = null;          // pointerId holding the SMASH disc
   var jumpPointerId = null;           // pointerId holding the JUMP disc
+  var mouseAtkPointerId = null;       // desktop left button held → autofire + cursor-aim
+  var cursorClientX = null, cursorClientY = null;  // last desktop cursor pos (raw client px)
 
   // ---- Keyboard state (8-way digital + jump) --------------------------------
   var keyUp = false, keyDown = false, keyLeft = false, keyRight = false;
@@ -184,6 +186,18 @@ window.GAME = window.GAME || {};
     var b = G.World && G.World.getBuildingAt ? G.World.getBuildingAt(col, row) : null;
     if (isStanding(b)) return { col: col, row: row };
     return null; // not standing → fall through to facing/nearest at attack time
+  }
+
+  // Explicit aim at a raw client point: a standing ground building, else a flyer
+  // (plane) whose sprite is near the point. Returns {col,row} or null.
+  function resolveAimAt(cx, cy) {
+    var cell = (G.iso && G.iso.pickTile) ? G.iso.pickTile(cx, cy) : null;
+    var t = cell ? resolveClickTarget(cell.col, cell.row) : null;
+    if (!t && G.World && G.World.pickFlyer) {
+      var f = G.World.pickFlyer(cx, cy);
+      if (f && f.state === 'standing') t = { col: Math.round(f.col), row: Math.round(f.row) };
+    }
+    return t;
   }
 
   // World position of the player, if discoverable (entities own the unit; we ask
@@ -310,23 +324,29 @@ window.GAME = window.GAME || {};
       return;
     }
 
-    // ---- Desktop: left-click = pick tile → target + attack. ----
+    // ---- Desktop: left button = aim (building OR plane) + attack; HOLD = autofire. ----
     if (e.button === 0) {
-      var cell = G.iso && G.iso.pickTile ? G.iso.pickTile(e.clientX, e.clientY) : null;
-      if (cell) {
-        pendingTarget = resolveClickTarget(cell.col, cell.row); // standing → explicit
-        // Face the clicked cell regardless (player turns toward the click).
-        faceTowardCell(cell.col, cell.row);
-      }
-      fireAttack();                          // click always requests an attack
+      cursorClientX = e.clientX; cursorClientY = e.clientY;
+      var t = resolveAimAt(e.clientX, e.clientY);
+      if (t) { pendingTarget = t; faceTowardCell(t.col, t.row); }
+      fireAttack();                          // press fires immediately
+      mouseAtkPointerId = e.pointerId;        // held → continuous autofire (consume re-latches + re-aims)
+      capture(e);
       e.preventDefault();
     }
   }
 
   function onPointerMove(e) {
-    if (!isControlPointer(e) && e.pointerId !== joyPointerId && e.pointerId !== smashPointerId && e.pointerId !== jumpPointerId) {
+    if (!isControlPointer(e) && e.pointerId !== joyPointerId && e.pointerId !== smashPointerId && e.pointerId !== jumpPointerId && e.pointerId !== mouseAtkPointerId) {
       // Move that isn't over the canvas and isn't one of our captured control
       // pointers → ignore (let DOM handle hover/scroll).
+      return;
+    }
+
+    if (e.pointerId === mouseAtkPointerId) {
+      // Desktop left button held + dragging → the beam follows the cursor.
+      cursorClientX = e.clientX; cursorClientY = e.clientY;
+      e.preventDefault();
       return;
     }
 
@@ -352,6 +372,7 @@ window.GAME = window.GAME || {};
 
     // Desktop hover highlight (no buttons held).
     if (!Input.isTouch && e.target === canvas) {
+      cursorClientX = e.clientX; cursorClientY = e.clientY;
       var cell = G.iso && G.iso.pickTile ? G.iso.pickTile(e.clientX, e.clientY) : null;
       Input.hovered = cell || null;
     }
@@ -372,6 +393,12 @@ window.GAME = window.GAME || {};
     }
     if (e.pointerId === jumpPointerId) {
       jumpPointerId = null;
+      release(e);
+      e.preventDefault();
+      return;
+    }
+    if (e.pointerId === mouseAtkPointerId) {
+      mouseAtkPointerId = null;             // release → autofire stops
       release(e);
       e.preventDefault();
       return;
@@ -550,6 +577,7 @@ window.GAME = window.GAME || {};
     if (joyPointerId !== null) releaseJoystick();
     smashPointerId = null;
     jumpPointerId = null;
+    mouseAtkPointerId = null;
   }
 
   // Reusable intent object — one allocation total, never per-frame.
@@ -559,10 +587,17 @@ window.GAME = window.GAME || {};
     _intent.moveX = moveX;
     _intent.moveY = moveY;
 
-    // Hold-to-autofire: while the SMASH disc (touch) or Space (kbd) is held, keep
-    // the attack latched every frame. The kaiju's re-fire gate rate-limits it, so
-    // this just means "smash continuously at the gate cadence" — no input throttle here.
-    if (smashPointerId !== null || spaceHeld) attackLatched = true;
+    // Hold-to-autofire: while the SMASH disc (touch), Space (kbd), or the left mouse
+    // button (desktop) is held, keep the attack latched every frame. The kaiju's
+    // re-fire gate rate-limits it → "smash continuously at the gate cadence".
+    if (smashPointerId !== null || spaceHeld || mouseAtkPointerId !== null) attackLatched = true;
+
+    // Desktop hold: keep aiming at whatever's under the cursor (building or plane),
+    // re-resolved each frame so the beam follows the pointer. Empty → null → faced/nearest.
+    if (mouseAtkPointerId !== null && cursorClientX != null) {
+      var held = resolveAimAt(cursorClientX, cursorClientY);
+      if (held) pendingTarget = held;
+    }
 
     var atk = attackLatched;
     var tgt = pendingTarget;

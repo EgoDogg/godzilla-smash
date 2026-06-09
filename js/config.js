@@ -2,7 +2,7 @@
 window.GAME = window.GAME || {};
 window.GAME.Config = {
   saveKey: 'godzilla-save-v3',
-  CACHE_VERSION: 'gz-v8',
+  CACHE_VERSION: 'gz-v9',
 
   // --- Isometric grid (world units = tiles). Wide, open, zoomed-out city:
   //     21 cols of 2×2 blocks split by wide streets; 58 rows. TILE_*/WZ_PX are

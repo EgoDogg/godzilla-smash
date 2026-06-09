@@ -693,6 +693,40 @@ window.GAME = window.GAME || {};
     for (var i = 0; i < flyers.length; i++) fn(flyers[i], i);
   }
 
+  // Pick the standing flyer (airplane) whose on-screen sprite is nearest a raw
+  // client point, within ~PICK px. Planes float at `altitude`, so iso.pickTile
+  // (ground plane only) can't find them — project each flyer at its altitude and
+  // add the camera origin to get its canvas-px position, then take the nearest.
+  function pickFlyer(clientX, clientY) {
+    var iso = G.iso, cam = G.camera;
+    if (!iso || !iso.worldToScreen || !cam) return null;
+    var sx = clientX, sy = clientY;
+    var cv = cam._canvas;
+    if (cv && cv.getBoundingClientRect) { var r = cv.getBoundingClientRect(); sx = clientX - r.left; sy = clientY - r.top; }
+    var PICK = 40, best = null, bestD = PICK * PICK;
+    for (var i = 0; i < flyers.length; i++) {
+      var f = flyers[i];
+      if (f.state !== 'standing') continue;
+      var p = iso.worldToScreen(f.col + 0.5, f.row + 0.5, f.altitude || 0);
+      var dx = (p.x + cam.x) - sx, dy = (p.y + cam.y) - sy;
+      var d = dx * dx + dy * dy;
+      if (d < bestD) { bestD = d; best = f; }
+    }
+    return best;
+  }
+
+  // Explicit-aim target resolver: the ground building at a cell, else a standing
+  // flyer occupying that rounded cell (so a tapped/aimed plane resolves to the plane).
+  function getTargetAt(col, row) {
+    var b = getBuildingAt(col, row);
+    if (b && b.state === 'standing') return b;
+    for (var i = 0; i < flyers.length; i++) {
+      var f = flyers[i];
+      if (f.state === 'standing' && Math.round(f.col) === col && Math.round(f.row) === row) return f;
+    }
+    return null;
+  }
+
   // 0..1 lifecycle progress for the renderer (sink on crumble, scale on rise).
   function lifecyclePhase(b) {
     switch (b.state) {
@@ -717,6 +751,8 @@ window.GAME = window.GAME || {};
 
     // queries
     getBuildingAt: getBuildingAt,
+    getTargetAt: getTargetAt,
+    pickFlyer: pickFlyer,
     footprintsNear: footprintsNear,
     tileToWorld: tileToWorld,
     buildingCenter: buildingCenter,

@@ -1055,9 +1055,10 @@ window.GAME = window.GAME || {};
 
     var airborne = this.isAirborne();
 
-    // 1) explicit target
-    if (targetCell && W.getBuildingAt) {
-      var tb = W.getBuildingAt(targetCell.col, targetCell.row);
+    // 1) explicit target (ground building OR an aimed flyer/plane)
+    if (targetCell && (W.getTargetAt || W.getBuildingAt)) {
+      var tb = W.getTargetAt ? W.getTargetAt(targetCell.col, targetCell.row)
+                             : W.getBuildingAt(targetCell.col, targetCell.row);
       if (tb && (tb.state === 'standing')) {
         // allow flying target if airborne, or ground target if on ground
         if (airborne ? (tb.flying) : true) primary = tb;
@@ -1345,7 +1346,9 @@ window.GAME = window.GAME || {};
 
   function buildingScreen(b, out) {
     out = out || { x: 0, y: 0 };
-    projectInto(b.col + 0.5, b.row + 0.5, (b.height || 1) * 0.45, out);
+    // Flyers (planes) sit at altitude — aim the beam UP to the sprite, not the ground.
+    var wz = (b.flying && b.altitude != null) ? b.altitude : (b.height || 1) * 0.45;
+    projectInto(b.col + 0.5, b.row + 0.5, wz, out);
     return out;
   }
 
