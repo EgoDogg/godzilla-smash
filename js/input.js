@@ -69,6 +69,12 @@ window.GAME = window.GAME || {};
 
   // ---- Public visual state ----------------------------------------------------
   Input.isTouch = false;
+  // DISPLAY modality ('touch'|'desktop') — decoupled from the sticky isTouch INPUT-routing
+  // flag (UP / research-2026-06b note 2). Render reads this to pick discs vs key-legend.
+  // Seeded from a media query in init; flips to 'touch' on the first touch/pen pointer.
+  // Routing is NEVER driven by this — only isTouch gates the multi-thumb branch — so a
+  // hybrid (touch+mouse) laptop keeps correct mouse handling regardless of what's drawn.
+  Input.currentInput = 'desktop';
   Input.facing = 2;                   // default look forward (+wy); see facing table below
   Input.joystick = { active: false, baseX: 0, baseY: 0, dx: 0, dy: 0 };
   Input.smashBtn = { x: 0, y: 0, r: 0 };
@@ -330,7 +336,7 @@ window.GAME = window.GAME || {};
   }
 
   function onPointerDown(e) {
-    if (e.pointerType === 'touch' || e.pointerType === 'pen') Input.isTouch = true;
+    if (e.pointerType === 'touch' || e.pointerType === 'pen') { Input.isTouch = true; Input.currentInput = 'touch'; }
     if (!isControlPointer(e)) return;
 
     var p = localPoint(e);
@@ -618,6 +624,18 @@ window.GAME = window.GAME || {};
     try { canvas.style.touchAction = 'none'; } catch (_) {}
 
     refreshSize();
+
+    // Seed the DISPLAY modality from the pointer media queries (research-2026-06b §21/§100):
+    // coarse-ONLY (phone/tablet) -> 'touch'; anything with a fine pointer (desktop, AND
+    // hybrid touch-laptops) -> 'desktop' so the key-legend is visible on frame 1. A real
+    // touch later flips it to 'touch' (onPointerDown). Routing is unaffected (isTouch).
+    try {
+      if (window.matchMedia &&
+          window.matchMedia('(any-pointer: coarse)').matches &&
+          !window.matchMedia('(any-pointer: fine)').matches) {
+        Input.currentInput = 'touch';
+      }
+    } catch (_) {}
 
     // Pointer Events — passive:false so preventDefault works on control pointers.
     var optsNP = { passive: false };

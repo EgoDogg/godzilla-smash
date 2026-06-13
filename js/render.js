@@ -597,7 +597,12 @@ window.GAME = window.GAME || {};
   function drawTouchControls(w, h) {
     var Input = G.Input;
     if (!Input) return;
-    if (Input.isTouch === false) return;
+    // Display modality (UP / research-2026-06b note 2): touch UI = discs; desktop UI =
+    // a key-legend + the surfaced Nova pip. Drive off Input.currentInput ('touch'|'desktop',
+    // a DISPLAY field decoupled from the sticky isTouch INPUT-routing flag); fall back to
+    // isTouch if an older input.js (no currentInput) is loaded.
+    var touchUI = (Input.currentInput != null) ? (Input.currentInput === 'touch') : (Input.isTouch === true);
+    if (!touchUI) { drawDesktopControls(w, h); return; }
 
     var j = Input.joystick;
     if (j && (j.active || j.visible)) {
@@ -731,6 +736,84 @@ window.GAME = window.GAME || {};
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.fillText('NOVA', fx, fy + 1);
+    ctx.restore();
+  }
+
+  // ------------------------------------------------------------------------
+  // Desktop control affordances (UP / research-2026-06b note 2): the actions all
+  // WORK on desktop (Space/click=Atomic Breath, Shift/J=Jump, F=Nova, WASD=Move) but
+  // were undiscoverable — drawTouchControls early-returned. This draws a key-legend
+  // for discoverability + surfaces the Nova charge/cooldown pip (the touch path's
+  // drawFinisher reuse, so keyboard-F charging finally gets on-screen feedback).
+  // Each fragment is wrapped in its own balanced save/restore — drawHud paints the
+  // combo pip + damage text AFTER this, so a leaked ctx state would corrupt them.
+  // ------------------------------------------------------------------------
+  function drawDesktopControls(w, h) {
+    var Input = G.Input;
+    var Eco = G.Economy;
+    var owned = !!(Eco && Eco.finisherOwned);
+
+    // Nova pip — same disc + live player state the touch path uses; 'F' is the keybind hook.
+    if (owned && Input && Input.finisherBtn) {
+      var fb = Input.finisherBtn;
+      var fx = (fb.x != null ? fb.x : (w - 320));
+      var fy = (fb.y != null ? fb.y : (h - 92));
+      var fr = (fb.r != null ? fb.r : 38);
+      var charge = player ? (player.chargeT || 0) : 0;
+      var cd = player ? Math.max(0, player.finisherCd || 0) : 0;
+      drawFinisher(fx, fy, fr, charge, cd);          // internally balanced
+      if (!reduced && charge <= 0.001 && cd <= 0.001) {
+        var pulse = 0.30 + 0.30 * Math.sin(performance.now() * 0.006);   // ready-flash
+        ctx.save();
+        ctx.globalAlpha = pulse;
+        ctx.lineWidth = 2.5;
+        ctx.strokeStyle = 'rgba(210,170,255,0.95)';
+        ctx.beginPath();
+        ctx.arc(fx, fy, fr + 5, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.restore();
+      }
+      ctx.save();                                    // 'F' keybind badge above the pip
+      ctx.fillStyle = 'rgba(235,225,255,0.95)';
+      ctx.font = '800 14px ui-monospace, Menlo, monospace';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'alphabetic';
+      ctx.fillText('F', fx, fy - fr - 7);
+      ctx.restore();
+    }
+
+    // Key legend (bottom-left) — informational; mouse/keys already drive the game.
+    var rows = [
+      ['SPACE / CLICK', 'Atomic Breath'],
+      ['SHIFT / J', 'Jump'],
+      ['WASD / ARROWS', 'Move']
+    ];
+    if (owned) rows.push(['F', 'Nova Slam']);
+    rows.push(['SHOP ↗', 'Upgrades']);          // points at the always-visible #shop-btn (top-right); no key bound (research §90)
+
+    ctx.save();
+    ctx.textBaseline = 'middle';
+    var pad = 12, lh = 21, keyW = 124, lblW = 116;
+    var panelW = pad * 2 + keyW + lblW;
+    var panelH = pad * 2 + rows.length * lh - 5;
+    var px = 12, py = h - panelH - 12;
+    ctx.globalAlpha = 0.9;
+    ctx.fillStyle = 'rgba(14,18,28,0.80)';
+    ctx.fillRect(px, py, panelW, panelH);
+    ctx.lineWidth = 1;
+    ctx.strokeStyle = 'rgba(120,150,200,0.32)';
+    ctx.strokeRect(px + 0.5, py + 0.5, panelW - 1, panelH - 1);
+    ctx.globalAlpha = 1;
+    ctx.textAlign = 'left';
+    for (var i = 0; i < rows.length; i++) {
+      var ry = py + pad + i * lh + lh * 0.5 - 4;
+      ctx.font = '800 12px ui-monospace, Menlo, monospace';
+      ctx.fillStyle = 'rgba(150,200,255,0.96)';
+      ctx.fillText(rows[i][0], px + pad, ry);
+      ctx.font = '700 12px system-ui, sans-serif';
+      ctx.fillStyle = 'rgba(222,230,242,0.92)';
+      ctx.fillText(rows[i][1], px + pad + keyW, ry);
+    }
     ctx.restore();
   }
 
