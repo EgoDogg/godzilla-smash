@@ -30,9 +30,11 @@ window.GAME = window.GAME || {};
   //     squared curve would). EXPONENTIAL decay → a stable mid steady-state under
   //     repeated fire (linear decay is bistable: 0 or clamp). Legacy call magnitudes
   //     (~3..15) map to trauma via SHAKE_TRAUMA_K. ---
-  var SHAKE_MAX_PX = 12;          // peak screen offset (hard ceiling via the trauma clamp; tablet-safe)
-  var SHAKE_DECAY = 0.02;         // trauma *= SHAKE_DECAY^dt  (half-life ~0.18s)
-  var SHAKE_TRAUMA_K = 1 / 85;    // mag→trauma: gz2014(3)→.035, GvK(9)→.106, supernova(13)→.153
+  // Shake tunables — consolidated into Config.CAMERA (U9); literal fallbacks behavior-identical.
+  var _CAM = Cfg.CAMERA || {};
+  var SHAKE_MAX_PX = (_CAM.SHAKE_MAX_PX != null ? _CAM.SHAKE_MAX_PX : 12);   // peak screen offset (trauma-clamped; tablet-safe)
+  var SHAKE_DECAY = (_CAM.SHAKE_DECAY != null ? _CAM.SHAKE_DECAY : 0.02);    // trauma *= SHAKE_DECAY^dt (half-life ~0.18s)
+  var SHAKE_TRAUMA_K = (_CAM.SHAKE_TRAUMA_K != null ? _CAM.SHAKE_TRAUMA_K : 1 / 85); // mag→trauma: gz2014(3)→.035, GvK(9)→.106, supernova(13)→.153
                                   // sustained 8/sec ≈ trauma/0.38 → ~1.1px / 3.3px / 4.8px; clamp caps at 12px
 
   // ======================================================================
@@ -46,8 +48,8 @@ window.GAME = window.GAME || {};
     tx: 0, ty: 0,          // target origin (where ox/oy chase toward)
     W: 1, H: 1,            // viewport CSS pixels
     dpr: 1,                // capped device pixel ratio (set by resize)
-    focusX: 0.5,           // horizontal focus anchor (fraction of W)
-    focusY: 0.66,          // vertical focus anchor (corridor-ahead bias; lowered for the wider/zoomed-out city)
+    focusX: (Cfg.CAMERA && Cfg.CAMERA.focusX != null) ? Cfg.CAMERA.focusX : 0.5,  // horizontal focus anchor (fraction of W) — Config.CAMERA (U9)
+    focusY: (Cfg.CAMERA && Cfg.CAMERA.focusY != null) ? Cfg.CAMERA.focusY : 0.66, // vertical focus anchor (corridor-ahead bias)
     shakeX: 0, shakeY: 0,  // current shake offset (applied to x/y)
     trauma: 0,             // trauma-based shake amplitude [0,1] (decays linearly)
     _init: false,          // snap to target on first follow (no easing pop-in)

@@ -791,11 +791,14 @@ window.GAME = window.GAME || {};
      ===================================================================== */
 
   var PX_PER_TILE = TILE_W;
-  var ACCEL = 1060 / PX_PER_TILE;     // +18% — keep pace with the wider city / faster smashing
-  var MAX_SPEED = 260 / PX_PER_TILE;  // +18% roam speed so more separation isn't more walking
-  var FRICTION = 12;
-  var COLLIDE_R = 18 / PX_PER_TILE;
-  var WALK_SPEED = 0.22;
+  // Locomotion tunables — consolidated into Config.LOCO (U9); literal fallbacks keep this
+  // behavior-identical if Config is older. ACCEL/MAX_SPEED/COLLIDE_R are px → ÷PX_PER_TILE.
+  var _LOCO = Cfg.LOCO || {};
+  var ACCEL = (_LOCO.ACCEL != null ? _LOCO.ACCEL : 1060) / PX_PER_TILE;
+  var MAX_SPEED = (_LOCO.MAX_SPEED != null ? _LOCO.MAX_SPEED : 260) / PX_PER_TILE;
+  var FRICTION = (_LOCO.FRICTION != null ? _LOCO.FRICTION : 12);
+  var COLLIDE_R = (_LOCO.COLLIDE_R != null ? _LOCO.COLLIDE_R : 18) / PX_PER_TILE;
+  var WALK_SPEED = (_LOCO.WALK_SPEED != null ? _LOCO.WALK_SPEED : 0.22);
 
   /* ------------ data-driven attack helpers ------------ */
 

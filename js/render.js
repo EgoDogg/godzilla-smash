@@ -53,8 +53,9 @@ window.GAME = window.GAME || {};
   var aabb = { minCol: 0, maxCol: 0, minRow: 0, maxRow: 0 };
   var scrCorner = { x: 0, y: 0 };     // unused scratch kept for compat
 
-  var CULL_PAD = 3;
-  var CULL_RISE_ROWS = 14;
+  // Cull pads — consolidated into Config.RENDER (U9); literal fallbacks behavior-identical.
+  var CULL_PAD = (Cfg.RENDER && Cfg.RENDER.CULL_PAD != null) ? Cfg.RENDER.CULL_PAD : 3;
+  var CULL_RISE_ROWS = (Cfg.RENDER && Cfg.RENDER.CULL_RISE_ROWS != null) ? Cfg.RENDER.CULL_RISE_ROWS : 14;
 
   // Pre-allocated corner scratch for computeCull.
   var TMP_CORNERS = [

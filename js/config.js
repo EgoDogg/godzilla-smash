@@ -33,8 +33,17 @@ window.GAME.Config = {
 
   // --- Universal claws (multiplies all forms): power = form.base × CLAWS_MULT^clawsLevel ---
   CLAWS_MULT: 2.0,            // each Stronger Claws level DOUBLES damage
-  CLAWS_BASE: 12,            // cost = round(CLAWS_BASE * CLAWS_GROWTH^level)
-  CLAWS_GROWTH: 2.6,
+  // (CLAWS_BASE/CLAWS_GROWTH removed in U9 — UE1's clawsCost = base×CLAWS_MULT^(L+1) made
+  //  the old round(CLAWS_BASE×CLAWS_GROWTH^level) curve dead.)
+
+  // --- Consolidated module tunables (U9 / KMP-prep M0): scattered constants moved here from
+  //     entities/iso/input/audio/render so the portable core reads ONE source. Behavior-
+  //     identical to the prior in-module literals; each consumer keeps a literal fallback. ---
+  LOCO:      { ACCEL: 1060, MAX_SPEED: 260, FRICTION: 12, COLLIDE_R: 18, WALK_SPEED: 0.22 }, // ACCEL/MAX_SPEED/COLLIDE_R are px → entities ÷PX_PER_TILE at use site
+  CAMERA:    { focusX: 0.5, focusY: 0.66, SHAKE_MAX_PX: 12, SHAKE_DECAY: 0.02, SHAKE_TRAUMA_K: 1 / 85 },
+  INPUT_GEO: { JOY_RADIUS: 70, JOY_DEADZONE: 0.12, SMASH_MIN: 96, JUMP_MIN: 76, FINISHER_MIN: 76, LEFT_ZONE: 0.42, FACE_AHEAD_PX: 28, NEAR_TARGET_PX: 40 },
+  AUDIO:     { MASTER_GAIN: 0.5 },
+  RENDER:    { CULL_PAD: 3, CULL_RISE_ROWS: 14 },
 
   // --- Combo: the only damage multiplier (chain smashes to ramp ×1 → ×2) ---
   // Combo (research-locked docs/research-2026-06.md): STEP 0.12 → cap reached in ~9

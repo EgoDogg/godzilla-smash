@@ -23,7 +23,8 @@ window.GAME = window.GAME || {};
   var keepAlive = null;    // silent looping source that keeps iOS from suspending the ctx
   var localMuted = false;  // fallback mute flag when GAME.Economy is absent
 
-  var MASTER_GAIN = 0.5;   // global headroom so stacked SFX never clip hard
+  var MASTER_GAIN = (G.Config && G.Config.AUDIO && G.Config.AUDIO.MASTER_GAIN != null)
+    ? G.Config.AUDIO.MASTER_GAIN : 0.5;   // global headroom so stacked SFX never clip hard (Config.AUDIO, U9)
 
   // ---- Mute resolution ----------------------------------------------------
   // Economy owns persisted `muted`; honor it when present, else use localMuted.

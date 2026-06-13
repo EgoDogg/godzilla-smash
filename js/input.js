@@ -43,16 +43,17 @@ window.GAME = window.GAME || {};
   var Input = {};
 
   // ---- Tunables (control geometry; gameplay numbers stay in Config) -----------
-  // Touch-control geometry — research-locked (docs/research-2026-06.md U4).
-  var JOY_RADIUS = 70;     // px throw of the floating stick (kept; ~80 was a marginal gain)
-  var JOY_DEADZONE = 0.12; // fraction of radius ignored near center (was 0.18 — crisper)
-  var SMASH_MIN = 96;      // min SMASH disc diameter (was 64; HIG 44pt + primary-action size)
-  var JUMP_MIN = 76;       // min JUMP disc diameter (was 56; SMASH:JUMP = 96:76 hierarchy)
-  var FINISHER_MIN = 76;   // min NOVA disc diameter (secondary tier, matches JUMP)
-  var LEFT_ZONE = 0.42;    // left 42% of width spawns the joystick (was 0.55 — frees the
-                           // center band so tap-to-target works; protects the LOCKED pillar)
-  var FACE_AHEAD_PX = 28;  // how far ahead (world px) we probe a faced building
-  var NEAR_TARGET_PX = 40; // fallback: nearest standing building within this world-px
+  // Touch-control geometry — consolidated into Config.INPUT_GEO (U9, research-locked U4);
+  // literal fallbacks keep this behavior-identical if Config is older.
+  var _GEO = (G.Config && G.Config.INPUT_GEO) || {};
+  var JOY_RADIUS = (_GEO.JOY_RADIUS != null ? _GEO.JOY_RADIUS : 70);
+  var JOY_DEADZONE = (_GEO.JOY_DEADZONE != null ? _GEO.JOY_DEADZONE : 0.12);
+  var SMASH_MIN = (_GEO.SMASH_MIN != null ? _GEO.SMASH_MIN : 96);
+  var JUMP_MIN = (_GEO.JUMP_MIN != null ? _GEO.JUMP_MIN : 76);
+  var FINISHER_MIN = (_GEO.FINISHER_MIN != null ? _GEO.FINISHER_MIN : 76);
+  var LEFT_ZONE = (_GEO.LEFT_ZONE != null ? _GEO.LEFT_ZONE : 0.42);   // left band spawns the joystick (rest = tap-to-target)
+  var FACE_AHEAD_PX = (_GEO.FACE_AHEAD_PX != null ? _GEO.FACE_AHEAD_PX : 28);
+  var NEAR_TARGET_PX = (_GEO.NEAR_TARGET_PX != null ? _GEO.NEAR_TARGET_PX : 40);
 
   // ---- Wiring -----------------------------------------------------------------
   var canvas = null;
