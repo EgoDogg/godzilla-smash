@@ -465,67 +465,144 @@ window.GAME = window.GAME || {};
      Light body (no dorsal plates), two swept wing quads flapped off walkPhase.
      shape: { wingSpan, wingStyle:'moth'|'pteranodon', plates:0, bulk }
      ====================================================================== */
+  /* FLYERMEGA §7 shared airborne helpers ------------------------------------ */
+  var FLAP_PERIOD = 8;   // frames; one shared idle-flap cadence for both airborne families
+
+  // §7.5 — detached altitude shadow (replaces the feet-contact ellipse): a soft ellipse pushed
+  // down + slightly forward, the gap from the body reads "flying over buildings". One recipe, both families.
+  function drawAltitudeShadow(ctx, BH, BW, fg) {
+    ctx.save();
+    ctx.globalAlpha = 0.16; ctx.fillStyle = '#000';
+    ctx.beginPath();
+    ctx.ellipse(BW * 0.30 * fg.dir, BH * 0.12, BW * 0.55, BH * 0.05, 0, 0, 6.2832);
+    ctx.fill();
+    ctx.restore();
+  }
+
+  // §3 — Mothra furred OVAL thorax (compact horizontal egg + fuzzy fur edge + short abdomen).
+  function drawMothThorax(ctx, BH, BW, fg, pal, thick) {
+    var cy = -BH * 0.46, rx = BW * 0.34, ry = BH * 0.30;
+    var g = ctx.createLinearGradient(0, cy - ry, 0, cy + ry);
+    g.addColorStop(0, pal.skinLight); g.addColorStop(0.5, pal.skin); g.addColorStop(1, pal.skinDark);
+    ctx.fillStyle = g;
+    ctx.beginPath(); ctx.ellipse(0, cy, rx, ry, 0, 0, 6.2832); ctx.fill();
+    ctx.fillStyle = pal.skinDark;                       // short tapering abdomen below
+    ctx.beginPath(); ctx.ellipse(BW * 0.03 * fg.dir, cy + ry * 0.95, rx * 0.42, ry * 0.7, 0, 0, 6.2832); ctx.fill();
+    ctx.save();                                         // fuzzy fur edge
+    ctx.globalAlpha = 0.5; ctx.strokeStyle = pal.skinLight; ctx.lineWidth = thick ? 2.8 : 1.8;
+    ctx.beginPath(); ctx.ellipse(0, cy, rx * 1.04, ry * 1.04, 0, 0, 6.2832); ctx.stroke();
+    ctx.restore();
+  }
+
+  // §5 — Rodan slim near-horizontal body lozenge (beak-leading +X → stub tail −X, 3-stop gradient).
+  function drawPteranoBody(ctx, BH, BW, fg, pal) {
+    var cy = -BH * 0.55, hw = BW * 0.72, hh = BH * 0.15;
+    var g = ctx.createLinearGradient(0, cy - hh, 0, cy + hh);
+    g.addColorStop(0, pal.skinLight); g.addColorStop(0.5, pal.skin); g.addColorStop(1, pal.skinDark);
+    ctx.fillStyle = g;
+    ctx.beginPath();
+    ctx.moveTo(hw, cy);
+    ctx.quadraticCurveTo(hw * 0.3, cy - hh, -hw * 0.4, cy - hh * 0.7);
+    ctx.quadraticCurveTo(-hw, cy - hh * 0.2, -hw * 1.05, cy);
+    ctx.quadraticCurveTo(-hw, cy + hh * 0.3, -hw * 0.4, cy + hh * 0.7);
+    ctx.quadraticCurveTo(hw * 0.3, cy + hh, hw, cy);
+    ctx.closePath(); ctx.fill();
+    ctx.strokeStyle = rimCol(0.2); ctx.lineWidth = 1.8;   // back/top rim
+    ctx.beginPath(); ctx.moveTo(hw, cy); ctx.quadraticCurveTo(hw * 0.3, cy - hh, -hw * 0.4, cy - hh * 0.7); ctx.stroke();
+  }
+
+  // §5/§7 — a small pair of curled tucked talons under the abdomen (no planted feet / walk swing).
+  function drawTuckedTalons(ctx, BH, BW, fg, col) {
+    ctx.fillStyle = col;
+    for (var s = -1; s <= 1; s += 2) {
+      var tx = s * BW * 0.12, ty = -BH * 0.34;
+      ctx.beginPath();
+      ctx.moveTo(tx, ty);
+      ctx.quadraticCurveTo(tx + s * BW * 0.05, ty + BH * 0.07, tx, ty + BH * 0.10);
+      ctx.lineTo(tx - s * BW * 0.035, ty + BH * 0.07);
+      ctx.closePath(); ctx.fill();
+    }
+  }
+
+  // §5 — Rodan crest horns at the skull rear; 'vsplit' (t2/t3) forks from a common base, tips hooked.
+  function drawCrestHorns(ctx, BH, BW, hx, hy, style, col) {
+    ctx.fillStyle = col;
+    var n = 2;
+    for (var i = 0; i < n; i++) {
+      var len = BH * (0.16 - i * 0.03);
+      var ang = (style === 'vsplit') ? (-0.5 - i * 0.5) : (-0.6 - i * 0.35);   // vsplit fans wider
+      var ex = hx - Math.cos(ang) * len * 0.2, ey = hy + Math.sin(ang) * len * 0.2;
+      var tx = hx - Math.cos(ang) * len, ty = hy - len * (style === 'vsplit' ? 0.9 : 1.0);
+      var hook = (style === 'vsplit') ? (i === 0 ? BW * 0.05 : -BW * 0.05) : 0;   // tips curl toward each other
+      ctx.beginPath();
+      ctx.moveTo(ex - BW * 0.03, ey);
+      ctx.lineTo(tx + hook, ty);
+      ctx.lineTo(ex + BW * 0.03, ey);
+      ctx.closePath(); ctx.fill();
+    }
+  }
+
   function buildFlyer(ctx, w, h, pal, shape, base, frame, fsm) {
     ctx.clearRect(0, 0, w, h);
     ctx.save();
     ctx.translate(ANCHOR_X, ANCHOR_Y);
 
-    var wingSpan  = (shape && shape.wingSpan  != null) ? shape.wingSpan  : 2.2;
-    var wingStyle = (shape && shape.wingStyle) ? shape.wingStyle : 'moth';
-    var bulkMult  = (shape && shape.bulk       != null) ? shape.bulk      : 0.75;
+    var s         = shape || {};
+    var wingSpan  = s.wingSpan != null ? s.wingSpan : 2.2;
+    var wingStyle = s.wingStyle || 'moth';
+    var bulkMult  = s.bulk     != null ? s.bulk     : 0.85;
+    var isMoth = wingStyle === 'moth';
 
     var BH = h * 0.74 * bulkMult;
     var BW = BH * 0.5;
 
-    var walkT    = (frame % 6) / 6;
-    var step     = Math.sin(walkT * Math.PI * 2);
-    var bob      = (fsm === 'walk') ? Math.abs(step) * BH * 0.015 : 0;
-    var atk      = (fsm === 'attack') ? Math.sin(Math.min(1, frame / 5) * Math.PI) : 0;
-    var wingFlap = (fsm === 'walk' || fsm === 'attack') ? step : Math.sin(walkT * Math.PI * 2);
+    var TAU = 6.2832;
+    var flapPhase = (frame % FLAP_PERIOD) / FLAP_PERIOD * TAU;
+    var atk = (fsm === 'attack') ? Math.sin(Math.min(1, frame / 5) * Math.PI) : 0;
+    var flapAmp = s.flapAmp != null ? s.flapAmp : (isMoth ? 1.0 : 0.8);
+    var wingFlap = Math.sin(flapPhase) * flapAmp + atk * flapAmp * 0.6;   // constant idle flap + additive attack downstroke (§7.4)
+    var hover = Math.sin(flapPhase * 0.5) * BH * 0.02;                    // gentle floating oscillation
 
     var fg = facingGeom(base);
-    ctx.translate(0, -bob);
+    ctx.translate(0, -hover);
 
-    /* ground contact ellipse */
-    ctx.fillStyle = 'rgba(0,0,0,0.28)';
-    ctx.beginPath();
-    ctx.ellipse(0, 2, BW * 0.90, BH * 0.04, 0, 0, 6.2832);
-    ctx.fill();
+    /* §7.5 detached altitude shadow (replaces the feet-contact ellipse) */
+    drawAltitudeShadow(ctx, BH, BW, fg);
 
     var dark = pal.skinDark, skin = pal.skin, light = pal.skinLight;
-    var WH = BH * wingSpan;   /* half-span in px for each wing */
+    // half-span in px, scaled by wingSpan but CAPPED so the widest tip stays inside the 150px
+    // canvas (anchor 75); wingSpan escalates relative size within that bound (§3.4/§5.4 feasibility).
+    var WH = Math.min(BH * wingSpan * 0.125, 50);
 
-    /* back wings (drawn behind body) */
-    if (wingStyle === 'moth') {
-      drawMothWing(ctx, WH, BH, fg, pal, wingFlap, false, dark);
-    } else {
-      drawPteranoWing(ctx, WH, BH, fg, pal, wingFlap, false, dark);
-    }
+    /* back wing */
+    if (isMoth) drawMothWing(ctx, WH, BH, fg, pal, wingFlap, false, dark, s);
+    else        drawPteranoWing(ctx, WH, BH, fg, pal, wingFlap, false, dark, s);
 
-    /* torso (slimmer for flyers: narrower belly clip) */
-    drawFlyerTorso(ctx, BH, BW, fg, skin, dark, light);
+    /* airborne body (horizontal — moth furred oval / rodan slim lozenge) */
+    if (isMoth) drawMothThorax(ctx, BH, BW, fg, pal, s.furThorax === 'thick');
+    else        drawPteranoBody(ctx, BH, BW, fg, pal);
 
-    /* belly highlight */
-    ctx.save(); ctx.globalAlpha = 0.35; ctx.fillStyle = light;
+    /* belly highlight (small underside sheen §1.8) */
+    ctx.save(); ctx.globalAlpha = 0.30; ctx.fillStyle = light;
     ctx.beginPath();
-    ctx.ellipse(fg.bellyX * BW, -BH * 0.34, BW * 0.18, BH * 0.14, 0.15 * fg.dir, 0, 6.2832);
+    ctx.ellipse(0, -BH * 0.40, BW * 0.16, BH * 0.10, 0, 0, 6.2832);
     ctx.fill(); ctx.restore();
 
-    /* front legs (thin, drawn over torso) */
-    ctx.fillStyle = dark;
-    drawBirdLeg(ctx, fg.farLegX * BW, BH, BW, fg);
-    ctx.fillStyle = skin;
-    drawBirdLeg(ctx, fg.nearLegX * BW, BH, BW, fg);
+    /* Rodan heat: magma cracks across the lit body (reuse drawFissures §1.7) */
+    if (s.fissures && pal.fissureCore) drawFissures(ctx, BH, BW, fg, pal.fissureCore, pal.fissureGlow, s.fissures);
 
-    /* front wings (drawn in front of body) */
-    if (wingStyle === 'moth') {
-      drawMothWing(ctx, WH, BH, fg, pal, wingFlap, true, skin);
-    } else {
-      drawPteranoWing(ctx, WH, BH, fg, pal, wingFlap, true, skin);
-    }
+    /* tucked talons (no planted feet / walk swing) */
+    drawTuckedTalons(ctx, BH, BW, fg, dark);
 
-    /* head — no snout extension for flyers (beak-ish) */
+    /* front wing */
+    if (isMoth) drawMothWing(ctx, WH, BH, fg, pal, wingFlap, true, skin, s);
+    else        drawPteranoWing(ctx, WH, BH, fg, pal, wingFlap, true, skin, s);
+
+    /* head — lowered + nudged forward to attach to the airborne body */
+    ctx.save();
+    ctx.translate(isMoth ? 0 : BW * 0.12, BH * 0.30);
     drawFlyerHead(ctx, BH, BW, fg, pal, atk, wingStyle);
+    ctx.restore();
 
     ctx.restore();
   }
@@ -557,97 +634,93 @@ window.GAME = window.GAME || {};
 
   /* Moth wing: two overlapping quads, upper and lower lobe per wing.
      front=false → draw the far (back) side; front=true → near (front) side. */
-  function drawMothWing(ctx, WH, BH, fg, pal, flap, front, baseCol) {
-    /* iso wing angle: when facing S (base=0) wings read as symmetric;
-       SE/E/NE cause far wing to compress. */
-    var lean   = fg.dir;
-    var side   = front ? 1 : -1;
-    var flapAmt = flap * BH * 0.22;
-    var nearW  = WH * (front ? 1.0 : 0.85);
-
-    /* wing root attaches mid-torso */
-    var rootX = side * BW_from_BH(BH) * 0.36;
-    var rootY = -BH * 0.62;
-
-    /* compress far wing by lean for iso depth illusion */
-    var compress = front ? 1.0 : clamp(1.0 - lean * 0.55, 0.30, 1.0);
-
-    /* upper lobe */
-    var tipUX = side * nearW * 0.80 * compress + lean * side * BH * 0.08;
-    var tipUY = -BH * 0.90 + flapAmt * 0.4;
-    var tipLX = side * nearW * 1.05 * compress + lean * side * BH * 0.04;
-    var tipLY = -BH * 0.30 + flapAmt;
-
-    ctx.save();
-    /* wing gradient: bright near root, dark at tips */
-    var wg = ctx.createLinearGradient(rootX, rootY, tipLX, tipLY);
-    wg.addColorStop(0, pal.skinLight);
-    wg.addColorStop(0.5, baseCol);
-    wg.addColorStop(1, pal.skinDark);
-    ctx.fillStyle = wg;
-    ctx.globalAlpha = front ? 0.95 : 0.70;
+  /* one moth wing LOBE — a rounded membrane from root to (tipX,tipY), scaled toward the root
+     so concentric bands (border → field → root colour) nest for the banded-wing read (§3). */
+  function mothLobe(ctx, rootX, rootY, tipX, tipY, side, BH, col, scale) {
+    var tx = rootX + (tipX - rootX) * scale, ty = rootY + (tipY - rootY) * scale;
+    var midUX = rootX + (tx - rootX) * 0.55 + side * BH * 0.10 * scale, midUY = (rootY + ty) * 0.5 - BH * 0.14 * scale;
+    var midLX = rootX + (tx - rootX) * 0.5,  midLY = (rootY + ty) * 0.5 + BH * 0.14 * scale;
+    ctx.fillStyle = col;
     ctx.beginPath();
     ctx.moveTo(rootX, rootY);
-    ctx.quadraticCurveTo(tipUX * 0.7, -BH * 1.02 + flapAmt * 0.2, tipUX, tipUY);
-    ctx.quadraticCurveTo(tipLX * 0.95, -BH * 0.60 + flapAmt * 0.7, tipLX, tipLY);
-    ctx.quadraticCurveTo(rootX + side * BH * 0.04, -BH * 0.42, rootX, rootY);
+    ctx.quadraticCurveTo(midUX, midUY, tx, ty);                 // leading edge
+    ctx.quadraticCurveTo(midLX, midLY, rootX + side * BH * 0.02, rootY + BH * 0.06 * scale);   // trailing
     ctx.closePath(); ctx.fill();
+  }
 
-    /* wing vein strokes */
-    ctx.globalAlpha = front ? 0.30 : 0.18;
-    ctx.strokeStyle = pal.plateEdge; ctx.lineWidth = 1.2; ctx.lineCap = 'round';
-    for (var v = 0; v < 3; v++) {
-      var vt = (v + 1) / 4;
-      ctx.beginPath();
-      ctx.moveTo(rootX, rootY);
-      ctx.lineTo(lerp(rootX, tipLX, vt) + lerp(0, tipUX - rootX, vt * 0.6),
-                 lerp(rootY, tipLY, vt) + lerp(0, tipUY - rootY, vt * 0.5));
-      ctx.stroke();
-    }
+  /* Mothra FOUR-wing (large fore + smaller hind per side) with a per-forewing EYESPOT (§3). */
+  function drawMothWing(ctx, WH, BH, fg, pal, flap, front, baseCol, shape) {
+    var lean = fg.dir, side = front ? 1 : -1;
+    var flapAmt = flap * BH * 0.16;
+    var nearW = WH * (front ? 1.0 : 0.85);
+    var compress = front ? 1.0 : clamp(1.0 - lean * 0.5, 0.40, 1.0);
+    var rootX = side * BW_from_BH(BH) * 0.16, rootY = -BH * 0.48;
+    var alpha = front ? 0.95 : 0.82;                 // raised far-wing alpha (§7.6)
+    var border = pal.plate || '#1a1a22';
+    var field = (shape && shape.wingField) ? shape.wingField[0] : '#e88a2c';
+    var rootCol = (shape && shape.wingField) ? shape.wingField[1] : '#f0c050';
+    ctx.save();
+    ctx.globalAlpha = alpha;
+    /* FOREwing — large, swept high/forward; tip outward-offset so far/near read distinct */
+    var fTipX = side * nearW * 1.0 * compress + lean * side * BH * 0.10;
+    var fTipY = -BH * 0.92 + flapAmt;
+    mothLobe(ctx, rootX, rootY, fTipX, fTipY, side, BH, border, 1.0);
+    mothLobe(ctx, rootX, rootY, fTipX, fTipY, side, BH, field, 0.80);
+    mothLobe(ctx, rootX, rootY, fTipX, fTipY, side, BH, rootCol, 0.45);
+    /* HINDwing — smaller, lower/back */
+    var hTipX = side * nearW * 0.58 * compress;
+    var hTipY = -BH * 0.14 + flapAmt * 1.1;
+    mothLobe(ctx, rootX, rootY + BH * 0.05, hTipX, hTipY, side, BH, border, 1.0);
+    mothLobe(ctx, rootX, rootY + BH * 0.05, hTipX, hTipY, side, BH, field, 0.78);
+    /* EYESPOT on the forewing tip (the brand) — concentric border/iris/pale */
+    var er = (shape && shape.eyespot != null ? shape.eyespot : 0.85);
+    var ex = rootX + (fTipX - rootX) * 0.72, ey = rootY + (fTipY - rootY) * 0.62;
+    ctx.fillStyle = border; ctx.beginPath(); ctx.arc(ex, ey, BH * 0.14 * er, 0, 6.2832); ctx.fill();
+    ctx.fillStyle = pal.eye; ctx.beginPath(); ctx.arc(ex, ey, BH * 0.09 * er, 0, 6.2832); ctx.fill();
+    ctx.fillStyle = pal.skinLight; ctx.beginPath(); ctx.arc(ex, ey, BH * 0.038 * er, 0, 6.2832); ctx.fill();
     ctx.restore();
   }
   function BW_from_BH(BH) { return BH * 0.5; }
 
-  /* Pteranodon wing: single swept membrane, longer and more angular. */
-  function drawPteranoWing(ctx, WH, BH, fg, pal, flap, front, baseCol) {
-    var lean    = fg.dir;
-    var side    = front ? 1 : -1;
-    var flapAmt = flap * BH * 0.26;
-    var nearW   = WH * (front ? 1.0 : 0.80);
-    var compress = front ? 1.0 : clamp(1.0 - lean * 0.55, 0.25, 1.0);
-
-    var rootX = side * BW_from_BH(BH) * 0.30;
-    var rootY = -BH * 0.66;
-
-    /* pointed wing tip */
+  /* Pteranodon wing (§5): one broad single-spar membrane with a SCALLOPED trailing edge (hard
+     concave cuts — instantly not-Mothra). opts.scallops sets the notch count; opts.fireRim adds
+     a glowing molten bottom-edge (rodan_mv/fire). */
+  function drawPteranoWing(ctx, WH, BH, fg, pal, flap, front, baseCol, shape) {
+    var lean = fg.dir, side = front ? 1 : -1;
+    var flapAmt = flap * BH * 0.18;
+    var nearW = WH * (front ? 1.0 : 0.80);
+    var compress = front ? 1.0 : clamp(1.0 - lean * 0.5, 0.35, 1.0);
+    var rootX = side * BW_from_BH(BH) * 0.22, rootY = -BH * 0.56;
     var tipX = side * nearW * 1.10 * compress + lean * side * BH * 0.06;
-    var tipY = -BH * 0.72 + flapAmt;
-
-    /* membrane trailing edge (lower) */
-    var trailX = side * nearW * 0.55 * compress;
-    var trailY = -BH * 0.20 + flapAmt * 0.8;
-
+    var tipY = -BH * 0.62 + flapAmt;
+    var alpha = front ? 0.92 : 0.80;
+    var scallops = (shape && shape.scallops) ? shape.scallops : 2;
+    var trailRootX = rootX + side * BH * 0.02, trailRootY = rootY + BH * 0.24;
     ctx.save();
+    ctx.globalAlpha = alpha;
     var wg = ctx.createLinearGradient(rootX, rootY, tipX, tipY);
-    wg.addColorStop(0, pal.skinLight);
-    wg.addColorStop(0.45, baseCol);
-    wg.addColorStop(1, pal.skinDark);
+    wg.addColorStop(0, pal.skinLight); wg.addColorStop(0.45, baseCol); wg.addColorStop(1, pal.skinDark);
     ctx.fillStyle = wg;
-    ctx.globalAlpha = front ? 0.92 : 0.66;
     ctx.beginPath();
     ctx.moveTo(rootX, rootY);
-    ctx.quadraticCurveTo(tipX * 0.55 + side * BH * 0.02, -BH * 0.95 + flapAmt * 0.3, tipX, tipY);
-    ctx.quadraticCurveTo(lerp(tipX, trailX, 0.6), -BH * 0.44 + flapAmt * 0.9, trailX, trailY);
-    ctx.quadraticCurveTo(rootX + side * BH * 0.02, -BH * 0.30, rootX, rootY);
+    ctx.quadraticCurveTo(tipX * 0.5 + side * BH * 0.02, rootY - BH * 0.18 + flapAmt * 0.3, tipX, tipY);   // leading edge → tip
+    for (var k = 0; k < scallops; k++) {                                  // SCALLOPED trailing edge (concave notches)
+      var t1 = (k + 1) / scallops;
+      var ax = lerp(tipX, trailRootX, t1), ay = lerp(tipY, trailRootY, t1) + BH * 0.10;
+      var cxs = lerp(tipX, trailRootX, (k + 0.5) / scallops) - side * BH * 0.05;
+      var cys = lerp(tipY, trailRootY, (k + 0.5) / scallops) + BH * 0.02;
+      ctx.quadraticCurveTo(cxs, cys, ax, ay);
+    }
+    ctx.quadraticCurveTo(trailRootX, trailRootY, rootX, rootY);
     ctx.closePath(); ctx.fill();
-
-    /* single spar stroke */
-    ctx.globalAlpha = front ? 0.35 : 0.20;
-    ctx.strokeStyle = pal.skinDark; ctx.lineWidth = 1.4; ctx.lineCap = 'round';
-    ctx.beginPath();
-    ctx.moveTo(rootX, rootY);
-    ctx.quadraticCurveTo(tipX * 0.55, -BH * 0.95 + flapAmt * 0.3, tipX, tipY);
-    ctx.stroke();
+    ctx.strokeStyle = pal.skinDark; ctx.lineWidth = 2.4; ctx.lineCap = 'round'; ctx.globalAlpha = alpha * 0.9;   // bold spar
+    ctx.beginPath(); ctx.moveTo(rootX, rootY); ctx.quadraticCurveTo(tipX * 0.5, rootY - BH * 0.18 + flapAmt * 0.3, tipX, tipY); ctx.stroke();
+    if (shape && shape.fireRim && pal.plateGlow) {                        // glowing molten trailing edge (heat tiers)
+      ctx.strokeStyle = pal.plateGlow; ctx.lineWidth = BH * 0.03; ctx.lineJoin = 'round'; ctx.globalAlpha = alpha;
+      ctx.beginPath(); ctx.moveTo(tipX, tipY);
+      for (var m = 0; m < scallops; m++) { var tt = (m + 1) / scallops; ctx.lineTo(lerp(tipX, trailRootX, tt), lerp(tipY, trailRootY, tt) + BH * 0.10); }
+      ctx.stroke();
+    }
     ctx.restore();
   }
 

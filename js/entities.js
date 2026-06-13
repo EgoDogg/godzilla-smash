@@ -960,17 +960,25 @@ window.GAME = window.GAME || {};
     if (this.finisherCd > 0) this.finisherCd -= dt;
     this._glowPhase += dt;
 
-    // ---- JUMP kinematics (pos.z, velZ) ----
+    // ---- JUMP kinematics (pos.z, velZ) — FLYERS (Mothra/Rodan, archetype 'flyer') HOVER at a
+    //      fixed cruise altitude and never jump; ground kaiju keep the jump arc (FLYERMEGA §7). ----
+    var isFlyer = !!(this._formDef && this._formDef.shape && this._formDef.shape.archetype === 'flyer');
     var JUMP = Cfg.JUMP || { vEscape: 8.5, gravity: 26 };
-    var jumpEdge = !!intent.jump && !this._prevJump;
-    this._prevJump = !!intent.jump;
-    if (jumpEdge && !this.isAirborne()) {
-      this.velZ = JUMP.vEscape;
-    }
-    if (this.isAirborne() || this.velZ > 0) {
-      this.velZ -= JUMP.gravity * dt;
-      this.pos.z += this.velZ * dt;
-      if (this.pos.z < 0) { this.pos.z = 0; this.velZ = 0; }
+    if (isFlyer) {
+      this.pos.z = (Cfg.FLYER_ALTITUDE != null ? Cfg.FLYER_ALTITUDE : 1.0);
+      this.velZ = 0;
+      this._prevJump = !!intent.jump;     // track edge but never apply an impulse
+    } else {
+      var jumpEdge = !!intent.jump && !this._prevJump;
+      this._prevJump = !!intent.jump;
+      if (jumpEdge && !this.isAirborne()) {
+        this.velZ = JUMP.vEscape;
+      }
+      if (this.isAirborne() || this.velZ > 0) {
+        this.velZ -= JUMP.gravity * dt;
+        this.pos.z += this.velZ * dt;
+        if (this.pos.z < 0) { this.pos.z = 0; this.velZ = 0; }
+      }
     }
 
     // ---- Nova Slam charge / release (finisher) ----
@@ -1023,11 +1031,11 @@ window.GAME = window.GAME || {};
     var wedged = blockedAt(preX, preY);
 
     var nx = clamp(preX + dwx, loX, hiX);
-    if (wedged || !blockedAt(nx, this.pos.wy)) { this.pos.wx = nx; }
+    if (isFlyer || wedged || !blockedAt(nx, this.pos.wy)) { this.pos.wx = nx; }   // flyers pass OVER buildings
     else { this.vel.x *= 0.2; }
 
     var ny = clamp(preY + dwy, loY, hiY);
-    if (wedged || !blockedAt(this.pos.wx, ny)) { this.pos.wy = ny; }
+    if (isFlyer || wedged || !blockedAt(this.pos.wx, ny)) { this.pos.wy = ny; }
     else { this.vel.y *= 0.2; }
 
     if (G.World) {
@@ -1100,15 +1108,16 @@ window.GAME = window.GAME || {};
     if (!W) return [];
 
     var airborne = this.isAirborne();
+    // Permanent flyers (Mothra/Rodan) hit BOTH ground buildings AND planes — they still smash the
+    // city. The "airborne prefers flying" gating below is only for a JUMPING ground kaiju (FLYERMEGA U13).
+    var permFlyer = !!(this._formDef && this._formDef.shape && this._formDef.shape.archetype === 'flyer');
 
     // 1) explicit target (ground building OR an aimed flyer/plane)
     if (targetCell && (W.getTargetAt || W.getBuildingAt)) {
       var tb = W.getTargetAt ? W.getTargetAt(targetCell.col, targetCell.row)
                              : W.getBuildingAt(targetCell.col, targetCell.row);
       if (tb && (tb.state === 'standing')) {
-        // allow flying target if airborne, or ground target if on ground
-        if (airborne ? (tb.flying) : true) primary = tb;
-        if (!primary && !airborne && tb.state === 'standing') primary = tb; // ground always ok
+        if (permFlyer || (airborne ? tb.flying : true)) primary = tb;
       }
     }
 
@@ -1120,7 +1129,7 @@ window.GAME = window.GAME || {};
       if (W.getBuildingAt) {
         var fb = W.getBuildingAt(Math.floor(ax), Math.floor(ay));
         if (fb && fb.state === 'standing') {
-          if (!airborne || fb.flying) primary = fb;
+          if (permFlyer || !airborne || fb.flying) primary = fb;
         }
       }
     }
@@ -1133,8 +1142,8 @@ window.GAME = window.GAME || {};
       for (var i = 0; i < near.length; i++) {
         var b = near[i];
         if (!b || b.state !== 'standing') continue;
-        // airborne: prefer flying targets; fall back to any if none
-        if (airborne && !b.flying) continue;
+        // jumping ground-kaiju prefers flying; permanent flyers take the nearest of ANY (ground or air)
+        if (airborne && !permFlyer && !b.flying) continue;
         var dx = (b.col + 0.5) - this.pos.wx, dy = (b.row + 0.5) - this.pos.wy;
         var d = dx * dx + dy * dy;
         if (d < bestD) { bestD = d; best = b; }

@@ -623,9 +623,10 @@ window.GAME = window.GAME || {};
       drawSmash(sx, sy, sr, pressed);
     }
 
-    // Jump disc — only shown if Input exposes a jumpBtn (contract §3 / input §44).
+    // Jump disc — hidden for FLYER forms (Mothra/Rodan hover, no ground jump — FLYERMEGA);
+    // otherwise shown if Input exposes a jumpBtn (contract §3 / input §44).
     var jb = Input.jumpBtn;
-    if (jb) {
+    if (jb && !(player && player._formDef && player._formDef.shape && player._formDef.shape.archetype === 'flyer')) {
       var jx = (jb.x != null ? jb.x : (jb.cx != null ? jb.cx : (w - 200)));
       var jy = (jb.y != null ? jb.y : (jb.cy != null ? jb.cy : (h - 92)));
       var jr = (jb.r != null ? jb.r : (jb.radius != null ? jb.radius : 36));
@@ -783,11 +784,10 @@ window.GAME = window.GAME || {};
     }
 
     // Key legend (bottom-left) — informational; mouse/keys already drive the game.
-    var rows = [
-      ['SPACE / CLICK', 'Atomic Breath'],
-      ['SHIFT / J', 'Jump'],
-      ['WASD / ARROWS', 'Move']
-    ];
+    var flyer = !!(player && player._formDef && player._formDef.shape && player._formDef.shape.archetype === 'flyer');
+    var rows = [['SPACE / CLICK', 'Atomic Breath']];
+    if (!flyer) rows.push(['SHIFT / J', 'Jump']);     // flyers hover — no jump
+    rows.push(['WASD / ARROWS', 'Move']);
     if (owned) rows.push(['F', 'Nova Slam']);
     rows.push(['SHOP ↗', 'Upgrades']);          // points at the always-visible #shop-btn (top-right); no key bound (research §90)
 

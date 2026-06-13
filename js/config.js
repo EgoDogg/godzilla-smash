@@ -146,24 +146,24 @@ window.GAME.Config = {
     // ============ Mothra (flyer) — t1, t2, t3 ============
     { id: 'mothra_gvm', name: 'Mothra', label: 'GvM', family: 'mothra', archetype: 'flyer', tier: 5, base: 1500000, cost: 5500000,
       palette: {
-        skin: '#00d9ff', skinDark: '#009acc', skinLight: '#66ebff',
-        plate: '#0080aa', plateEdge: '#00d9ff', plateGlow: 'rgba(0,217,255,0.75)',
-        breath: ['#00d9ff', '#ffffff'], breathGlow: 'rgba(0,200,255,0.95)', eye: '#00ffff', aura: null, fxMotes: 'pink' },
-      shape: { archetype: 'flyer', wingSpan: 2.8, wingStyle: 'moth', plates: 0, bulk: 0.9 },
+        skin: '#f3ede0', skinDark: '#b8aa92', skinLight: '#fffaf0',
+        plate: '#1a1a22', plateEdge: '#2ec8ff', plateGlow: 'rgba(46,200,255,0.7)',
+        breath: ['#2ec8ff', '#ffffff'], breathGlow: 'rgba(46,200,255,0.95)', eye: '#2ec8ff', aura: null, fxMotes: 'pink' },
+      shape: { archetype: 'flyer', wingSpan: 2.7, wingStyle: 'moth', plates: 0, bulk: 0.9, eyespot: 0.85, furThorax: true, wingField: ['#e88a2c', '#f0c050'] },
       attack: { kind: 'cloud', cooldown: 0.46, dot: { frac: 0.06, ticks: 10, intervalMs: 300 } } },
     { id: 'mothra_gxk', name: 'Mothra', label: 'GxK', family: 'mothra', archetype: 'flyer', tier: 6, base: 3000000, cost: 11000000,
       palette: {
-        skin: '#00d9ff', skinDark: '#009acc', skinLight: '#66ebff',
-        plate: '#ff8c00', plateEdge: '#ffaa33', plateGlow: 'rgba(255,140,0,0.75)',
-        breath: ['#ff8c00', '#ffffff'], breathGlow: 'rgba(255,140,0,0.95)', eye: '#ffbb00', aura: null, fxMotes: 'pink' },
-      shape: { archetype: 'flyer', wingSpan: 2.9, wingStyle: 'moth', plates: 0, bulk: 0.95 },
+        skin: '#c8772a', skinDark: '#8a4d18', skinLight: '#e6a04a',
+        plate: '#1a1410', plateEdge: '#2ec8ff', plateGlow: 'rgba(46,200,255,0.8)',
+        breath: ['#ffb84a', '#ffffff'], breathGlow: 'rgba(46,200,255,0.95)', eye: '#2ec8ff', aura: null, fxMotes: 'pink' },
+      shape: { archetype: 'flyer', wingSpan: 3.0, wingStyle: 'moth', plates: 0, bulk: 0.95, eyespot: 1.0, furThorax: 'thick', joints: true, wingField: ['#c8772a', '#e88a2c'] },
       attack: { kind: 'cloud', cooldown: 0.46, dot: { frac: 0.06, ticks: 10, intervalMs: 300 } } },
     { id: 'mothra_supernova', name: 'Mothra', label: 'Supernova', family: 'mothra', archetype: 'flyer', tier: 7, base: 7600000, cost: 40000000,
       palette: {
-        skin: '#fffacd', skinDark: '#f0e68c', skinLight: '#ffffff',
-        plate: '#daa520', plateEdge: '#ffd700', plateGlow: 'rgba(255,215,0,0.9)',
-        breath: ['#ffd700', '#ffffff'], breathGlow: 'rgba(255,215,0,0.98)', eye: '#ffffff', aura: 'rgba(255,215,0,0.20)', fxMotes: 'pink' },
-      shape: { archetype: 'flyer', wingSpan: 3.0, wingStyle: 'moth', plates: 0, bulk: 1.0 },
+        skin: '#fff6d8', skinDark: '#e8cf88', skinLight: '#ffffff',
+        plate: '#5a4416', plateEdge: '#ffd700', plateGlow: 'rgba(255,215,0,0.92)',
+        breath: ['#ffffff', '#ffd700'], breathGlow: 'rgba(255,215,0,0.98)', eye: '#ffffff', aura: 'rgba(255,215,0,0.24)', fxMotes: 'pink' },
+      shape: { archetype: 'flyer', wingSpan: 3.3, wingStyle: 'moth', plates: 0, bulk: 1.0, eyespot: 1.15, furThorax: 'thick', joints: true, godrays: true, wingField: ['#e8b020', '#f5d878'] },
       attack: { kind: 'cloud', cooldown: 0.46, dot: { frac: 0.06, ticks: 10, intervalMs: 300 } } },
 
     // ============ King Ghidorah (hydra, 3 heads) — t1, t2, t3, t4, t5 ============
@@ -206,24 +206,24 @@ window.GAME.Config = {
     // ============ Rodan (flyer, pteranodon) — t1, t2, t3 ============
     { id: 'rodan', name: 'Rodan', label: 'T1', family: 'rodan', archetype: 'flyer', tier: 13, base: 4000000, cost: 22000000,
       palette: {
-        skin: '#8b4513', skinDark: '#654321', skinLight: '#a0522d',
-        plate: '#8b4513', plateEdge: '#cd853f', plateGlow: 'rgba(205,133,63,0.75)',
+        skin: '#8a5a30', skinDark: '#5a3818', skinLight: '#b07a45',
+        plate: '#5a3818', plateEdge: '#cd853f', plateGlow: 'rgba(205,133,63,0.75)',
         breath: ['#ff8c00', '#ffaa33'], breathGlow: 'rgba(255,140,0,0.9)', eye: '#ffaa00', aura: null, fxMotes: null },
-      shape: { archetype: 'flyer', wingSpan: 3.2, wingStyle: 'pteranodon', plates: 0, bulk: 1.1 },
+      shape: { archetype: 'flyer', wingSpan: 2.8, wingStyle: 'pteranodon', plates: 0, bulk: 0.95, scallops: 2, crest: 'straight' },
       attack: { kind: 'dive', aoeRadius: 2.6, shake: 11, cooldown: 0.7 } },
     { id: 'rodan_mv', name: 'Rodan', label: 'MV', family: 'rodan', archetype: 'flyer', tier: 14, base: 6500000, cost: 36000000,
       palette: {
-        skin: '#704214', skinDark: '#4a2c0e', skinLight: '#9b6b47',
-        plate: '#704214', plateEdge: '#ff8c42', plateGlow: 'rgba(255,140,66,0.80)',
-        breath: ['#ff8c00', '#ffbb33'], breathGlow: 'rgba(255,140,0,0.95)', eye: '#ffbb00', aura: null, fxMotes: null },
-      shape: { archetype: 'flyer', wingSpan: 3.4, wingStyle: 'pteranodon', plates: 0, bulk: 1.15 },
+        skin: '#5c1e14', skinDark: '#2e0f0a', skinLight: '#8a2e1c',
+        plate: '#2e0f0a', plateEdge: '#ff6a1e', plateGlow: 'rgba(255,90,20,0.85)', fissureCore: '#ff6a1e', fissureGlow: 'rgba(255,90,20,0.5)',
+        breath: ['#ff8c00', '#ffbb33'], breathGlow: 'rgba(255,140,0,0.95)', eye: '#ff9933', aura: 'rgba(255,90,20,0.12)', fxMotes: 'heat' },
+      shape: { archetype: 'flyer', wingSpan: 3.1, wingStyle: 'pteranodon', plates: 0, bulk: 1.1, scallops: 3, fireRim: true, fissures: 0.5, crest: 'vsplit' },
       attack: { kind: 'dive', aoeRadius: 2.7, shake: 12, cooldown: 0.7 } },
     { id: 'rodan_fire', name: 'Rodan', label: 'Fire', family: 'rodan', archetype: 'flyer', tier: 15, base: 12000000, cost: 60000000,
       palette: {
-        skin: '#ff6b35', skinDark: '#cc5500', skinLight: '#ff9966',
-        plate: '#ff6b35', plateEdge: '#ffaa33', plateGlow: 'rgba(255,170,51,0.85)',
-        breath: ['#ff4500', '#ff8c00'], breathGlow: 'rgba(255,100,0,0.98)', eye: '#ffdd00', aura: 'rgba(255,100,0,0.18)', fxMotes: 'heat' },
-      shape: { archetype: 'flyer', wingSpan: 3.6, wingStyle: 'pteranodon', plates: 0, bulk: 1.2 },
+        skin: '#ff5a1e', skinDark: '#c23008', skinLight: '#ffb066',
+        plate: '#c23008', plateEdge: '#ffcc33', plateGlow: 'rgba(255,140,0,0.98)', fissureCore: '#fff6cc', fissureGlow: 'rgba(255,140,0,0.6)',
+        breath: ['#ff4500', '#ff8c00'], breathGlow: 'rgba(255,100,0,0.98)', eye: '#ffdd00', aura: 'rgba(255,80,0,0.20)', fxMotes: 'heat' },
+      shape: { archetype: 'flyer', wingSpan: 3.4, wingStyle: 'pteranodon', plates: 0, bulk: 1.2, scallops: 4, fireRim: true, fissures: 0.8, crest: 'vsplit', goldCrest: true },
       attack: { kind: 'dive', aoeRadius: 2.8, shake: 13, cooldown: 0.7 } },
 
     // ============ Mechagodzilla (mecha) — t1, t2, t3, t4 (ASCENDING) ============
@@ -284,5 +284,6 @@ window.GAME.Config = {
   },
 
   // --- Jump mechanics (pos.z kinematics) ---
-  JUMP: { vEscape: 8.5, gravity: 26 }
+  JUMP: { vEscape: 8.5, gravity: 26 },
+  FLYER_ALTITUDE: 1.0,   // flyers (Mothra/Rodan) hover at this constant world-Z (FLYERMEGA §7)
 };

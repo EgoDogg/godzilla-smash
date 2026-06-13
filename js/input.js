@@ -600,7 +600,12 @@ window.GAME = window.GAME || {};
    * ======================================================================== */
   function fireAttack() { attackLatched = true; }
 
-  function fireJump() { jumpLatched = true; }
+  function fireJump() {
+    // flyers (Mothra/Rodan) hover at altitude — no ground jump (FLYERMEGA)
+    var u = G._activeUnit;
+    if (u && u._formDef && u._formDef.shape && u._formDef.shape.archetype === 'flyer') return;
+    jumpLatched = true;
+  }
 
   function faceTowardCell(col, row) {
     var p = playerWorldPos();
