@@ -43,13 +43,14 @@ window.GAME = window.GAME || {};
   var Input = {};
 
   // ---- Tunables (control geometry; gameplay numbers stay in Config) -----------
-  var JOY_RADIUS = 70;     // px throw of the floating stick
-  var JOY_DEADZONE = 0.18; // fraction of radius ignored near center
-  var SMASH_MIN = 64;      // min SMASH disc diameter (so radius >= 32)
-  var JUMP_MIN = 56;       // min JUMP disc diameter (so radius >= 28)
-  var FINISHER_MIN = 76;   // min NOVA disc diameter (research-locked; secondary tier)
-  var LEFT_ZONE = 0.55;    // left 55% of width spawns the joystick
-  var RIGHT_ZONE = 0.55;   // right 55% of width is the button area (SMASH/JUMP)
+  // Touch-control geometry — research-locked (docs/research-2026-06.md U4).
+  var JOY_RADIUS = 70;     // px throw of the floating stick (kept; ~80 was a marginal gain)
+  var JOY_DEADZONE = 0.12; // fraction of radius ignored near center (was 0.18 — crisper)
+  var SMASH_MIN = 96;      // min SMASH disc diameter (was 64; HIG 44pt + primary-action size)
+  var JUMP_MIN = 76;       // min JUMP disc diameter (was 56; SMASH:JUMP = 96:76 hierarchy)
+  var FINISHER_MIN = 76;   // min NOVA disc diameter (secondary tier, matches JUMP)
+  var LEFT_ZONE = 0.42;    // left 42% of width spawns the joystick (was 0.55 — frees the
+                           // center band so tap-to-target works; protects the LOCKED pillar)
   var FACE_AHEAD_PX = 28;  // how far ahead (world px) we probe a faced building
   var NEAR_TARGET_PX = 40; // fallback: nearest standing building within this world-px
 
@@ -149,12 +150,37 @@ window.GAME = window.GAME || {};
     layoutSmash();
   }
 
+  // Read env(safe-area-inset-*) via a hidden probe element — Canvas2D layout can't use
+  // CSS env() directly, and on a full-bleed iPad PWA (viewport-fit=cover) the bottom-right
+  // discs would otherwise sit under the home-indicator strip. Probe created once, lazily.
+  var _saiProbe = null;
+  function safeAreaInsets() {
+    if (!_saiProbe) {
+      try {
+        _saiProbe = document.createElement('div');
+        _saiProbe.style.cssText =
+          'position:fixed;left:0;top:0;width:0;height:0;visibility:hidden;pointer-events:none;' +
+          'padding-right:env(safe-area-inset-right);padding-bottom:env(safe-area-inset-bottom);' +
+          'padding-left:env(safe-area-inset-left);padding-top:env(safe-area-inset-top);';
+        document.body.appendChild(_saiProbe);
+      } catch (_) { return { right: 0, bottom: 0, left: 0, top: 0 }; }
+    }
+    var cs = window.getComputedStyle(_saiProbe);
+    return {
+      right:  parseFloat(cs.paddingRight)  || 0,
+      bottom: parseFloat(cs.paddingBottom) || 0,
+      left:   parseFloat(cs.paddingLeft)   || 0,
+      top:    parseFloat(cs.paddingTop)    || 0
+    };
+  }
+
   function layoutSmash() {
-    // Fixed bottom-right discs: SMASH (lower) and JUMP (upper).
-    // Both >=min px, inset from safe edges. JUMP stacked above SMASH.
+    // Fixed bottom-right discs: SMASH (lower) and JUMP (upper), NOVA left of SMASH.
+    // Inset from safe edges + the home-indicator/notch via env(safe-area-inset-*).
     var r = Math.max(SMASH_MIN / 2, Math.round(Math.min(W, H) * 0.085));
-    var insetX = r + 26;
-    var insetY = r + 26;
+    var sai = safeAreaInsets();
+    var insetX = r + 26 + sai.right;
+    var insetY = r + 26 + sai.bottom;
 
     Input.smashBtn.r = r;
     Input.smashBtn.x = W - insetX;
