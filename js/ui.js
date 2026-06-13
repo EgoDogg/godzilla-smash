@@ -35,6 +35,7 @@ window.GAME = window.GAME || {};
     tabs: null,      // NodeList of #shop-tabs button
     thp: null,       // #target-hp container
     thpName: null, thpNum: null, thpFill: null, thpGhost: null,
+    wincard: null, wincardStats: null, wincardContinue: null,  // win-finale card
   };
 
   // --- Dirty-flag cache: last DOM-written strings, so refresh() only writes on change. ---
@@ -260,6 +261,39 @@ window.GAME = window.GAME || {};
     if (state.shopOpen) closeShop(); else openShop();
   }
 
+  /* ---------------------------------------------------------------- win-finale card */
+
+  // Show the one-time completion card with run stats (driven by world.triggerFinale). Pauses
+  // the sim while open; "Continue — Free Roam" dismisses it and the player keeps smashing.
+  function showWinCard(stats) {
+    if (!el.wincard) return;
+    if (el.wincardStats) {
+      el.wincardStats.innerHTML = '';
+      var rows = [];
+      if (stats) {
+        rows.push(['Forms collected', stats.formsOwned + ' / ' + stats.formsTotal]);
+        rows.push(['Peak attack power', Utils.fmt(stats.attackPower)]);
+        rows.push(['Peak combo', '×' + (Math.round((stats.peakCombo || 1) * 10) / 10).toFixed(1)]);
+        rows.push(['Cash banked', '💰 ' + Utils.fmt(stats.money)]);
+      }
+      for (var i = 0; i < rows.length; i++) {
+        var d = document.createElement('div');
+        d.className = 'ws';
+        var k = document.createElement('span'); k.textContent = rows[i][0];
+        var v = document.createElement('b');    v.textContent = rows[i][1];
+        d.appendChild(k); d.appendChild(v);
+        el.wincardStats.appendChild(d);
+      }
+    }
+    el.wincard.classList.remove('hidden');
+    setPaused(true);
+  }
+
+  function closeWinCard() {
+    if (el.wincard) el.wincard.classList.add('hidden');
+    setPaused(false);
+  }
+
   // Update the #shop-tabs button .active chrome and remember the tab.
   // When not skipping Economy, ask it to repaint the body for the new tab.
   function setActiveTab(tab, skipEconomy) {
@@ -360,6 +394,9 @@ window.GAME = window.GAME || {};
     el.thpNum = document.getElementById('thp-num');
     el.thpFill = document.getElementById('thp-fill');
     el.thpGhost = document.getElementById('thp-ghost');
+    el.wincard = document.getElementById('wincard');
+    el.wincardStats = document.getElementById('wincard-stats');
+    el.wincardContinue = document.getElementById('wincard-continue');
 
     // Seed the active tab from whichever button ships marked .active in the HTML.
     if (el.tabs && el.tabs.length) {
@@ -376,6 +413,7 @@ window.GAME = window.GAME || {};
     if (el.shopClose) el.shopClose.onclick = function () { closeShop(); };
     if (el.shopBackdrop) el.shopBackdrop.onclick = function () { closeShop(); };
     if (el.muteBtn) el.muteBtn.onclick = function () { toggleMute(); };
+    if (el.wincardContinue) el.wincardContinue.onclick = function () { closeWinCard(); };
 
     if (el.tabs) {
       for (var j = 0; j < el.tabs.length; j++) {
@@ -408,6 +446,7 @@ window.GAME = window.GAME || {};
     refresh: refresh,
     openShop: openShop,
     closeShop: closeShop,      // convenience for Main / Economy after a purchase flow
+    showWinCard: showWinCard,  // one-time win-finale card (driven by world.triggerFinale)
     togglePause: togglePause,
     setPaused: setPaused,
     toggleMute: toggleMute,

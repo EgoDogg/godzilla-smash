@@ -257,7 +257,7 @@ window.GAME.Config = {
 
   // --- Special buildings (non-standard footprints, sprites, effects) ---
   SPECIALS: {
-    statue: { hp: 5e8, footprint: { w: 2, h: 2 }, height: 7, sprite: 'statue', place: 'topmid', unique: true },
+    statue: { hp: 1e9, footprint: { w: 2, h: 2 }, height: 7, sprite: 'statue', place: 'topmid', unique: true },
     pyramid: { hp: 2e8, footprint: { w: 2, h: 2 }, height: 3.5, sprite: 'pyramid', place: 'sides', count: 4 },
     sandpile: { hp: 5e4, footprint: { w: 1, h: 1 }, height: 0.5, sprite: 'sandpile', place: 'sides', scatter: 10 },
     football: { hp: 6.5e4, footprint: { w: 3, h: 2 }, height: 0.2, sprite: 'field', place: 'mid' },

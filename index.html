@@ -97,6 +97,21 @@
     background:var(--panel); border:1px solid var(--blue); color:var(--text); font:700 14px/1 system-ui;
     padding:12px 18px; border-radius:999px; opacity:0; pointer-events:none; transition:opacity .25s, transform .25s; }
   #toast.show { opacity:1; transform:translate(-50%,0); }
+
+  /* ---------- Win card (one-time completion finale) ---------- */
+  #wincard { position:fixed; inset:0; display:flex; align-items:center; justify-content:center; z-index:40; }
+  #wincard.hidden { display:none; }
+  #wincard-backdrop { position:absolute; inset:0; background:rgba(4,6,12,.80); backdrop-filter:blur(4px); }
+  #wincard-panel { position:relative; width:min(440px,92vw); background:var(--panel); border:1px solid var(--line);
+    border-radius:18px; padding:26px 24px; text-align:center; box-shadow:0 0 70px rgba(120,180,255,.30); }
+  #wincard-title { font:900 26px/1.15 system-ui; color:#ffe08a; margin-bottom:6px; }
+  #wincard-sub { color:var(--dim); font:600 13px/1.45 system-ui; margin-bottom:18px; }
+  #wincard-stats { display:flex; flex-direction:column; gap:7px; margin-bottom:20px; }
+  #wincard-stats .ws { display:flex; justify-content:space-between; font:600 15px/1 system-ui; color:var(--text); }
+  #wincard-stats .ws b { color:#6dffa0; font-weight:800; }
+  #wincard-continue { width:100%; padding:13px; font:800 15px/1 system-ui; border-radius:12px;
+    border:1px solid var(--green); background:linear-gradient(180deg,#2bb56a,#1f9a58); color:#fff; cursor:pointer; }
+  #wincard-continue:hover { filter:brightness(1.08); }
 </style>
 </head>
 <body>
@@ -129,6 +144,16 @@
       <button data-tab="worlds">Worlds</button>
     </div>
     <div id="shop-body"></div>
+  </div>
+</div>
+
+<div id="wincard" class="hidden">
+  <div id="wincard-backdrop"></div>
+  <div id="wincard-panel">
+    <div id="wincard-title">🏙️ CITY LEVELLED — 100%</div>
+    <div id="wincard-sub">Your atomic breath one-shots the strongest building. The city is rubble. You win.</div>
+    <div id="wincard-stats"></div>
+    <button id="wincard-continue">Continue — Free Roam</button>
   </div>
 </div>
 

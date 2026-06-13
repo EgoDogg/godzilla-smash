@@ -494,6 +494,27 @@ window.GAME = window.GAME || {};
   // Destruction pipeline — centralised so direct hit, AOE, and DoT all
   // converge here and bank/FX/audio fire exactly once per building.
   // -------------------------------------------------------------------------
+  // Win-finale (research-2026-06c): one-time completion beat — a climax (reuse the evolution
+  // juice) then the win card. Fired when the unique statue is destroyed by a player who can
+  // already one-shot the strongest building (Economy.canFinale()). The card is delayed past
+  // the climax freeze so the slow-mo smash reads before the modal appears.
+  function triggerFinale() {
+    if (G.Economy && G.Economy.markFinale) G.Economy.markFinale();   // mark first (one-shot guard)
+    var rm = Utils.reducedMotion;
+    if (G.FX) {
+      if (G.FX.screenFlash) G.FX.screenFlash(rm ? 0.2 : 0.95);
+      if (G.FX.shake)       G.FX.shake(rm ? 0 : 22);
+      if (G.FX.hitStop)     G.FX.hitStop(rm ? 0 : 260);              // held climax beat
+    }
+    if (G.Audio && G.Audio.evolve) G.Audio.evolve();                 // reuse the evolution roar/bloom
+    var stats = (G.Economy && G.Economy.finaleStats) ? G.Economy.finaleStats() : null;
+    if (typeof setTimeout === 'function') {
+      setTimeout(function () { if (G.UI && G.UI.showWinCard) G.UI.showWinCard(stats); }, rm ? 250 : 750);
+    } else if (G.UI && G.UI.showWinCard) {
+      G.UI.showWinCard(stats);
+    }
+  }
+
   function destroy(b) {
     var payout = b.maxHp;
     var E = G.Economy;
@@ -520,6 +541,11 @@ window.GAME = window.GAME || {};
 
     // Airplanes don't advance the frontier.
     if (!b.flying) advanceFrontier(b.row);
+
+    // Win-finale: destroying the unique statue once you can one-shot the strongest building.
+    if (b.special === 'statue' && E && typeof E.canFinale === 'function' && E.canFinale()) {
+      triggerFinale();
+    }
 
     return payout;
   }

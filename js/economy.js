@@ -61,7 +61,9 @@ window.GAME = window.GAME || {};
     maxReachedRow:  0,
     world2Unlocked: false,
     muted:          false,
-    lastSeen:       0           // ms timestamp of last save (for a future offline-income floor)
+    lastSeen:       0,          // ms timestamp of last save (for a future offline-income floor)
+    finaleSeen:     false,      // win-finale played once (attackPower>=CAP_HP + statue destroyed)
+    peakCombo:      1           // highest combo multiplier reached this save (win-card stat)
   };
 
   // HUD dirty flag — UI polls and repaints when set.
@@ -150,6 +152,7 @@ window.GAME = window.GAME || {};
     var C = Cfg.COMBO;
     comboT = C.WINDOW_MS;
     comboMultVal = U.clamp(comboMultVal + C.STEP, 1, C.MAX);
+    if (comboMultVal > state.peakCombo) state.peakCombo = comboMultVal;  // win-card stat
   }
 
   // ===========================================================================================
@@ -182,6 +185,22 @@ window.GAME = window.GAME || {};
 
   function atkSpeedCost() {
     return Math.round(Cfg.ATKSPD.BASE * Math.pow(Cfg.ATKSPD.GROWTH, state.atkSpeedLevel));
+  }
+
+  // ---- Win-finale (research-2026-06c) --------------------------------------------------------
+  // The game is finite: when attack power can one-shot the strongest building (>=CAP_HP) AND
+  // the player destroys the unique statue, the one-time completion beat fires.
+  function canFinale() { return attackPower() >= CAP_HP && !state.finaleSeen; }
+  function markFinale() { if (!state.finaleSeen) { state.finaleSeen = true; save(); } }
+  function finaleStats() {
+    return {
+      formsOwned:  state.ownedFormIds.length,
+      formsTotal:  (Cfg.FORMS ? Cfg.FORMS.length : 20),
+      attackPower: attackPower(),
+      clawsLevel:  state.clawsLevel,
+      money:       state.money,
+      peakCombo:   state.peakCombo
+    };
   }
 
   // Re-fire gate (seconds) for the ACTIVE form at a given attack-speed level — display only.
@@ -370,7 +389,9 @@ window.GAME = window.GAME || {};
       activeFormId:   state.activeFormId,
       maxReachedRow:  state.maxReachedRow,
       world2Unlocked: state.world2Unlocked,
-      muted:          state.muted
+      muted:          state.muted,
+      finaleSeen:     state.finaleSeen,
+      peakCombo:      state.peakCombo
     });
     // safeSave returns false on quota/private-mode/ITP eviction — tell the player ONCE
     // rather than silently losing progress. (G.UI.toast does not exist — use Env.announce.)
@@ -417,6 +438,8 @@ window.GAME = window.GAME || {};
     state.world2Unlocked = !!s.world2Unlocked;
     state.muted          = !!s.muted;
     state.lastSeen       = (typeof s.lastSeen === 'number' && isFinite(s.lastSeen)) ? s.lastSeen : 0;
+    state.finaleSeen     = !!s.finaleSeen;
+    state.peakCombo      = (typeof s.peakCombo === 'number' && s.peakCombo >= 1) ? s.peakCombo : 1;
 
     hudDirty = true;
     return true;
@@ -873,6 +896,9 @@ window.GAME = window.GAME || {};
     buyMoveSpeed:  buyMoveSpeed,
     moveSpeedMult: function () { return moveMult; },
     buyFinisher:   buyFinisher,
+    canFinale:     canFinale,
+    markFinale:    markFinale,
+    finaleStats:   finaleStats,
     buyForm:    buyForm,
     switchForm: switchForm,
     buyWorld2:  buyWorld2,
@@ -908,6 +934,8 @@ window.GAME = window.GAME || {};
     get atkSpeedLevel()  { return state.atkSpeedLevel; },
     get moveSpeedLevel() { return state.moveSpeedLevel; },
     get finisherOwned()  { return state.finisherOwned; },
+    get finaleSeen()     { return state.finaleSeen; },
+    get peakCombo()      { return state.peakCombo; },
     get lastSeen()       { return state.lastSeen; },
     flushSave:           flushSave,   // exposed so the boot/host can force a flush
     get activeFormId()   { return state.activeFormId; },
