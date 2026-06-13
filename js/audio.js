@@ -186,6 +186,16 @@ window.GAME = window.GAME || {};
       if (k > 0.45) osc('sine', baseF * 1.1, baseF * 0.45, dur * 0.7, 0.4, t + 0.12);
     },
 
+    // Nova Slam detonation — a deep slam body + ground rumble + a bright zap, scaled
+    // by charge. Distinct from crumble (which also fires from the buildings it destroys).
+    finisher: function (charge) {
+      if (!live()) return;
+      var t = now(), k = (typeof charge === 'number') ? charge : 1;
+      osc('sine', 110, 38, 0.55 + 0.25 * k, 0.7, t);        // deep slam body
+      noise('lowpass', 500, 0.8, 0.6 + 0.3 * k, 0.55, t);   // ground rumble
+      osc('sawtooth', 900, 180, 0.22, 0.20, t);             // bright detonation zap
+    },
+
     // Evolution — rising roar sweep + bright shimmer + white-flash whoosh.
     evolve: function () {
       if (!live()) return;

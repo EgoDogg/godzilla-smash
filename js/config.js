@@ -58,6 +58,16 @@ window.GAME.Config = {
   //     above ATKSPD, preserving claws < atk-speed < move-speed coin-efficiency ordering. ---
   MOVESPD: { PER_LEVEL: 0.08, LEVELS: 6, BASE: 40, GROWTH: 2.4 },
 
+  // --- Nova Slam (charged finisher, research-locked docs/research-2026-06.md).
+  //     One-time unlock (COST). Hold the NOVA disc / F to charge 0→1 over CHARGE_S;
+  //     release fires an AoE slam centered ~1.2 tiles ahead of facing: radius
+  //     lerp(RADIUS_T, RADIUS_MAX_T, charge) tiles, damage = (DMG_MIN+(DMG_MAX-DMG_MIN)
+  //     ×charge) × attackPower with distance falloff. COOLDOWN_S real cooldown (a
+  //     finisher, not a spam loop) — NEVER touches the autofire gate. MIN_CHARGE = a
+  //     tap still fires weak; SLOW = move multiplier while charging; SHAKE peak. ---
+  FINISHER: { COST: 350, CHARGE_S: 1.2, COOLDOWN_S: 8, RADIUS_T: 2.5, RADIUS_MAX_T: 3.2,
+              DMG_MIN: 3, DMG_MAX: 10, MIN_CHARGE: 0.15, SLOW: 0.5, SHAKE: 14 },
+
   // --- Destruction / respawn timing (ms) ---
   RESPAWN: { CRUMBLE_MS: 550, RUBBLE_MS: 6500, RUBBLE_PER_TIER: 450, RISE_MS: 700 },
 

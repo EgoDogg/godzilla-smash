@@ -50,6 +50,7 @@ window.GAME = window.GAME || {};
     clawsLevel:     0,
     atkSpeedLevel:  0,          // Attack-Speed upgrade track (Config.ATKSPD), 0..LEVELS
     moveSpeedLevel: 0,          // Move-Speed upgrade track (Config.MOVESPD), 0..LEVELS
+    finisherOwned:  false,      // Nova Slam charged finisher unlocked (one-time)
     ownedFormIds:   ['gz2014'],
     activeFormId:   'gz2014',
     maxReachedRow:  0,
@@ -240,6 +241,17 @@ window.GAME = window.GAME || {};
     return true;
   }
 
+  function buyFinisher() {
+    if (state.finisherOwned) { sfxDeny(); return false; }   // one-time unlock
+    var cost = Cfg.FINISHER.COST;
+    if (!canAfford(cost)) { sfxDeny(); return false; }
+    state.money -= cost;
+    state.finisherOwned = true;
+    sfxBuy();
+    afterPurchase();
+    return true;
+  }
+
   // buyForm(id) — buy any form that passes the unlock gate.
   //   Wyrm forms: play 'evolve' SFX (Godzilla evolution).
   //   Titan base forms (tier 1): play 'recruit' SFX (new character unlocked).
@@ -329,6 +341,7 @@ window.GAME = window.GAME || {};
       clawsLevel:     state.clawsLevel,
       atkSpeedLevel:  state.atkSpeedLevel,
       moveSpeedLevel: state.moveSpeedLevel,
+      finisherOwned:  state.finisherOwned,
       ownedFormIds:   state.ownedFormIds.slice(),
       activeFormId:   state.activeFormId,
       maxReachedRow:  state.maxReachedRow,
@@ -347,6 +360,7 @@ window.GAME = window.GAME || {};
     state.clawsLevel = (s.clawsLevel | 0) >= 0 ? (s.clawsLevel | 0) : 0;
     state.atkSpeedLevel = U.clamp(s.atkSpeedLevel | 0, 0, Cfg.ATKSPD.LEVELS);
     state.moveSpeedLevel = U.clamp(s.moveSpeedLevel | 0, 0, Cfg.MOVESPD.LEVELS);
+    state.finisherOwned = !!s.finisherOwned;
     recalcMoveMult();
 
     // ownedFormIds: keep only known form ids, de-duplicated, ensure gz2014 is always present.
@@ -529,6 +543,30 @@ window.GAME = window.GAME || {};
           affordable: canAfford(msCost),
           disabled:   !canAfford(msCost),
           onClick:    function () { buyMoveSpeed(); }
+        }
+      }));
+    }
+
+    // Nova Slam — one-time charged-finisher unlock.
+    if (state.finisherOwned) {
+      body.appendChild(itemRow({
+        swatch: '#9a5cff',
+        title:  'Nova Slam',
+        sub:    'Hold the NOVA disc (or F) — charge, release: massive area slam',
+        cls:    'owned',
+        tag:    'OWNED'
+      }));
+    } else {
+      var fCost = Cfg.FINISHER.COST;
+      body.appendChild(itemRow({
+        swatch: '#9a5cff',
+        title:  'Nova Slam',
+        sub:    'Hold the NOVA disc (or F) — charge, release: massive area slam',
+        button: {
+          label:      '💰 ' + U.fmt(fCost),
+          affordable: canAfford(fCost),
+          disabled:   !canAfford(fCost),
+          onClick:    function () { buyFinisher(); }
         }
       }));
     }
@@ -788,6 +826,7 @@ window.GAME = window.GAME || {};
     moveSpeedCost: moveSpeedCost,
     buyMoveSpeed:  buyMoveSpeed,
     moveSpeedMult: function () { return moveMult; },
+    buyFinisher:   buyFinisher,
     buyForm:    buyForm,
     switchForm: switchForm,
     buyWorld2:  buyWorld2,
@@ -822,6 +861,7 @@ window.GAME = window.GAME || {};
     get clawsLevel()     { return state.clawsLevel; },
     get atkSpeedLevel()  { return state.atkSpeedLevel; },
     get moveSpeedLevel() { return state.moveSpeedLevel; },
+    get finisherOwned()  { return state.finisherOwned; },
     get activeFormId()   { return state.activeFormId; },
     get ownedFormIds()   { return state.ownedFormIds.slice(); },
     get world2Unlocked() { return state.world2Unlocked; },

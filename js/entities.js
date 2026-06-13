@@ -862,6 +862,8 @@ window.GAME = window.GAME || {};
     this.aimBuilding = null;  // building the aim-highlight ring tracks (set in update)
     this._prevAttack = false;
     this._prevJump = false;   // edge detector for jump intent
+    this.chargeT = 0;         // Nova Slam charge 0..1 (held); finisherCd gates re-fire
+    this.finisherCd = 0;      // Nova Slam cooldown remaining (s)
     // Resolve palette from unified form def
     this._formDef = formDefFor(this.kind, this.formId);
     this.pal = paletteFromFormDef(this._formDef);
@@ -945,6 +947,7 @@ window.GAME = window.GAME || {};
     if (this._flash > 0) this._flash = Math.max(0, this._flash - dt * 1.8);
     if (this.hurtT > 0) this.hurtT = Math.max(0, this.hurtT - dt);
     if (this.atkCooldown > 0) this.atkCooldown -= dt;
+    if (this.finisherCd > 0) this.finisherCd -= dt;
     this._glowPhase += dt;
 
     // ---- JUMP kinematics (pos.z, velZ) ----
@@ -960,14 +963,33 @@ window.GAME = window.GAME || {};
       if (this.pos.z < 0) { this.pos.z = 0; this.velZ = 0; }
     }
 
+    // ---- Nova Slam charge / release (finisher) ----
+    // Hold → charge toward 1; release → fireFinisher (which sets finisherCd, so the
+    // up-to-5 substeps that share one intent can't double-fire). Cancel (pointercancel /
+    // blur / shop) silently drops the charge. NEVER touches atkCooldown — autofire is
+    // an independent loop. fireFinisher borrows only the attack POSE.
+    var FIN = Cfg.FINISHER;
+    var ownFin = !!(G.Economy && G.Economy.finisherOwned);
+    var canCharge = !!(FIN && ownFin && intent.charge && this.finisherCd <= 0);
+    if (canCharge) {
+      this.chargeT = Math.min(1, this.chargeT + dt / FIN.CHARGE_S);
+      this._flash = Math.max(this._flash, 0.25 + 0.35 * this.chargeT); // charging glow
+    } else if (FIN && ownFin && intent.chargeRelease && this.finisherCd <= 0) {
+      this.fireFinisher(Math.max(FIN.MIN_CHARGE, this.chargeT));
+      this.chargeT = 0;
+    } else if (this.chargeT > 0 && !intent.charge) {
+      this.chargeT = 0;   // cancelled (no release latch — pointercancel/blur/shop)
+    }
+
     // ---- horizontal locomotion ----
     var mx = intent.moveX || 0, my = intent.moveY || 0;
     var moveMag = Math.hypot(mx, my);
     if (moveMag > 1) { mx /= moveMag; my /= moveMag; moveMag = 1; }
 
     // Move-Speed upgrade track: scale ACCEL + MAX_SPEED by the cached economy multiplier
-    // (×1 at level 0). Cached → no per-frame Math.pow. (U3 will further ×FIN.SLOW here.)
+    // (×1 at level 0). Cached → no per-frame Math.pow. Charging Nova Slam slows you ×FIN.SLOW.
     var spdMult = (G.Economy && G.Economy.moveSpeedMult) ? G.Economy.moveSpeedMult() : 1;
+    if (canCharge) spdMult *= FIN.SLOW;
     var accel = ACCEL * spdMult, maxSp = MAX_SPEED * spdMult;
 
     if (moveMag > 0.001) {
@@ -1054,7 +1076,7 @@ window.GAME = window.GAME || {};
     if (this.attackT <= 0) this.aimBuilding = this.aimTarget();
   };
 
-  var EMPTY_INTENT = { moveX: 0, moveY: 0, attack: false, target: null, jump: false };
+  var EMPTY_INTENT = { moveX: 0, moveY: 0, attack: false, target: null, jump: false, charge: false, chargeRelease: false };
 
   Kaiju.prototype.fireAttack = function (targetCell) {
     var targets = this.acquireTargets(targetCell);
@@ -1335,6 +1357,51 @@ window.GAME = window.GAME || {};
     } else {
       // unknown kind — default to beam
       fireBeam(this, targets, power, atkDef);
+    }
+  };
+
+  /* =====================================================================
+     fireFinisher — Nova Slam charged AoE. PARALLEL to startAttack: it borrows
+     the attack pose but NEVER touches atkCooldown (the autofire loop is undisturbed).
+     Epicenter ~1.2 tiles ahead of facing (kaiju sits inside the ring; damage circle
+     leans into the unsmashed buildings). Modeled on fireDive. charge ∈ [MIN_CHARGE,1].
+     ===================================================================== */
+  Kaiju.prototype.fireFinisher = function (charge) {
+    var FIN = Cfg.FINISHER;
+    this.finisherCd = FIN.COOLDOWN_S;        // set FIRST → self-consuming across substeps
+    // Borrow the attack pose only (does NOT gate autofire via atkCooldown).
+    this._attackDur = 0.4; this.attackT = 0.4; this.attackFrame = 0; this.fsm = 'attack';
+
+    var pal = this.pal;
+    var fwd = facingToWorldVec(this.facing);
+    var ccol = this.pos.wx + fwd.wx * 1.2, crow = this.pos.wy + fwd.wy * 1.2;
+    projectInto(ccol, crow, 0, _proj);
+    var cx = _proj.x, cy = _proj.y;
+    var radius = lerp(FIN.RADIUS_T, FIN.RADIUS_MAX_T, charge);
+
+    // FX — bigger than a dive: a double shockwave, scaled shake/flash, debris, hit-stop.
+    FX.shockwave(cx, cy, radius * TILE_W * 0.9, pal.plateEdge || pal.eye);
+    FX.shockwave(cx, cy, radius * TILE_W * 1.25, pal.eye);
+    FX.shake(REDUCED ? 0 : FIN.SHAKE * (0.5 + 0.5 * charge));
+    FX.debris({ col: Math.floor(ccol), row: Math.floor(crow), height: 1.5, style: null });
+    FX.screenFlash(0.15 + 0.15 * charge);
+    FX.hitStop(50);
+    if (G.Audio && typeof G.Audio.finisher === 'function') G.Audio.finisher(charge);
+
+    // AoE damage with distance falloff (fireDive pattern). Money/combo flow through
+    // dealDamage → World.hitBuilding → bankDestroy automatically.
+    var power = (G.Economy && G.Economy.attackPower) ? G.Economy.attackPower() : Cfg.START_ATTACK;
+    var dmgMult = FIN.DMG_MIN + (FIN.DMG_MAX - FIN.DMG_MIN) * charge;
+    var near = (G.World && G.World.footprintsNear) ? G.World.footprintsNear(ccol, crow, radius + 1) : [];
+    for (var i = 0; i < near.length; i++) {
+      var b = near[i];
+      if (!b || b.state !== 'standing') continue;
+      var dx = (b.col + 0.5) - ccol, dy = (b.row + 0.5) - crow;
+      if (dx * dx + dy * dy <= radius * radius) {
+        var dist = Math.sqrt(dx * dx + dy * dy);
+        var falloff = lerp(1, 0.55, clamp(dist / radius, 0, 1));
+        dealDamage(b, Math.round(power * dmgMult * falloff));
+      }
     }
   };
 

@@ -615,6 +615,18 @@ window.GAME = window.GAME || {};
       var jPressed = !!(jb.pressed || jb.down || jb.active);
       drawJump(jx, jy, jr, jPressed);
     }
+
+    // NOVA disc — only once the finisher is owned. Shows the charge fill (while held)
+    // or the depleting cooldown arc (while recharging), read from the live player.
+    var fb = Input.finisherBtn;
+    if (fb && G.Economy && G.Economy.finisherOwned) {
+      var fx2 = (fb.x != null ? fb.x : (w - 320));
+      var fy2 = (fb.y != null ? fb.y : (h - 92));
+      var fr2 = (fb.r != null ? fb.r : 38);
+      drawFinisher(fx2, fy2, fr2,
+                   player ? (player.chargeT || 0) : 0,
+                   player ? Math.max(0, player.finisherCd || 0) : 0);
+    }
   }
 
   // Floating joystick.
@@ -671,6 +683,42 @@ window.GAME = window.GAME || {};
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.fillText('JUMP', jx, jy + 1);
+    ctx.restore();
+  }
+
+  // NOVA disc — violet; brightens while charging. Charge fill arc (hot, sweeps 0→full)
+  // while held; depleting gray arc while on cooldown.
+  function drawFinisher(fx, fy, fr, charge, cd) {
+    var COOLD = (Cfg.FINISHER && Cfg.FINISHER.COOLDOWN_S) || 8;
+    var charging = charge > 0.001;
+    var onCd = cd > 0.001;
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(fx, fy, fr, 0, Math.PI * 2);
+    ctx.fillStyle = charging ? 'rgba(150,80,230,0.85)'
+                  : (onCd ? 'rgba(70,45,110,0.45)' : 'rgba(120,60,200,0.55)');
+    ctx.fill();
+    ctx.lineWidth = 2.5;
+    ctx.strokeStyle = charging ? 'rgba(220,180,255,0.95)' : 'rgba(170,120,235,0.7)';
+    ctx.stroke();
+    if (charging) {
+      ctx.strokeStyle = mixHex('#c08aff', '#ff5af0', U.clamp(charge, 0, 1));
+      ctx.lineWidth = 4; ctx.lineCap = 'round';
+      ctx.beginPath();
+      ctx.arc(fx, fy, fr - 4, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * U.clamp(charge, 0, 1));
+      ctx.stroke();
+    } else if (onCd) {
+      ctx.strokeStyle = 'rgba(165,165,185,0.7)';
+      ctx.lineWidth = 4; ctx.lineCap = 'round';
+      ctx.beginPath();
+      ctx.arc(fx, fy, fr - 4, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * U.clamp(cd / COOLD, 0, 1));
+      ctx.stroke();
+    }
+    ctx.fillStyle = 'rgba(255,255,255,0.92)';
+    ctx.font = '800 ' + Math.round(fr * 0.42) + 'px system-ui, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('NOVA', fx, fy + 1);
     ctx.restore();
   }
 

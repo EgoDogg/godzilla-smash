@@ -47,6 +47,7 @@ window.GAME = window.GAME || {};
   var JOY_DEADZONE = 0.18; // fraction of radius ignored near center
   var SMASH_MIN = 64;      // min SMASH disc diameter (so radius >= 32)
   var JUMP_MIN = 56;       // min JUMP disc diameter (so radius >= 28)
+  var FINISHER_MIN = 76;   // min NOVA disc diameter (research-locked; secondary tier)
   var LEFT_ZONE = 0.55;    // left 55% of width spawns the joystick
   var RIGHT_ZONE = 0.55;   // right 55% of width is the button area (SMASH/JUMP)
   var FACE_AHEAD_PX = 28;  // how far ahead (world px) we probe a faced building
@@ -70,6 +71,7 @@ window.GAME = window.GAME || {};
   Input.joystick = { active: false, baseX: 0, baseY: 0, dx: 0, dy: 0 };
   Input.smashBtn = { x: 0, y: 0, r: 0 };
   Input.jumpBtn = { x: 0, y: 0, r: 0 };
+  Input.finisherBtn = { x: 0, y: 0, r: 0 };   // NOVA disc (left of SMASH); inert until owned
   Input.hovered = null;
 
   // ---- Pointer bookkeeping (multi-thumb: joystick id vs smash id vs jump id) -----
@@ -77,6 +79,7 @@ window.GAME = window.GAME || {};
   var joyCurX = 0, joyCurY = 0;       // current touch position for that pointer
   var smashPointerId = null;          // pointerId holding the SMASH disc
   var jumpPointerId = null;           // pointerId holding the JUMP disc
+  var finisherPointerId = null;       // pointerId holding the NOVA disc (charging Nova Slam)
   var mouseAtkPointerId = null;       // desktop left button held → autofire + cursor-aim
   var cursorClientX = null, cursorClientY = null;  // last desktop cursor pos (raw client px)
 
@@ -84,6 +87,8 @@ window.GAME = window.GAME || {};
   var keyUp = false, keyDown = false, keyLeft = false, keyRight = false;
   var keyJump = false;                // Shift or KeyJ
   var spaceHeld = false;              // Space held → autofire (rate-gated downstream by the kaiju)
+  var keyFHeld = false;               // F held → charging Nova Slam (level state, read in consume)
+  var chargeReleaseLatched = false;   // one-shot: NOVA disc/F released → fire the finisher
 
   /* --------------------------------------------------------------------------
    * SCREEN → WORLD direction mapping  (blueprint §6: "up-screen = forward (+wy)").
@@ -160,6 +165,12 @@ window.GAME = window.GAME || {};
     Input.jumpBtn.r = rj;
     Input.jumpBtn.x = W - insetX;
     Input.jumpBtn.y = H - insetY - gapVertical;
+
+    // NOVA disc — L-shape: left of SMASH, same baseline (research-locked geometry).
+    var rf = Math.max(FINISHER_MIN / 2, Math.round(Math.min(W, H) * 0.075));
+    Input.finisherBtn.r = rf;
+    Input.finisherBtn.x = W - insetX - (r + rf + 24);
+    Input.finisherBtn.y = H - insetY;
   }
 
   function inSmash(x, y) {
@@ -170,6 +181,15 @@ window.GAME = window.GAME || {};
 
   function inJump(x, y) {
     var b = Input.jumpBtn;
+    var dx = x - b.x, dy = y - b.y;
+    return (dx * dx + dy * dy) <= (b.r * b.r);
+  }
+
+  // NOVA disc hit-test — inert (returns false) until the finisher is purchased, so
+  // taps there fall through to tap-to-target before the player owns Nova Slam.
+  function inFinisher(x, y) {
+    if (!(G.Economy && G.Economy.finisherOwned)) return false;
+    var b = Input.finisherBtn;
     var dx = x - b.x, dy = y - b.y;
     return (dx * dx + dy * dy) <= (b.r * b.r);
   }
@@ -304,6 +324,14 @@ window.GAME = window.GAME || {};
         e.preventDefault();
         return;
       }
+      // NOVA disc (only when owned): claim the pointer; charge accrues in consume()
+      // while held (no latch on press). Checked before the joystick/tap fallthrough.
+      if (inFinisher(p.x, p.y) && finisherPointerId === null) {
+        finisherPointerId = e.pointerId;
+        capture(e);
+        e.preventDefault();
+        return;
+      }
       // Floating joystick: only in the left zone, only if not already active.
       if (p.x <= W * LEFT_ZONE && joyPointerId === null) {
         joyPointerId = e.pointerId;
@@ -344,7 +372,7 @@ window.GAME = window.GAME || {};
   }
 
   function onPointerMove(e) {
-    if (!isControlPointer(e) && e.pointerId !== joyPointerId && e.pointerId !== smashPointerId && e.pointerId !== jumpPointerId && e.pointerId !== mouseAtkPointerId) {
+    if (!isControlPointer(e) && e.pointerId !== joyPointerId && e.pointerId !== smashPointerId && e.pointerId !== jumpPointerId && e.pointerId !== finisherPointerId && e.pointerId !== mouseAtkPointerId) {
       // Move that isn't over the canvas and isn't one of our captured control
       // pointers → ignore (let DOM handle hover/scroll).
       return;
@@ -377,6 +405,12 @@ window.GAME = window.GAME || {};
       return;
     }
 
+    if (e.pointerId === finisherPointerId) {
+      // Holding NOVA (charging); nothing positional, just swallow.
+      e.preventDefault();
+      return;
+    }
+
     // Desktop hover highlight (no buttons held).
     if (!Input.isTouch && e.target === canvas) {
       cursorClientX = e.clientX; cursorClientY = e.clientY;
@@ -404,6 +438,13 @@ window.GAME = window.GAME || {};
       e.preventDefault();
       return;
     }
+    if (e.pointerId === finisherPointerId) {
+      finisherPointerId = null;
+      chargeReleaseLatched = true;          // deliberate release → fire the charged slam
+      release(e);
+      e.preventDefault();
+      return;
+    }
     if (e.pointerId === mouseAtkPointerId) {
       mouseAtkPointerId = null;             // release → autofire stops
       release(e);
@@ -417,6 +458,9 @@ window.GAME = window.GAME || {};
     if (e.pointerId === joyPointerId) { releaseJoystick(); release(e); return; }
     if (e.pointerId === smashPointerId) { smashPointerId = null; release(e); return; }
     if (e.pointerId === jumpPointerId) { jumpPointerId = null; release(e); return; }
+    // NOVA cancel: drop the pointer WITHOUT latching a release — an OS-gesture cancel
+    // silently discards the charge instead of detonating an unintended slam.
+    if (e.pointerId === finisherPointerId) { finisherPointerId = null; release(e); return; }
   }
 
   function capture(e) { try { canvas.setPointerCapture(e.pointerId); } catch (_) {} }
@@ -474,6 +518,11 @@ window.GAME = window.GAME || {};
         fireJump();
         e.preventDefault();
         return;
+      case 'KeyF':
+        e.preventDefault();
+        if (e.repeat) return;          // hold = charge; OS key-repeat ignored
+        keyFHeld = true;               // charging Nova Slam (read each consume)
+        return;
       default: return;
     }
     e.preventDefault();
@@ -488,6 +537,10 @@ window.GAME = window.GAME || {};
       case 'KeyD': case 'ArrowRight': keyRight = false; break;
       case 'Space':
         spaceHeld = false;             // release → autofire stops
+        return;
+      case 'KeyF':
+        keyFHeld = false;
+        chargeReleaseLatched = true;   // release → fire the charged slam
         return;
       case 'ShiftLeft': case 'ShiftRight': case 'KeyJ':
         keyJump = false;
@@ -584,11 +637,13 @@ window.GAME = window.GAME || {};
     if (joyPointerId !== null) releaseJoystick();
     smashPointerId = null;
     jumpPointerId = null;
+    finisherPointerId = null;
+    keyFHeld = false;              // blur/hide mid-charge → cancel (no release latch)
     mouseAtkPointerId = null;
   }
 
   // Reusable intent object — one allocation total, never per-frame.
-  var _intent = { moveX: 0, moveY: 0, attack: false, target: null, jump: false };
+  var _intent = { moveX: 0, moveY: 0, attack: false, target: null, jump: false, charge: false, chargeRelease: false };
 
   Input.consume = function () {
     _intent.moveX = moveX;
@@ -619,11 +674,15 @@ window.GAME = window.GAME || {};
     _intent.attack = atk;
     _intent.target = tgt;
     _intent.jump = jmp;
+    // Nova Slam: charge is level-state (disc/F held); release is a one-shot edge.
+    _intent.charge = (finisherPointerId !== null || keyFHeld);
+    _intent.chargeRelease = chargeReleaseLatched;
 
     // One-shot edge signals reset after each consume.
     attackLatched = false;
     pendingTarget = null;
     jumpLatched = false;
+    chargeReleaseLatched = false;
 
     return _intent;
   };
