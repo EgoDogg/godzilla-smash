@@ -495,30 +495,37 @@ window.GAME = window.GAME || {};
      Shared with archetypes.js — exported via G.Kaiju._wyrmHelpers below.
      ===================================================================== */
 
-  function facingGeom(base) {
-    switch (base) {
-      case 0:
-        return { dir: 0.0, headX: 0.0, headFwd: 0.0, snout: 0.10, plateLean: 0.0,
-                 farLegX: -0.22, nearLegX: 0.22, farArmX: -0.30, nearArmX: 0.30,
-                 bellyX: 0.0, tailDir: -1, show: 'front', headScale: 1.06 };
-      case 1:
-        return { dir: 0.6, headX: 0.16, headFwd: 0.22, snout: 0.30, plateLean: 0.18,
-                 farLegX: -0.26, nearLegX: 0.18, farArmX: -0.22, nearArmX: 0.34,
-                 bellyX: 0.10, tailDir: -1, show: 'front', headScale: 1.0 };
-      case 2:
-        return { dir: 1.0, headX: 0.30, headFwd: 0.40, snout: 0.46, plateLean: 0.30,
-                 farLegX: -0.18, nearLegX: 0.20, farArmX: -0.10, nearArmX: 0.34,
-                 bellyX: 0.16, tailDir: -1, show: 'side', headScale: 0.96 };
-      case 3:
-        return { dir: 0.7, headX: 0.18, headFwd: 0.20, snout: 0.24, plateLean: 0.42,
-                 farLegX: -0.20, nearLegX: 0.22, farArmX: -0.30, nearArmX: 0.26,
-                 bellyX: 0.06, tailDir: 1, show: 'back34', headScale: 0.9 };
-      default:
-        return { dir: 0.0, headX: 0.0, headFwd: 0.0, snout: 0.0, plateLean: 0.55,
-                 farLegX: -0.22, nearLegX: 0.22, farArmX: -0.30, nearArmX: 0.30,
-                 bellyX: 0.0, tailDir: 1, show: 'back', headScale: 0.72 };
-    }
-  }
+  // facingGeom — SINGLE SOURCE (U12 dedup): archetypes.js owns this table (loads first,
+  // exports G.Archetypes.facingGeom). entities consumes that one object so the byte-identical
+  // duplicate is gone. The inline fallback below is behavior-identical and only used if
+  // archetypes were somehow absent (load order guarantees it isn't). Both consumers + the
+  // _wyrmHelpers export now reference the same function.
+  var facingGeom = (G.Archetypes && typeof G.Archetypes.facingGeom === 'function')
+    ? G.Archetypes.facingGeom
+    : function (base) {
+        switch (base) {
+          case 0:
+            return { dir: 0.0, headX: 0.0, headFwd: 0.0, snout: 0.10, plateLean: 0.0,
+                     farLegX: -0.22, nearLegX: 0.22, farArmX: -0.30, nearArmX: 0.30,
+                     bellyX: 0.0, tailDir: -1, show: 'front', headScale: 1.06 };
+          case 1:
+            return { dir: 0.6, headX: 0.16, headFwd: 0.22, snout: 0.30, plateLean: 0.18,
+                     farLegX: -0.26, nearLegX: 0.18, farArmX: -0.22, nearArmX: 0.34,
+                     bellyX: 0.10, tailDir: -1, show: 'front', headScale: 1.0 };
+          case 2:
+            return { dir: 1.0, headX: 0.30, headFwd: 0.40, snout: 0.46, plateLean: 0.30,
+                     farLegX: -0.18, nearLegX: 0.20, farArmX: -0.10, nearArmX: 0.34,
+                     bellyX: 0.16, tailDir: -1, show: 'side', headScale: 0.96 };
+          case 3:
+            return { dir: 0.7, headX: 0.18, headFwd: 0.20, snout: 0.24, plateLean: 0.42,
+                     farLegX: -0.20, nearLegX: 0.22, farArmX: -0.30, nearArmX: 0.26,
+                     bellyX: 0.06, tailDir: 1, show: 'back34', headScale: 0.9 };
+          default:
+            return { dir: 0.0, headX: 0.0, headFwd: 0.0, snout: 0.0, plateLean: 0.55,
+                     farLegX: -0.22, nearLegX: 0.22, farArmX: -0.30, nearArmX: 0.30,
+                     bellyX: 0.0, tailDir: 1, show: 'back', headScale: 0.72 };
+        }
+      };
 
   function drawTail(ctx, BH, BW, fg, dark) {
     var d = fg.tailDir;
