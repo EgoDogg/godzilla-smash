@@ -506,7 +506,9 @@ window.GAME = window.GAME || {};
     if (G.Audio && typeof G.Audio.crumble === 'function') G.Audio.crumble(b.tier);
     // Kill juice: a brief freeze-frame + screen flash (scaled by tier). Both are
     // no-ops under reduced-motion (guarded inside FX). Destroy only — never per-hit.
-    if (G.FX && typeof G.FX.hitStop === 'function') G.FX.hitStop(40 + Math.min(b.tier || 0, 18) * 3);
+    // Hit-stop (research-locked): floor 60ms, cap 95ms (< the ~125ms re-fire gate so it
+    // never stalls autofire). <50ms is imperceptible; genre kill-stops run 80-120ms.
+    if (G.FX && typeof G.FX.hitStop === 'function') G.FX.hitStop(Math.min(95, 60 + Math.min(b.tier || 0, 18) * 2));
     if (G.FX && typeof G.FX.screenFlash === 'function') G.FX.screenFlash((b.tier || 0) >= 14 ? 0.28 : 0.18);
 
     b.hp = 0;

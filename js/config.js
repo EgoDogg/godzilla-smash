@@ -2,7 +2,7 @@
 window.GAME = window.GAME || {};
 window.GAME.Config = {
   saveKey: 'godzilla-save-v3',
-  CACHE_VERSION: 'gz-v13',
+  CACHE_VERSION: 'gz-v14',
 
   // --- Isometric grid (world units = tiles). Wide, open, zoomed-out city:
   //     21 cols of 2×2 blocks split by wide streets; 58 rows. TILE_*/WZ_PX are
@@ -32,7 +32,10 @@ window.GAME.Config = {
   CLAWS_GROWTH: 2.6,
 
   // --- Combo: the only damage multiplier (chain smashes to ramp ×1 → ×2) ---
-  COMBO: { WINDOW_MS: 1600, STEP: 0.04, MAX: 2.0 },
+  // Combo (research-locked docs/research-2026-06.md): STEP 0.12 → cap reached in ~9
+  // destroys (was 0.04 → ~25, practically invisible). WINDOW 3250ms > RUBBLE_MS 2800 so
+  // a combo survives one respawn gap but still decays on idle. CAP 2.0 unchanged (locked).
+  COMBO: { WINDOW_MS: 3250, STEP: 0.12, MAX: 2.0 },
   PASSIVE: 0,                // no passive income (would trivialize deep rows)
 
   // --- Attack cadence: the re-fire GATE is decoupled from the attack ANIMATION.
@@ -69,7 +72,10 @@ window.GAME.Config = {
               DMG_MIN: 3, DMG_MAX: 10, MIN_CHARGE: 0.15, SLOW: 0.5, SHAKE: 14 },
 
   // --- Destruction / respawn timing (ms) ---
-  RESPAWN: { CRUMBLE_MS: 550, RUBBLE_MS: 6500, RUBBLE_PER_TIER: 450, RISE_MS: 700 },
+  // Respawn (research-locked): both levers cut together — RUBBLE_MS 6500→2800 AND
+  // RUBBLE_PER_TIER 450→150, else deep-tier downtime stays ~12s (per-tier dominates).
+  // tier0 ≈ 4.05s, tier18 ≈ 6.75s total — within the genre 4-8s target. See research §rubble.
+  RESPAWN: { CRUMBLE_MS: 550, RUBBLE_MS: 2800, RUBBLE_PER_TIER: 150, RISE_MS: 700 },
 
   WORLD2_COST: 12e9,         // capstone unlock → "Coming soon" stub
 
