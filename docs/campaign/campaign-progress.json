@@ -16,7 +16,7 @@
     "4. regression: unit named no-change checks pass",
     "5. drift (deploy units): sw.js CACHE === config.CACHE_VERSION; campaign-progress.json + CAMPAIGN-BOOT.md updated in the ship commit. Doc-only commits may skip 1-4 with a justification line."
   ],
-  "_updated_at": "2026-06-13T05:15:00Z",
+  "_updated_at": "2026-06-13T05:45:00Z",
   "_halt": null,
   "_run_policy": {
     "_locked": "Continuous + async feel-queue; KMP deferred; balance + touch numbers research-locked to >=97% (author drafts are fallbacks); >=97% latitude to touch anything; rollback = git reset --hard <prev-tag>.",
@@ -74,7 +74,7 @@
     "v15": {
       "title": "Hardening — stuck-input P0, PWA hygiene, save system, behavior-identical consolidations",
       "units": {
-        "U6": { "passes": false, "evidence": null, "tag": null, "commit": null, "depends_on": ["U5"], "note": "input-stuck-fixes: P0 spaceHeld=false in clearAllHeld (input.js:582) + mouseAtkPointerId branch in onPointerCancel (:415-420)." },
+        "U6": { "passes": true, "evidence": "node --check clean; preview empirical repro via dispatched events: Space keydown -> consume().attack true (held autofire), then window blur -> consume().attack false x2 (P0 fixed: spaceHeld cleared in clearAllHeld, no stuck autofire on refocus); mouseAtkPointerId branch added to onPointerCancel (structural mirror of onPointerUp); console clean.", "tag": "gz-u06-input-stuck", "commit": "gz-u06-input-stuck", "completed_at": "2026-06-13", "depends_on": ["U5"], "note": "P0 input-clearAllHeld-spaceHeld-not-cleared (0.97) + input-pointer-cancel-mouseAtk-leak (0.95) both fixed in input.js. No cache bump (ships to device at U9 gz-v15 deploy)." },
         "U7": { "passes": false, "evidence": null, "tag": null, "commit": null, "depends_on": ["U5"], "note": "pwa-hardening-trio: sw.js catch serves index.html only for destination==='document' else 503; stop caching non-OK; boot console.warn on cache-version mismatch; safeSave failure -> Env.announce once (economy.js save())." },
         "U8": { "passes": false, "evidence": null, "tag": null, "commit": null, "depends_on": ["U5"], "note": "save-system: version:3 + lastSeen timestamp; dirty-flag bankDestroy + maxReachedRow setter; flush on 2s timer + visibilitychange/pagehide; keep immediate save for purchases/setMuted." },
         "U9": { "passes": false, "evidence": null, "tag": null, "commit": null, "depends_on": ["U6", "U7", "U8"], "note": "consolidations + DEPLOY gz-v15 (HIGH-stakes behavior-identical): C1 tunables->Config sub-objects; C2 single-source iso math + worldToScreenInto alloc fix; C3 stale-comment sweep; C6; small guards (buyClaws cap, shake-typeof, audio closed-ctx, dead keyJump). Bump -> gz-v15; push; poll; G1." }

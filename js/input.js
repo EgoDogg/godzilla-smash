@@ -487,6 +487,9 @@ window.GAME = window.GAME || {};
     // NOVA cancel: drop the pointer WITHOUT latching a release — an OS-gesture cancel
     // silently discards the charge instead of detonating an unintended slam.
     if (e.pointerId === finisherPointerId) { finisherPointerId = null; release(e); return; }
+    // Desktop autofire pointer: a cancel without a blur (e.g. an iPadOS trackpad gesture
+    // on the captured pointer) otherwise leaves mouseAtkPointerId set → stuck autofire.
+    if (e.pointerId === mouseAtkPointerId) { mouseAtkPointerId = null; release(e); return; }
   }
 
   function capture(e) { try { canvas.setPointerCapture(e.pointerId); } catch (_) {} }
@@ -665,6 +668,7 @@ window.GAME = window.GAME || {};
     jumpPointerId = null;
     finisherPointerId = null;
     keyFHeld = false;              // blur/hide mid-charge → cancel (no release latch)
+    spaceHeld = false;             // P0: blur with Space held left autofire stuck on refocus
     mouseAtkPointerId = null;
   }
 
