@@ -1,0 +1,99 @@
+{
+  "_schema_version": "1.0",
+  "_purpose": "Default-FAIL evidence contract for the Godzilla Smash gz-v14->v15->v16 autonomous campaign. Every unit starts passes:false. NEVER flip passes:true without ALL THREE of a verifiable evidence string + a real git tag + a real commit SHA, written in the commit AFTER the fix (atomic ship).",
+  "_master_plan": "docs/next-run-execution-plan.md",
+  "_campaign_folder": "docs/campaign/",
+  "_branch": "main",
+  "_pre_campaign_anchor_tag": "(none — branch tip)",
+  "_pre_campaign_anchor_commit": "3a81b404de320a3fc846b14ad152d3a2a7fb80ee",
+  "_resume_ritual": "docs/campaign/CAMPAIGN-BOOT.md SESSION-START RITUAL",
+  "_operating_mode": "ONE session model exclusively (claude-opus-4-8[1m]); every agent() inherits it, no pins, no downgrade. FULL ULTRACODE POOLS per non-trivial unit: re-ground -> design -> 3-lens adversarial verify ALWAYS -> 3-vote -> implement -> 5-gate -> tag + flip JSON + push; capstone loops til 2 dry (cap 4). Cleanup of dead/duplicated code is AUTHORIZED requested work. Effort = session-global Ultracode dial, not per-leg.",
+  "_confidence_calibration": "<90% -> BLOCKERS + pivot; 90-96% -> proceed + note the alternative in the commit; >=97% -> proceed. Human-locked picks immutable -> if one looks wrong, BLOCKERS HIGH + pivot, never override.",
+  "_per_commit_gate": [
+    "1. node --check on every edited js/*.js (clean)",
+    "2. preview cache-bust per godzilla-preview-verification-gotcha (unregister SW -> delete caches -> refetch {cache:'reload'} -> location.href='./?fresh='+Date.now()); console clean",
+    "3. behavior: unit eval-drive assertions vs LIVE objects pass (drive frames manually; tab is document.hidden) OR visual unit captures a screenshot to docs/campaign/shots/",
+    "4. regression: unit named no-change checks pass",
+    "5. drift (deploy units): sw.js CACHE === config.CACHE_VERSION; campaign-progress.json + CAMPAIGN-BOOT.md updated in the ship commit. Doc-only commits may skip 1-4 with a justification line."
+  ],
+  "_updated_at": "2026-06-13T00:00:00Z",
+  "_halt": null,
+  "_run_policy": {
+    "_locked": "Continuous + async feel-queue; KMP deferred; balance + touch numbers research-locked to >=97% (author drafts are fallbacks); >=97% latitude to touch anything; rollback = git reset --hard <prev-tag>.",
+    "mode": "delegated-autonomous",
+    "auto_fix_ceiling": "trivial/low @>=0.95 freely; medium @>=0.97 + verify; defer high-risk / <0.90 / net-new to BLOCKERS.",
+    "lean_before_add": "Reuse existing helpers (Utils.fmt, iso.worldToScreenInto, World.footprintsNear, _wyrmHelpers, FX pool, Env.announce) before adding new code; the audit named the reuse points.",
+    "halt_only_on": [
+      "HIGH security finding (e.g. save-blob/innerHTML injection)",
+      "a human-locked pick that looks wrong",
+      "budget/quota near-exhausted (park at clean tag)",
+      "final pre-ship review after v16 deploy"
+    ],
+    "halt_mechanism": "set _halt to the gate name + write a BLOCKERS.md envelope + ONE consolidated PushNotification; pivot to the next un-gated unit.",
+    "delegated_no_halt": "G1 feel verdicts are async and DO NOT stop the run — they queue as STEER notes and fold into a tuning pass at the next version boundary.",
+    "reground_gate": "MANDATORY before any resumed unit: an inherit-session-model workflow refutes the unit's plan scope vs current HEAD (file:line anchors were checked at gz-v13 and drift as units land). If scope changed, re-find before fixing.",
+    "sequence": ["UR", "U1", "U2", "U3", "U4", "U5", "U6", "U7", "U8", "U9", "U10", "U11", "U12", "U13"],
+    "verify_intensity": {
+      "default": "3-lens adversarial verify ALWAYS + 3-vote on findings.",
+      "high_stakes": "U3 nova-slam (new input+sim+render+audio seam), U9 consolidations (behavior-identical claim), U12 facing-unify (twice-bug-fixed, regression-sensitive) -> full panel + capstone til 2 dry.",
+      "research": "UR -> multi-source web research + adversarial verify to >=97%; un-reachable items -> BLOCKERS + documented fallback."
+    },
+    "finish_line": "gz-v16 deployed live + all of U1..U13 passes:true; D1 presented to Mike (not implemented); final pre-ship review handed over.",
+    "self_heal": {
+      "FM-1": "overload -> same-model ladder (tighten schema / reduce parallel width / backoff-retry); NEVER downgrade; a truncated whole-context scan ABORTS+restarts. <2 landed votes -> inconclusive -> orchestrator code-read self-verify.",
+      "FM-2": "per-commit gate RED after apply -> git reset --hard <prev-tag>, move finding to BLOCKERS, continue. Never fix-forward from broken.",
+      "FM-3": "ambiguous/uncitable canon -> 'I don't see this in the log' -> BLOCKERS + pivot. Never invent a locked decision."
+    },
+    "session_policy": "CONTINUOUS",
+    "gate_queue_mode": "SELF-WAKE: gates are async; the run never idles on a gate while un-gated work exists; ScheduleWakeup long-fallback (1800-3600s) + probe + resume on clear; SUSPEND self-wake while quota near-exhausted (it burns quota; Mike resumes).",
+    "true_stop_conditions": [
+      "1. All of U1..U13 shipped + a self-wake pending (park, await G1 feel verdicts / G2 design pick)",
+      "2. A HIGH security finding",
+      "3. A human-locked pick that looks wrong (BLOCKERS HIGH + pivot)",
+      "4. Budget/quota near-exhausted -> park at a clean tag boundary + resume on refresh",
+      "5. The final pre-ship review after the gz-v16 deploy"
+    ]
+  },
+  "phases": {
+    "research": {
+      "title": "Research-lock (June-2026 best practices -> >=97% numbers)",
+      "units": {
+        "UR": { "passes": false, "evidence": null, "tag": null, "commit": null, "note": "Dynamic workflow: (a) balance — combo step/window/cap, rubble/respawn timing, hit-stop floor/cap, atk/move/finisher cost curves; (b) touch — joystick radius/deadzone/spawn-zone, disc diameters, NOVA placement (final at first play). Output -> docs/research-2026-06.md. Feeds U1-U5." }
+      }
+    },
+    "v14": {
+      "title": "Features — Attack-Speed + Move-Speed tracks, Nova Slam finisher, final touch geometry, balance tuning",
+      "units": {
+        "U1": { "passes": false, "evidence": null, "tag": null, "commit": null, "depends_on": ["UR"], "note": "atk-speed-track: Config.ATKSPD + asymptotic gate in attackGateFor (entities.js:819-828) + buyAtkSpeed/cost/gateForLevel + shop row + save field (economy.js). Cost curve from UR." },
+        "U2": { "passes": false, "evidence": null, "tag": null, "commit": null, "depends_on": ["UR"], "note": "move-speed-track: Config.MOVESPD + cached moveSpeedMult() + multiplies ACCEL/MAX_SPEED/walkPhase (entities.js:963-1027). Cost curve from UR." },
+        "U3": { "passes": false, "evidence": null, "tag": null, "commit": null, "depends_on": ["UR"], "note": "nova-slam-finisher (HIGH-stakes): Config.FINISHER + fireFinisher() parallel to startAttack (never touches atkCooldown) + 3rd disc LEFT of SMASH + F-key + intent.charge/chargeRelease (input.js) + charge/cooldown arc (render.js) + Audio.finisher. NOVA disc size from UR(b)." },
+        "U4": { "passes": false, "evidence": null, "tag": null, "commit": null, "depends_on": ["UR", "U3"], "note": "touch-geometry (pulled forward from v16 per UR(b)): LEFT_ZONE/joystick radius+deadzone/SMASH+JUMP+NOVA disc sizes + tap-to-target-in-left-zone behavior (input.js). Controls FINAL at first play." },
+        "U5": { "passes": false, "evidence": null, "tag": null, "commit": null, "depends_on": ["U1", "U2", "U3", "U4"], "note": "v14-tuning + DEPLOY gz-v14: apply UR-locked combo/rubble/hit-stop numbers; bump sw.js CACHE + config.CACHE_VERSION -> gz-v14; push; poll live sw.js; G1 playtest notification." }
+      }
+    },
+    "v15": {
+      "title": "Hardening — stuck-input P0, PWA hygiene, save system, behavior-identical consolidations",
+      "units": {
+        "U6": { "passes": false, "evidence": null, "tag": null, "commit": null, "depends_on": ["U5"], "note": "input-stuck-fixes: P0 spaceHeld=false in clearAllHeld (input.js:582) + mouseAtkPointerId branch in onPointerCancel (:415-420)." },
+        "U7": { "passes": false, "evidence": null, "tag": null, "commit": null, "depends_on": ["U5"], "note": "pwa-hardening-trio: sw.js catch serves index.html only for destination==='document' else 503; stop caching non-OK; boot console.warn on cache-version mismatch; safeSave failure -> Env.announce once (economy.js save())." },
+        "U8": { "passes": false, "evidence": null, "tag": null, "commit": null, "depends_on": ["U5"], "note": "save-system: version:3 + lastSeen timestamp; dirty-flag bankDestroy + maxReachedRow setter; flush on 2s timer + visibilitychange/pagehide; keep immediate save for purchases/setMuted." },
+        "U9": { "passes": false, "evidence": null, "tag": null, "commit": null, "depends_on": ["U6", "U7", "U8"], "note": "consolidations + DEPLOY gz-v15 (HIGH-stakes behavior-identical): C1 tunables->Config sub-objects; C2 single-source iso math + worldToScreenInto alloc fix; C3 stale-comment sweep; C6; small guards (buyClaws cap, shake-typeof, audio closed-ctx, dead keyJump). Bump -> gz-v15; push; poll; G1." }
+      }
+    },
+    "v16": {
+      "title": "Visual + airborne — sprite geometry, retina sky, facing unify, airborne targeting",
+      "units": {
+        "U10": { "passes": false, "evidence": null, "tag": null, "commit": null, "depends_on": ["U9"], "note": "sprite-geometry: HW=28; HH=14 (sprites_special.js:41-42) + bakeSpecial footprint key (assets.js:527). Before/after screenshots." },
+        "U11": { "passes": false, "evidence": null, "tag": null, "commit": null, "depends_on": ["U9"], "note": "dpr-sky: bake sky at w*d/h*d (render.js:180-183), draw at CSS size, dpr in rebuild check. Retina screenshot." },
+        "U12": { "passes": false, "evidence": null, "tag": null, "commit": null, "depends_on": ["U9"], "note": "facing-unify (HIGH-stakes, twice-bug-fixed): one table via existing _wyrmHelpers hook; 8-facing screenshot strip; both consumers share one object." },
+        "U13": { "passes": false, "evidence": null, "tag": null, "commit": null, "depends_on": ["U10", "U11", "U12"], "note": "airborne-targeting + DEPLOY gz-v16: honor explicit ground taps airborne (entities.js:1068-1069); pass airborne as includeFlyers (:1088). Bump -> gz-v16; push; poll; G1; then final pre-ship review (true stop)." }
+      }
+    },
+    "deferred": {
+      "title": "Deferred — Mike-gated design call (NOT implemented this run)",
+      "units": {
+        "D1": { "passes": false, "evidence": null, "tag": null, "commit": null, "note": "world-thin-tier-rows: 8 of 19 tiers have 1 building row (prow=4 vs tierRows=3). Present street:1 vs tier=floor(row/prow) options at end; reshapes mid-save difficulty (maxReachedRow persists). Mike picks." }
+      }
+    }
+  }
+}
