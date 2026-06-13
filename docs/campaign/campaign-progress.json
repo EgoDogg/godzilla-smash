@@ -16,7 +16,7 @@
     "4. regression: unit named no-change checks pass",
     "5. drift (deploy units): sw.js CACHE === config.CACHE_VERSION; campaign-progress.json + CAMPAIGN-BOOT.md updated in the ship commit. Doc-only commits may skip 1-4 with a justification line."
   ],
-  "_updated_at": "2026-06-13T00:00:00Z",
+  "_updated_at": "2026-06-13T02:30:00Z",
   "_halt": null,
   "_run_policy": {
     "_locked": "Continuous + async feel-queue; KMP deferred; balance + touch numbers research-locked to >=97% (author drafts are fallbacks); >=97% latitude to touch anything; rollback = git reset --hard <prev-tag>.",
@@ -58,7 +58,7 @@
     "research": {
       "title": "Research-lock (June-2026 best practices -> >=97% numbers)",
       "units": {
-        "UR": { "passes": false, "evidence": null, "tag": null, "commit": null, "note": "Dynamic workflow: (a) balance — combo step/window/cap, rubble/respawn timing, hit-stop floor/cap, atk/move/finisher cost curves; (b) touch — joystick radius/deadzone/spawn-zone, disc diameters, NOVA placement (final at first play). Output -> docs/research-2026-06.md. Feeds U1-U5." }
+        "UR": { "passes": true, "evidence": "docs/research-2026-06.md committed; 8-agent workflow wf_dfb40cf9-aa4 (4 research -> 3-lens adversarial verify -> synthesis); 23 params, 17 locked>=0.97 + 6 documented fallbacks; apply-spec drives U1-U5. Refinements caught by math lens: rubble needs RUBBLE_PER_TIER 450->150 too, hit-stop cap 95ms (< 125ms gate), combo window 3250 not 4000, + new safe-area-inset fix.", "tag": "gz-ur-research-lock", "commit": "gz-ur-research-lock", "completed_at": "2026-06-13", "note": "Output docs/research-2026-06.md. Feeds U1-U5. Drafted numbers confirmed; see apply-spec for the few refinements." }
       }
     },
     "v14": {
