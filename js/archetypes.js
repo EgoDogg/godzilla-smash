@@ -31,6 +31,90 @@ window.GAME = window.GAME || {};
   function lerp(a, b, t)  { return a + (b - a) * t; }
   function clamp(v, lo, hi){ return v < lo ? lo : (v > hi ? hi : v); }
 
+  /* ======================================================================
+     ART HOUSE STYLE — shared primitives (visual-redesign-plan.md §1).
+     ADDED in ARTP1 as the scaffolding the v17-v20 family rewrites consume
+     (ARTP2 wyrm, ARTP3 mecha, ARTP4 ghidorah, FLYERMEGA flyers). They draw
+     nothing on their own yet; this unit only wires the RIM token into the two
+     existing house-rim strokes (behavior-identical) so the roster collapses to
+     ONE specular token going forward.
+
+     §1.6 BAKE GUARDRAILS (every builder MUST obey — these bake to a static sprite):
+       • NO shadowBlur / ctx.filter / globalCompositeOperation in any builder.
+         "soft glow/halo" = createRadialGradient(color→transparent) at normal alpha;
+         "additive/incandescent/hot" = an OPAQUE bright color over a dark body.
+       • Idle bakes frame=0 only — anything keyed to `frame`/`walkT` freezes at its
+         frame-0 value; bake energized effects at a static mid-value, defer real
+         animation to the live entities.js drawGlow overlay.
+       • Fixed canvas SPR_W=150 SPR_H=168, anchor (75,144.5) — bounds-check heavy forms.
+       • No retained Path2D; a full-silhouette rim must re-issue the torso path.
+       • Per-index jitter uses the deterministic hash() below (no RNG state).
+     ====================================================================== */
+
+  // §1.1 — ONE key light for the whole roster: a single neutral warm-white specular/rim
+  // token. Alpha varies by use (house back-edge rim 0.20-0.22 §1.2; self-illum rim ~0.5).
+  // Collapses the old rgba(255,250,235,*) literals + mecha pal.skinLight-as-specular +
+  // ghidorah #fffbe0 into this one token (the per-form specular swaps land in their phases).
+  var RIM_RGB = '255,250,235';
+  function rimCol(a) { return 'rgba(' + RIM_RGB + ',' + a + ')'; }
+
+  // §1.6 — deterministic GLSL hash for per-index jitter (plate width/lean, crack seeds,
+  // thorn placement). Pure arithmetic, no RNG state; stable across frames/facings. Returns [0,1).
+  function hash(i) { var s = Math.sin(i * 12.9898) * 43758.5453; return s - Math.floor(s); }
+
+  // §1.7 — shared pointed dorsal/cranial element: a dark CORE triangle drawn BEHIND a lit
+  // FACE triangle, so the figure-ground separation survives on the baked sprite where the live
+  // glow is absent. Reused for wyrm dorsal plates, mecha dorsal spines, ghidorah horn-crown
+  // prongs — one separation model for every pointed feature. x,y = base center; size = height;
+  // lean = apex horizontal offset as a fraction of size (toward the facing dir). coreCol null
+  // → face only (a plain plate). Pure fills (no stroke/composite) per §1.6.
+  function drawRidgeElement(ctx, x, y, size, lean, faceCol, coreCol) {
+    var halfW = size * 0.42;            // slim base (taller-than-wide = ridge read)
+    var apexX = x + lean * size;        // lean shifts the tip toward the facing direction
+    var apexY = y - size;
+    if (coreCol) {                      // CORE: a wider/taller dark triangle behind the face
+      ctx.fillStyle = coreCol;
+      ctx.beginPath();
+      ctx.moveTo(x - halfW * 1.30, y + size * 0.14);
+      ctx.lineTo(apexX + lean * size * 0.18, apexY - size * 0.12);
+      ctx.lineTo(x + halfW * 1.30, y + size * 0.14);
+      ctx.closePath(); ctx.fill();
+    }
+    ctx.fillStyle = faceCol;            // FACE: the lit triangle on top
+    ctx.beginPath();
+    ctx.moveTo(x - halfW, y);
+    ctx.lineTo(apexX, apexY);
+    ctx.lineTo(x + halfW, y);
+    ctx.closePath(); ctx.fill();
+  }
+
+  // §1.7 — branching glowing cracks across chest/belly/thigh. A wider faint under-stroke
+  // (glowCol) beneath a bright OPAQUE core stroke (coreCol) so it reads incandescent on the
+  // baked sprite with no additive compositing (§1.6); core lineWidth 2.6 clears the 2px floor
+  // (§1.4). Deterministic per-index seeds (stable across frames). intensity ~0..1 scales count
+  // (burning ~0.5 → 5 seams, supernova ~1.0 → 8). Suppressed facing away (drawn on the back §2.3).
+  function drawFissures(ctx, BH, BW, fg, coreCol, glowCol, intensity) {
+    if (fg && fg.show === 'back') return;
+    var n = Math.max(3, Math.round(4 + (intensity != null ? intensity : 0.5) * 4));
+    ctx.save();
+    ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+    for (var i = 0; i < n; i++) {
+      var hx = hash(i * 2.0 + 1.0), hy = hash(i * 3.0 + 7.0), hl = hash(i * 5.0 + 3.0);
+      var sx = lerp(-BW * 0.26, BW * 0.30, hx);
+      var sy = lerp(-BH * 0.74, -BH * 0.22, hy);
+      var len = (0.16 + hl * 0.18) * BH;
+      var ang = (hx - 0.5) * 1.4 + Math.PI * 0.5;       // mostly vertical, jittered
+      var mx = sx + Math.cos(ang) * len * 0.5 + (hl - 0.5) * BW * 0.10;
+      var my = sy + Math.sin(ang) * len * 0.5;
+      var ex = sx + Math.cos(ang) * len, ey = sy + Math.sin(ang) * len;
+      ctx.strokeStyle = glowCol; ctx.lineWidth = 5.0;   // wider faint under-stroke
+      ctx.beginPath(); ctx.moveTo(sx, sy); ctx.quadraticCurveTo(mx, my, ex, ey); ctx.stroke();
+      ctx.strokeStyle = coreCol; ctx.lineWidth = 2.6;   // bright opaque core (>=2.2px)
+      ctx.beginPath(); ctx.moveTo(sx, sy); ctx.quadraticCurveTo(mx, my, ex, ey); ctx.stroke();
+    }
+    ctx.restore();
+  }
+
   /* sprite canvas geometry — MUST match entities.js constants exactly so
      blit anchor alignment is identical when entities.js calls our builders. */
   var SPR_W    = 150;
@@ -122,7 +206,7 @@ window.GAME = window.GAME || {};
     ctx.closePath(); ctx.fill();
     /* rim light on the back edge */
     ctx.save();
-    ctx.strokeStyle = 'rgba(255,250,235,0.22)'; ctx.lineWidth = 2.5; ctx.lineCap = 'round';
+    ctx.strokeStyle = rimCol(0.22); ctx.lineWidth = 2.5; ctx.lineCap = 'round';   // §1.1 house rim (was rgba(255,250,235,0.22))
     ctx.beginPath();
     ctx.moveTo(-BW * 0.14, -BH * 0.80);
     ctx.quadraticCurveTo( BW * 0.04, -BH * 0.88, BW * (0.22 + lean * 0.06), -BH * 0.82);
@@ -401,7 +485,7 @@ window.GAME = window.GAME || {};
     ctx.closePath(); ctx.fill();
     /* rim light */
     ctx.save();
-    ctx.strokeStyle = 'rgba(255,250,235,0.20)'; ctx.lineWidth = 2.0; ctx.lineCap = 'round';
+    ctx.strokeStyle = rimCol(0.20); ctx.lineWidth = 2.0; ctx.lineCap = 'round';   // §1.1 house rim (was rgba(255,250,235,0.20))
     ctx.beginPath();
     ctx.moveTo(-BW * 0.10, -BH * 0.74);
     ctx.quadraticCurveTo( BW * 0.04, -BH * 0.84, BW * (0.18 + lean * 0.06), -BH * 0.78);
@@ -1097,6 +1181,13 @@ window.GAME = window.GAME || {};
        live glow pass without duplicating the code. */
     facingGeom:  facingGeom,
     drawPlates:  drawPlates,
+
+    /* ART HOUSE-STYLE primitives (ARTP1, visual-redesign-plan §1) — consumed by the
+       v17-v20 family rewrites + verifiable in isolation. */
+    rimCol:           rimCol,
+    hash:             hash,
+    drawRidgeElement: drawRidgeElement,
+    drawFissures:     drawFissures,
 
     /* Sprite canvas constants — entities.js must match these exactly. */
     SPR_W:    SPR_W,
