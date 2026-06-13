@@ -1,4 +1,6 @@
 /* Godzilla Smash — offline service worker (cache-first app shell) */
+// CACHE is the AUTHORITY for the live asset version. Keep in sync with
+// js/config.js CACHE_VERSION (the in-page console probe) — bump BOTH to ship.
 const CACHE = 'gz-v14';
 const ASSETS = ['./', './index.html', './manifest.json', './icon-512.png', './icon-192.png',
   './js/config.js', './js/utils.js', './js/iso.js', './js/assets.js', './js/archetypes.js', './js/sprites_special.js',
@@ -19,10 +21,25 @@ self.addEventListener('fetch', (e) => {
   e.respondWith(
     caches.match(e.request).then((hit) =>
       hit || fetch(e.request).then((resp) => {
-        const copy = resp.clone();
-        caches.open(CACHE).then((c) => c.put(e.request, copy));
+        // Only cache successful same-origin responses — never a 404/opaque error
+        // (caching those would poison the offline shell).
+        if (resp && resp.ok && resp.type === 'basic') {
+          const copy = resp.clone();
+          caches.open(CACHE).then((c) => c.put(e.request, copy));
+        }
         return resp;
-      }).catch(() => caches.match('./index.html'))
+      }).catch(() => {
+        // Offline + uncached. Serve the app shell ONLY for navigations. For any other
+        // resource (scripts, etc.) return a 503 — NEVER HTML-as-JS: on a partial cache
+        // a <script> fed index.html would silently break boot.
+        if (e.request.mode === 'navigate' || e.request.destination === 'document') {
+          return caches.match('./index.html');
+        }
+        return new Response('/* offline: resource not cached */', {
+          status: 503, statusText: 'Offline',
+          headers: { 'Content-Type': 'text/plain' }
+        });
+      })
     )
   );
 });

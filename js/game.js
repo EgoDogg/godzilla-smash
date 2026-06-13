@@ -78,6 +78,22 @@ window.GAME = window.GAME || {};
     window.addEventListener('focus', run);
     document.addEventListener('visibilitychange', function () { document.hidden ? pause() : run(); });
 
+    // Cache-version drift check: sw.js CACHE is the authority; Config.CACHE_VERSION is the
+    // in-page probe. Warn if they diverge (a live gz-v* cache that isn't CACHE_VERSION) —
+    // catches bumping only one of the two. No false positive on a fresh first load (no
+    // gz-v* cache yet). See the cross-comments in sw.js + config.js.
+    try {
+      if (window.caches && G.Config && G.Config.CACHE_VERSION) {
+        caches.keys().then(function (keys) {
+          var gz = keys.filter(function (k) { return /^gz-v/.test(k); });
+          if (gz.length && gz.indexOf(G.Config.CACHE_VERSION) === -1) {
+            console.warn('[gz] cache-version drift: Config.CACHE_VERSION=' + G.Config.CACHE_VERSION +
+                         ' but live SW cache(s)=' + gz.join(',') + ' — bump BOTH sw.js CACHE and config.js CACHE_VERSION.');
+          }
+        }).catch(function () {});
+      }
+    } catch (e) { /* caches API unavailable — ignore */ }
+
     booted = true;
     last = performance.now();
     requestAnimationFrame(loop);

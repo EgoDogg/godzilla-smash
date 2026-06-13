@@ -334,8 +334,9 @@ window.GAME = window.GAME || {};
   // ===========================================================================================
   var SAVE_KEY = 'godzilla-save-v3';
 
+  var _saveWarnShown = false;   // surface a save failure (quota / private mode) once
   function save() {
-    U.safeSave(SAVE_KEY, {
+    var ok = U.safeSave(SAVE_KEY, {
       v: 3,
       money:          state.money,
       clawsLevel:     state.clawsLevel,
@@ -348,6 +349,14 @@ window.GAME = window.GAME || {};
       world2Unlocked: state.world2Unlocked,
       muted:          state.muted
     });
+    // safeSave returns false on quota/private-mode/ITP eviction — tell the player ONCE
+    // rather than silently losing progress. (G.UI.toast does not exist — use Env.announce.)
+    if (!ok && !_saveWarnShown) {
+      _saveWarnShown = true;
+      if (G.Env && typeof G.Env.announce === 'function') {
+        G.Env.announce('Progress is not saving (storage full or private mode)');
+      }
+    }
   }
 
   // load() → bool. Returns false (leaving fresh defaults) when no v3 save exists.

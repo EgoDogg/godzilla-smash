@@ -2,6 +2,8 @@
 window.GAME = window.GAME || {};
 window.GAME.Config = {
   saveKey: 'godzilla-save-v3',
+  // In-page console probe of the live asset version. The AUTHORITY is sw.js `CACHE`;
+  // bump BOTH together to ship (game.js warns at boot if they drift out of sync).
   CACHE_VERSION: 'gz-v14',
 
   // --- Isometric grid (world units = tiles). Wide, open, zoomed-out city:
