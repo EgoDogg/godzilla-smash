@@ -52,6 +52,7 @@ window.GAME = window.GAME || {};
     inited: false,
     paused: false,
     shopOpen: false,
+    winCardOpen: false,    // win-finale card owns the keyboard while open (mirrors shopOpen)
     activeTab: 'upgrades', // mirrors which #shop-tabs button is .active
   };
 
@@ -286,11 +287,13 @@ window.GAME = window.GAME || {};
       }
     }
     el.wincard.classList.remove('hidden');
+    state.winCardOpen = true;
     setPaused(true);
   }
 
   function closeWinCard() {
     if (el.wincard) el.wincard.classList.add('hidden');
+    state.winCardOpen = false;
     setPaused(false);
   }
 
@@ -353,6 +356,13 @@ window.GAME = window.GAME || {};
     // Ignore key-repeat and modifier combos; let typing in inputs pass through.
     if (e.repeat) return;
     var k = e.key;
+    // While the win-finale card is open it OWNS the keyboard: Escape/Enter dismiss it,
+    // everything else is swallowed so Esc/P/B/M can't un-pause or open the shop UNDER the
+    // still-visible modal (UH1 — pause/modal desync; mirrors the shop's pause ownership).
+    if (state.winCardOpen) {
+      if (k === 'Escape' || k === 'Enter') { closeWinCard(); e.preventDefault(); }
+      return;
+    }
     if (k === 'Escape') {
       // Esc closes the shop if open, else toggles pause.
       if (state.shopOpen) { closeShop(); e.preventDefault(); }
