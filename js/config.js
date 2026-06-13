@@ -42,6 +42,14 @@ window.GAME.Config = {
   //     audio/visual mush (~75-80ms is the perceptual mush floor; we sit above it). ---
   COOLDOWN_SCALE: 0.42, COOLDOWN_FLOOR: 0.11, COOLDOWN_CAP: 0.20,
 
+  // --- Attack-Speed upgrade track (research-locked, docs/research-2026-06.md).
+  //     Purchasable utility track: asymptotic re-fire-gate reduction toward FLOOR.
+  //     gate' = FLOOR + (gate - FLOOR) * DECAY^level. Wyrm base gate 0.126s → L6 ≈ 0.081s
+  //     (×1.56 DPS ceiling, 12.35/s). Cost = round(BASE * GROWTH^level): 10/32/102/328/1049/3355.
+  //     GROWTH 3.2 > claws 2.6 (accelerating price for a capped reward keeps damage the
+  //     coin-efficient path). Smooth/continuous — no breakpoints. ---
+  ATKSPD: { FLOOR: 0.075, DECAY: 0.70, LEVELS: 6, BASE: 10, GROWTH: 3.2 },
+
   // --- Destruction / respawn timing (ms) ---
   RESPAWN: { CRUMBLE_MS: 550, RUBBLE_MS: 6500, RUBBLE_PER_TIER: 450, RISE_MS: 700 },
 

@@ -48,6 +48,7 @@ window.GAME = window.GAME || {};
   var state = {
     money:          0,
     clawsLevel:     0,
+    atkSpeedLevel:  0,          // Attack-Speed upgrade track (Config.ATKSPD), 0..LEVELS
     ownedFormIds:   ['gz2014'],
     activeFormId:   'gz2014',
     maxReachedRow:  0,
@@ -151,6 +152,27 @@ window.GAME = window.GAME || {};
     return Math.round(Cfg.CLAWS_BASE * Math.pow(Cfg.CLAWS_GROWTH, state.clawsLevel));
   }
 
+  function atkSpeedCost() {
+    return Math.round(Cfg.ATKSPD.BASE * Math.pow(Cfg.ATKSPD.GROWTH, state.atkSpeedLevel));
+  }
+
+  // Re-fire gate (seconds) for the ACTIVE form at a given attack-speed level — display only.
+  // Mirrors entities.js attackGateFor (the engine is authoritative); kept here for the shop
+  // rate label since economy has no kaiju handle. NOTE: duplicated gate math — consolidation
+  // candidate if a shared Config-driven helper is later extracted.
+  function atkGateForLevel(level) {
+    var f  = formDef(state.activeFormId);
+    var cd = (f && f.attack && typeof f.attack.cooldown === 'number') ? f.attack.cooldown : 0.30;
+    var g  = cd * (Cfg.COOLDOWN_SCALE != null ? Cfg.COOLDOWN_SCALE : 0.42);
+    var lo = (Cfg.COOLDOWN_FLOOR != null) ? Cfg.COOLDOWN_FLOOR : 0.11;
+    var hi = (Cfg.COOLDOWN_CAP != null) ? Cfg.COOLDOWN_CAP : 0.20;
+    if (g < lo) g = lo;
+    if (g > hi) g = hi;
+    var A = Cfg.ATKSPD;
+    if (A && level > 0) g = A.FLOOR + (g - A.FLOOR) * Math.pow(A.DECAY, level);
+    return g;
+  }
+
   // ===========================================================================================
   // Ownership helpers
   // ===========================================================================================
@@ -179,6 +201,17 @@ window.GAME = window.GAME || {};
     if (!canAfford(cost)) { sfxDeny(); return false; }
     state.money -= cost;
     state.clawsLevel += 1;
+    sfxBuy();
+    afterPurchase();
+    return true;
+  }
+
+  function buyAtkSpeed() {
+    if (state.atkSpeedLevel >= Cfg.ATKSPD.LEVELS) { sfxDeny(); return false; } // capped track
+    var cost = atkSpeedCost();
+    if (!canAfford(cost)) { sfxDeny(); return false; }
+    state.money -= cost;
+    state.atkSpeedLevel += 1;
     sfxBuy();
     afterPurchase();
     return true;
@@ -271,6 +304,7 @@ window.GAME = window.GAME || {};
       v: 3,
       money:          state.money,
       clawsLevel:     state.clawsLevel,
+      atkSpeedLevel:  state.atkSpeedLevel,
       ownedFormIds:   state.ownedFormIds.slice(),
       activeFormId:   state.activeFormId,
       maxReachedRow:  state.maxReachedRow,
@@ -287,6 +321,7 @@ window.GAME = window.GAME || {};
 
     state.money      = (typeof s.money === 'number' && isFinite(s.money)) ? Math.max(0, s.money) : 0;
     state.clawsLevel = (s.clawsLevel | 0) >= 0 ? (s.clawsLevel | 0) : 0;
+    state.atkSpeedLevel = U.clamp(s.atkSpeedLevel | 0, 0, Cfg.ATKSPD.LEVELS);
 
     // ownedFormIds: keep only known form ids, de-duplicated, ensure gz2014 is always present.
     var owned = [];
@@ -417,6 +452,33 @@ window.GAME = window.GAME || {};
         onClick:    function () { buyClaws(); }
       }
     }));
+
+    // Attack-Speed track — "Rapid Fire Breath". Sub shows the attacks/sec transition.
+    var asLvl  = state.atkSpeedLevel;
+    var asMax  = Cfg.ATKSPD.LEVELS;
+    var asRate = 1 / atkGateForLevel(asLvl);
+    if (asLvl >= asMax) {
+      body.appendChild(itemRow({
+        swatch: '#ffd24a',
+        title:  'Rapid Fire Breath · MAX',
+        sub:    asRate.toFixed(1) + ' attacks/sec (max)',
+        tag:    'MAX'
+      }));
+    } else {
+      var asCost = atkSpeedCost();
+      var asNext = 1 / atkGateForLevel(asLvl + 1);
+      body.appendChild(itemRow({
+        swatch: '#ffd24a',
+        title:  'Rapid Fire Breath · Lv ' + asLvl,
+        sub:    asRate.toFixed(1) + ' → ' + asNext.toFixed(1) + ' attacks/sec',
+        button: {
+          label:      '💰 ' + U.fmt(asCost),
+          affordable: canAfford(asCost),
+          disabled:   !canAfford(asCost),
+          onClick:    function () { buyAtkSpeed(); }
+        }
+      }));
+    }
   }
 
   // Evolutions tab: all wyrm (Godzilla) forms in tier order.
@@ -666,8 +728,10 @@ window.GAME = window.GAME || {};
     tickCombo:   tickCombo,
 
     // costs + purchases (v3 primary API)
-    clawsCost:  clawsCost,
-    buyClaws:   buyClaws,
+    clawsCost:    clawsCost,
+    buyClaws:     buyClaws,
+    atkSpeedCost: atkSpeedCost,
+    buyAtkSpeed:  buyAtkSpeed,
     buyForm:    buyForm,
     switchForm: switchForm,
     buyWorld2:  buyWorld2,
@@ -700,6 +764,7 @@ window.GAME = window.GAME || {};
     // ---- state getters (read-only views) ----
     get money()          { return state.money; },
     get clawsLevel()     { return state.clawsLevel; },
+    get atkSpeedLevel()  { return state.atkSpeedLevel; },
     get activeFormId()   { return state.activeFormId; },
     get ownedFormIds()   { return state.ownedFormIds.slice(); },
     get world2Unlocked() { return state.world2Unlocked; },

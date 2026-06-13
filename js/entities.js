@@ -824,6 +824,11 @@ window.GAME = window.GAME || {};
     var g = base * scale;
     if (g < floor) g = floor;
     if (g > cap) g = cap;
+    // Attack-Speed upgrade track: asymptotic reduction toward ATKSPD.FLOOR (Config-driven).
+    // gate' = FLOOR + (gate - FLOOR) * DECAY^level. Level 0 leaves g untouched.
+    var A = Cfg.ATKSPD;
+    var lvl = (G.Economy && typeof G.Economy.atkSpeedLevel === 'number') ? G.Economy.atkSpeedLevel : 0;
+    if (A && lvl > 0) g = A.FLOOR + (g - A.FLOOR) * Math.pow(A.DECAY, lvl);
     return g;
   }
 

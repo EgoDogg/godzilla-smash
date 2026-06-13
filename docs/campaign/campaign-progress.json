@@ -16,7 +16,7 @@
     "4. regression: unit named no-change checks pass",
     "5. drift (deploy units): sw.js CACHE === config.CACHE_VERSION; campaign-progress.json + CAMPAIGN-BOOT.md updated in the ship commit. Doc-only commits may skip 1-4 with a justification line."
   ],
-  "_updated_at": "2026-06-13T02:30:00Z",
+  "_updated_at": "2026-06-13T03:00:00Z",
   "_halt": null,
   "_run_policy": {
     "_locked": "Continuous + async feel-queue; KMP deferred; balance + touch numbers research-locked to >=97% (author drafts are fallbacks); >=97% latitude to touch anything; rollback = git reset --hard <prev-tag>.",
@@ -64,7 +64,7 @@
     "v14": {
       "title": "Features — Attack-Speed + Move-Speed tracks, Nova Slam finisher, final touch geometry, balance tuning",
       "units": {
-        "U1": { "passes": false, "evidence": null, "tag": null, "commit": null, "depends_on": ["UR"], "note": "atk-speed-track: Config.ATKSPD + asymptotic gate in attackGateFor (entities.js:819-828) + buyAtkSpeed/cost/gateForLevel + shop row + save field (economy.js). Cost curve from UR." },
+        "U1": { "passes": true, "evidence": "node --check clean (config/entities/economy); preview live-object eval-drive: costs 10/32/102/328/1049/3355 + cap at L6 (over-cap buyAtkSpeed=false); gz2014 player gate L0=0.126 unchanged -> L6=0.081 (x1.556), engine===formula; shop rows 'Rapid Fire Breath · Lv 0' = 7.9->9.0/sec 💰10 + MAX tag at cap; console error-clean; fresh-save defaults atkSpeedLevel=0.", "tag": "gz-u01-atkspeed", "commit": "gz-u01-atkspeed", "completed_at": "2026-06-13", "depends_on": ["UR"], "note": "atk-speed-track shipped: Config.ATKSPD {FLOOR .075,DECAY .70,LEVELS 6,BASE 10,GROWTH 3.2}; asymptotic reduction in attackGateFor; buyAtkSpeed/atkSpeedCost/atkGateForLevel + shop row + save field + clamp in economy.js. Display gate math duplicated in economy.atkGateForLevel (consolidation candidate)." },
         "U2": { "passes": false, "evidence": null, "tag": null, "commit": null, "depends_on": ["UR"], "note": "move-speed-track: Config.MOVESPD + cached moveSpeedMult() + multiplies ACCEL/MAX_SPEED/walkPhase (entities.js:963-1027). Cost curve from UR." },
         "U3": { "passes": false, "evidence": null, "tag": null, "commit": null, "depends_on": ["UR"], "note": "nova-slam-finisher (HIGH-stakes): Config.FINISHER + fireFinisher() parallel to startAttack (never touches atkCooldown) + 3rd disc LEFT of SMASH + F-key + intent.charge/chargeRelease (input.js) + charge/cooldown arc (render.js) + Audio.finisher. NOVA disc size from UR(b)." },
         "U4": { "passes": false, "evidence": null, "tag": null, "commit": null, "depends_on": ["UR", "U3"], "note": "touch-geometry (pulled forward from v16 per UR(b)): LEFT_ZONE/joystick radius+deadzone/SMASH+JUMP+NOVA disc sizes + tap-to-target-in-left-zone behavior (input.js). Controls FINAL at first play." },
