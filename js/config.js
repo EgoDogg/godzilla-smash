@@ -18,7 +18,10 @@ window.GAME.Config = {
   //     2-tile streets, with long sightline "runways". `tierRows` decouples the
   //     HP/difficulty depth-band from street width: tier = floor(row / tierRows),
   //     still 0..18 over 58 rows regardless of how wide the streets get. ---
-  LAYOUT: { blockW: 2, blockD: 2, street: 2, streetW: 3, bands: 19, tierRows: 3 },
+  // street 2→3, streetW 3→4 (gz-v15, docs/research-2026-06b.md): a thinner city (~270→192
+  // structures, coverage 22%→16%) so movement is rewarded; tierRows:3 keeps tier=floor(row/3)
+  // decoupled from street width → ROW_HP/income ladder UNCHANGED (income-neutral by construction).
+  LAYOUT: { blockW: 2, blockD: 2, street: 3, streetW: 4, bands: 19, tierRows: 3 },
 
   // --- Building HP ladder by TIER (depth band). HP === money payout. 19 tiers,
   //     SMOOTHED ~2.3×/tier (expert flow-channel curve), 10 → 1e9 at tier 18. ---
@@ -35,8 +38,9 @@ window.GAME.Config = {
 
   // --- Combo: the only damage multiplier (chain smashes to ramp ×1 → ×2) ---
   // Combo (research-locked docs/research-2026-06.md): STEP 0.12 → cap reached in ~9
-  // destroys (was 0.04 → ~25, practically invisible). WINDOW 3250ms > RUBBLE_MS 2800 so
-  // a combo survives one respawn gap but still decays on idle. CAP 2.0 unchanged (locked).
+  // destroys (was 0.04 → ~25, practically invisible). WINDOW 3250ms is now SHORTER than
+  // RUBBLE_MS 4500 (gz-v15) — intentional: a chain no longer survives camping a freshly
+  // flattened block, nudging the player to keep moving. CAP 2.0 unchanged (locked).
   COMBO: { WINDOW_MS: 3250, STEP: 0.12, MAX: 2.0 },
   PASSIVE: 0,                // no passive income (would trivialize deep rows)
 
@@ -74,10 +78,12 @@ window.GAME.Config = {
               DMG_MIN: 3, DMG_MAX: 10, MIN_CHARGE: 0.15, SLOW: 0.5, SHAKE: 14 },
 
   // --- Destruction / respawn timing (ms) ---
-  // Respawn (research-locked): both levers cut together — RUBBLE_MS 6500→2800 AND
-  // RUBBLE_PER_TIER 450→150, else deep-tier downtime stays ~12s (per-tier dominates).
-  // tier0 ≈ 4.05s, tier18 ≈ 6.75s total — within the genre 4-8s target. See research §rubble.
-  RESPAWN: { CRUMBLE_MS: 550, RUBBLE_MS: 2800, RUBBLE_PER_TIER: 150, RISE_MS: 700 },
+  // Respawn (Mike G1 verdict + docs/research-2026-06b.md): the dense city made the v5 dead-zone
+  // research backwards — fast respawn just lets you camp. SLOWER now (RUBBLE_MS 2800→4500,
+  // PER_TIER 150→250: full cycle ~5.75s tier0 / ~8s mid / ~10.25s tier18) AND an off-screen
+  // respawn GATE (world.js updateBuildings) so cleared blocks refill only once you roam away —
+  // the actual movement driver. Paired with the thinner city (LAYOUT street/streetW below).
+  RESPAWN: { CRUMBLE_MS: 550, RUBBLE_MS: 4500, RUBBLE_PER_TIER: 250, RISE_MS: 700 },
 
   WORLD2_COST: 12e9,         // capstone unlock → "Coming soon" stub
 

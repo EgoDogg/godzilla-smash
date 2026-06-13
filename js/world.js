@@ -627,10 +627,29 @@ window.GAME = window.GAME || {};
   //   rubble     : sit for (RUBBLE_MS + tier*RUBBLE_PER_TIER) → respawning.
   //   respawning : rise for RISE_MS → standing at full HP (+ rare-spawn roll).
   // -------------------------------------------------------------------------
+  // Off-screen respawn gate (Mike G1 + docs/research-2026-06b.md): a cleared building only
+  // begins respawning once it's safely OUT OF VIEW, so the player must roam to find fresh
+  // targets and cleared blocks refill behind them (vs an in-place timer you can camp out).
+  // Reuses the camera cull AABB + a margin. Headless / no camera-canvas → ungated (returns
+  // true) so world.js stays testable and never deadlocks if the view isn't ready.
+  var RESPAWN_MARGIN = 4;  // tiles beyond the visible AABB before a cleared building may refill
+  function clearToRespawn(b, aabb) {
+    if (!aabb) return true;                       // no view (headless/boot) → don't gate
+    var m = RESPAWN_MARGIN;
+    return (b.col < aabb.minCol - m) || (b.col > aabb.maxCol + m) ||
+           (b.row < aabb.minRow - m) || (b.row > aabb.maxRow + m);
+  }
+
   function updateBuildings(dt) {
     if (!(dt > 0)) return;
     var flashDecay = dt / 120;
     var shakeDecay = dt / 220;
+
+    // Compute the visible tile AABB ONCE per frame (camera is static within updateBuildings;
+    // cull() reuses a shared object so we hold the reference for the loop). Guard on the
+    // attached canvas so headless ticks skip the gate entirely.
+    var cam = G.camera;
+    var viewAABB = (cam && typeof cam.cull === 'function' && cam._canvas) ? cam.cull() : null;
 
     for (var i = 0; i < buildings.length; i++) {
       var b = buildings[i];
@@ -650,7 +669,9 @@ window.GAME = window.GAME || {};
           break;
 
         case 'rubble':
-          if (b.t >= RESPAWN.RUBBLE_MS + b.tier * RESPAWN.RUBBLE_PER_TIER) {
+          // Timer up AND off-screen → begin respawning. If the timer is up but the player
+          // is still looking at this spot, hold in rubble until they move on.
+          if (b.t >= RESPAWN.RUBBLE_MS + b.tier * RESPAWN.RUBBLE_PER_TIER && clearToRespawn(b, viewAABB)) {
             b.state = 'respawning';
             b.t = 0;
           }
