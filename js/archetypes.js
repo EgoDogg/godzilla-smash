@@ -747,13 +747,15 @@ window.GAME = window.GAME || {};
     ctx.save();
     ctx.translate(ANCHOR_X, ANCHOR_Y);
 
-    var heads      = (shape && shape.heads      != null) ? shape.heads      : 3;
-    var neckSpread = (shape && shape.neckSpread != null) ? shape.neckSpread : 1.0;
-    var wingSpan   = (shape && shape.wingSpan   != null) ? shape.wingSpan   : 2.5;
-    var isMech     = (shape && shape.mech) ? true : false;
-    var tails      = (shape && shape.tails      != null) ? shape.tails      : 2;
+    var s          = shape || {};
+    var heads      = s.heads      != null ? s.heads      : 3;
+    var neckSpread = s.neckSpread != null ? s.neckSpread : 1.0;
+    var wingSpan   = s.wingSpan   != null ? s.wingSpan   : 2.5;
+    var isMech     = !!s.mech;
+    var tails      = s.tails      != null ? s.tails      : 2;
+    var bodyBulk   = s.bodyBulk   != null ? s.bodyBulk   : 1.0;
 
-    var BH = h * 0.74 * 0.82;   /* slightly smaller body so necks have room */
+    var BH = h * 0.74 * 0.74 * bodyBulk;   /* smaller body so the tall neck-fan + crowns clear the canvas top; bodyBulk per tier (§4.5) */
     var BW = BH * 0.5;
 
     var walkT    = (frame % 6) / 6;
@@ -765,11 +767,21 @@ window.GAME = window.GAME || {};
     var fg = facingGeom(base);
     ctx.translate(0, -bob);
 
-    /* ground contact ellipse */
-    ctx.fillStyle = 'rgba(0,0,0,0.30)';
-    ctx.beginPath();
-    ctx.ellipse(0, 2, BW * 1.20, BH * 0.05, 0, 0, 6.2832);
-    ctx.fill();
+    /* ground contact ellipse OR void wormhole (void_ghidorah §4.6) */
+    if (s.voidPortal) {
+      var pr = BW * 0.85, pcy = -BH * 0.28;
+      var pg = ctx.createRadialGradient(0, pcy, BW * 0.06, 0, pcy, pr);
+      pg.addColorStop(0, 'rgba(0,224,255,0.50)'); pg.addColorStop(0.5, 'rgba(60,40,120,0.32)'); pg.addColorStop(1, 'rgba(0,0,0,0)');
+      ctx.fillStyle = pg;
+      ctx.beginPath(); ctx.arc(0, pcy, pr, 0, 6.2832); ctx.fill();
+      ctx.strokeStyle = 'rgba(0,224,255,0.45)'; ctx.lineWidth = 2.0;
+      ctx.beginPath(); ctx.arc(0, pcy, pr * 0.55, 0, 6.2832); ctx.stroke();
+    } else {
+      ctx.fillStyle = 'rgba(0,0,0,0.30)';
+      ctx.beginPath();
+      ctx.ellipse(0, 2, BW * 1.20, BH * 0.05, 0, 0, 6.2832);
+      ctx.fill();
+    }
 
     var dark = pal.skinDark, skin = pal.skin, light = pal.skinLight;
 
@@ -782,9 +794,9 @@ window.GAME = window.GAME || {};
       ctx.restore();
     }
 
-    /* wings (Ghidorah is also a flyer, drawn behind torso) */
+    /* bat wings (Ghidorah forelimbs, drawn behind torso) — mechanical for mecha_ghidorah */
     var WH = BH * wingSpan;
-    drawPteranoWing(ctx, WH, BH, fg, pal, step, false, dark);
+    drawBatWing(ctx, WH, BH, fg, pal, false, dark, { mech: isMech, spars: 4 });
 
     /* legs */
     ctx.fillStyle = dark;
@@ -807,67 +819,210 @@ window.GAME = window.GAME || {};
     }
 
     /* front wings */
-    drawPteranoWing(ctx, WH, BH, fg, pal, step, true, skin);
+    drawBatWing(ctx, WH, BH, fg, pal, true, skin, { mech: isMech, spars: 4 });
 
     /* necks + heads fanned from torso top */
-    drawHydraHeads(ctx, BH, BW, fg, pal, heads, neckSpread, atk, walkT, isMech);
+    drawHydraHeads(ctx, BH, BW, fg, pal, s, atk, walkT);
 
     ctx.restore();
+  }
+
+  /* (A §4) TAPERED FILLED neck — replaces the flat round-cap stroke. Samples the quadratic
+     spine root→ctrl→tip, offsets each sample along the curve NORMAL by halfWidth(t) (Canvas2D
+     has no per-point lineWidth, so offset-fill is the only way), builds the outline, and fills
+     with a root→tip gradient. opts.crestRim strokes the upper (crest) edge; opts.thorns studs
+     the rose-thorn signature (void); opts.midVein draws a thin center vein (void gold). */
+  function drawHydraNeck(ctx, p0x, p0y, cx, cy, p1x, p1y, nwBase, nwTip, gradTop, gradMid, gradBot, opts) {
+    opts = opts || {};
+    var N = 8, up = [], lo = [], mid = [];
+    for (var i = 0; i <= N; i++) {
+      var t = i / N, mt = 1 - t;
+      var px = mt * mt * p0x + 2 * mt * t * cx + t * t * p1x;
+      var py = mt * mt * p0y + 2 * mt * t * cy + t * t * p1y;
+      var tx = 2 * mt * (cx - p0x) + 2 * t * (p1x - cx);
+      var ty = 2 * mt * (cy - p0y) + 2 * t * (p1y - cy);
+      var len = Math.hypot(tx, ty) || 1;
+      var nx = -ty / len, ny = tx / len;                 // unit normal
+      var hw = lerp(nwBase, nwTip, t) * 0.5;
+      up.push([px + nx * hw, py + ny * hw]);
+      lo.push([px - nx * hw, py - ny * hw]);
+      mid.push([px, py, nx, ny, hw]);
+    }
+    var g = ctx.createLinearGradient(p0x, p0y, p1x, p1y);
+    g.addColorStop(0, gradBot); g.addColorStop(0.55, gradMid); g.addColorStop(1, gradTop);
+    ctx.fillStyle = g;
+    ctx.beginPath();
+    ctx.moveTo(up[0][0], up[0][1]);
+    for (var u = 1; u <= N; u++) ctx.lineTo(up[u][0], up[u][1]);
+    for (var l = N; l >= 0; l--) ctx.lineTo(lo[l][0], lo[l][1]);
+    ctx.closePath(); ctx.fill();
+    /* rose thorns (void §4.6) — small outward triangles on alternating sides */
+    if (opts.thorns) {
+      ctx.fillStyle = opts.thornCol || gradTop;
+      for (var k = 2; k < N; k += 1) {
+        var m = mid[k], side = (k % 2 === 0) ? 1 : -1;
+        var ex = m[0] + m[2] * m[4] * side, ey = m[1] + m[3] * m[4] * side;   // base on edge
+        var tl = m[4] * 1.7;                                                   // thorn length
+        // tangent dir for the thorn base spread
+        var dxn = -m[3], dyn = m[2];
+        ctx.beginPath();
+        ctx.moveTo(ex - dxn * m[4] * 0.5, ey - dyn * m[4] * 0.5);
+        ctx.lineTo(ex + m[2] * tl * side, ey + m[3] * tl * side);             // apex outward
+        ctx.lineTo(ex + dxn * m[4] * 0.5, ey + dyn * m[4] * 0.5);
+        ctx.closePath(); ctx.fill();
+      }
+    }
+    /* RIM crest stroke on the upper edge (§1.1 / cyan-gold void rim) */
+    if (opts.crestRim) {
+      ctx.strokeStyle = opts.crestRim; ctx.lineWidth = opts.crestW || 1.8; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+      ctx.beginPath(); ctx.moveTo(up[0][0], up[0][1]);
+      for (var u2 = 1; u2 <= N; u2++) ctx.lineTo(up[u2][0], up[u2][1]);
+      ctx.stroke();
+    }
+    if (opts.midVein) {   // thin gold center vein (void)
+      ctx.strokeStyle = opts.midVein; ctx.lineWidth = 1.6; ctx.lineCap = 'round';
+      ctx.beginPath(); ctx.moveTo(mid[0][0], mid[0][1]);
+      ctx.quadraticCurveTo(cx, cy, p1x, p1y); ctx.stroke();
+    }
+  }
+
+  /* (B §4) Ghidorah head — small skull + back-swept HORN-CROWN (drawRidgeElement prongs) +
+     golden eye. headHornStyle: 'crown' (3/side) · 'crown_tall' (4/side, +1 hooked tip) ·
+     'asymmetric' (center forked, sides straight) · 'thorns' (many short spikes, void).
+     Drawn in head-local space (caller translates/rotates/scales to the neck tip). */
+  function drawGhidorahHead(ctx, BH, BW, pal, atk, style, isCenter) {
+    var hw = BH * 0.11, hh = BH * 0.075;
+    var face = pal.skinLight, core = pal.skinDark, tip = pal.skinLight, eyeCol = pal.eye;
+    // skull ellipse + small snout (points +x)
+    ctx.fillStyle = face;
+    ctx.beginPath(); ctx.ellipse(0, 0, hw, hh, 0, 0, 6.2832); ctx.fill();
+    ctx.beginPath();
+    ctx.moveTo(hw * 0.6, -hh * 0.4); ctx.lineTo(hw * 1.7, 0); ctx.lineTo(hw * 0.6, hh * 0.5);
+    ctx.closePath(); ctx.fill();
+    if (atk > 0.01) {                       // open-jaw beam-charge glow
+      ctx.fillStyle = eyeCol; ctx.globalAlpha = 0.5 + atk * 0.4;
+      ctx.beginPath(); ctx.arc(hw * 1.5, 0, hh * 0.6 * atk, 0, 6.2832); ctx.fill();
+      ctx.globalAlpha = 1;
+    }
+    // HORN CROWN — prongs fan back-up over the skull; drawRidgeElement = dark core + lit tip
+    var perSide = (style === 'crown_tall') ? 4 : (style === 'thorns') ? 6 : 3;
+    var plen = BH * (style === 'thorns' ? 0.05 : 0.085) * (style === 'crown_tall' ? 1.3 : 1.0);
+    for (var p = 0; p < perSide; p++) {
+      var len2 = plen * (1 + (p === perSide - 1 && style === 'crown_tall' ? 0.55 : 0));   // hooked tip
+      var px = -hw * (0.2 + p * 0.28);                          // step back along the skull
+      var py = -hh * (0.3 + p * 0.10);
+      var prongLean = -0.5 - p * 0.12;                          // sweep rearward
+      drawRidgeElement(ctx, px, py, len2, prongLean, tip, core, 0.45);
+      if (style === 'asymmetric' && isCenter) {                // forked antler on the center head
+        drawRidgeElement(ctx, px - len2 * 0.16, py - len2 * 0.4, len2 * 0.6, prongLean - 0.3, tip, core, 0.4);
+      }
+    }
+    // golden eye + white-hot core
+    ctx.fillStyle = eyeCol;
+    ctx.beginPath(); ctx.arc(hw * 0.5, -hh * 0.1, Math.max(1.8, BH * 0.024), 0, 6.2832); ctx.fill();
+    ctx.fillStyle = '#ffffff';
+    ctx.beginPath(); ctx.arc(hw * 0.5, -hh * 0.1, Math.max(0.8, BH * 0.011), 0, 6.2832); ctx.fill();
+  }
+
+  /* (C §4) Bat wing — finger-spars from a wrist + smooth gold membrane (gradient) + a
+     SCALLOPED trailing edge (distinct from Rodan's single-point membrane). opts.mech =
+     hard straight spars + flat panel membrane + cyan edge (mecha_ghidorah). */
+  function drawBatWing(ctx, WH, BH, fg, pal, front, baseCol, opts) {
+    opts = opts || {};
+    var side = front ? 1 : -1;
+    var dir = fg.dir;
+    var rootX = -BW_from_BH(BH) * 0.3 * 0, rootY = -BH * 0.55;
+    var wx = side * WH * 0.10, wy = -BH * 0.62;                 // wrist
+    var spars = (opts.spars || 4);
+    var tipsX = [], tipsY = [];
+    for (var s = 0; s <= spars; s++) {
+      var f = s / spars;
+      var ex = wx + side * WH * (0.18 + f * 0.34);
+      var ey = wy + (f - 0.5) * BH * 0.55 - (opts.mech ? 0 : Math.sin(f * Math.PI) * BH * 0.04);
+      tipsX.push(ex); tipsY.push(ey);
+    }
+    // membrane fill
+    var g = ctx.createLinearGradient(wx, wy - BH * 0.2, wx, wy + BH * 0.3);
+    g.addColorStop(0, pal.skinLight); g.addColorStop(0.5, pal.skin); g.addColorStop(1, pal.skinDark);
+    ctx.fillStyle = opts.mech ? pal.skin : g;
+    ctx.beginPath();
+    ctx.moveTo(0, rootY);
+    ctx.lineTo(wx, wy);
+    ctx.lineTo(tipsX[0], tipsY[0]);
+    for (var t2 = 1; t2 <= spars; t2++) {
+      if (opts.mech) ctx.lineTo(tipsX[t2], tipsY[t2]);
+      else {                                                    // scalloped concave trailing edge
+        var mxv = (tipsX[t2 - 1] + tipsX[t2]) / 2 - side * BH * 0.05;
+        var myv = (tipsY[t2 - 1] + tipsY[t2]) / 2 + BH * 0.04;
+        ctx.quadraticCurveTo(mxv, myv, tipsX[t2], tipsY[t2]);
+      }
+    }
+    ctx.lineTo(0, rootY); ctx.closePath(); ctx.fill();
+    // finger spars
+    ctx.strokeStyle = opts.mech ? pal.plateEdge : pal.skinDark; ctx.lineWidth = opts.mech ? 1.8 : 2.0; ctx.lineCap = 'round';
+    for (var sp = 0; sp <= spars; sp++) { ctx.beginPath(); ctx.moveTo(wx, wy); ctx.lineTo(tipsX[sp], tipsY[sp]); ctx.stroke(); }
+    // RIM leading edge
+    ctx.strokeStyle = rimCol(0.22); ctx.lineWidth = 2.0;
+    ctx.beginPath(); ctx.moveTo(0, rootY); ctx.lineTo(wx, wy); ctx.lineTo(tipsX[0], tipsY[0]); ctx.stroke();
   }
 
   /* Fan `nHeads` necks from the top of the torso, each with its own head.
      The central neck points along the body facing; outer necks sweep left/right.
      Walk animation gives each neck a gentle independent bob. */
-  function drawHydraHeads(ctx, BH, BW, fg, pal, nHeads, neckSpread, atk, walkT, isMech) {
+  function drawHydraHeads(ctx, BH, BW, fg, pal, shape, atk, walkT) {
+    var s = shape || {};
+    var nHeads     = s.heads      != null ? s.heads      : 3;
+    var neckSpread = s.neckSpread != null ? s.neckSpread : 1.0;
+    var neckLenMul = s.neckLenMul != null ? s.neckLenMul : 1.0;
+    var widthMul   = s.neckWidthMul != null ? s.neckWidthMul : 1.0;
+    var hornStyle  = s.headHornStyle || 'crown';
+    var thorns     = !!s.neckThorns;
+    var cyborg     = !!s.cyborgCenter;
     var lean = fg.dir;
-    /* fan spread in radians: ±60° for 3 heads → 0.55 rad each step */
     var totalArc = 0.90 * neckSpread;
+    var centerIdx = Math.floor(nHeads / 2);
+    var goldPal = cyborg ? { skin: s.goldSkin, skinDark: s.goldDark, skinLight: s.goldLight, eye: pal.goldEye || '#ffd24a' } : null;
     for (var n = 0; n < nHeads; n++) {
       var frac = nHeads > 1 ? (n / (nHeads - 1) - 0.5) : 0;
-      var arc  = frac * totalArc;    /* radians: –0.45 .. 0 .. +0.45 for 3 heads */
-
-      /* bob each neck slightly out of phase */
-      var phaseOff = n * 0.55;
-      var neckBob  = Math.sin(walkT * Math.PI * 2 + phaseOff) * BH * 0.05;
-
-      /* neck base: top of torso, biased toward facing lean */
+      var arc  = frac * totalArc;
+      var neckBob = Math.sin(walkT * Math.PI * 2 + n * 0.55) * BH * 0.05;   // idle (frame0)=0
       var rootX = BW * (0.10 + lean * 0.12) + frac * BW * 0.40 * neckSpread;
       var rootY = -BH * 0.82;
-
-      /* neck length (centre slightly longer) */
-      var neckLen = BH * (0.38 + (1 - Math.abs(frac)) * 0.12);
-
-      /* neck tip position: sweep by arc from the root upward */
-      var tipX = rootX + Math.sin(arc) * neckLen;
+      var neckLen = BH * (0.32 + (1 - Math.abs(frac)) * 0.10) * neckLenMul;
+      var sBend = thorns ? (hash(n + 1) - 0.5) * neckLen * 0.45 : 0;        // void: static S-curve
+      var tipX = rootX + Math.sin(arc) * neckLen + sBend * 0.5;
       var tipY = rootY - Math.cos(arc) * neckLen + neckBob;
-
-      /* draw neck as a thick curved stroke */
-      var nw = BH * 0.09 * (1 - Math.abs(frac) * 0.25);
-      ctx.strokeStyle = n === Math.floor(nHeads / 2) ? pal.skin : pal.skinDark;
-      ctx.lineWidth   = nw;
-      ctx.lineCap     = 'round';
-      ctx.beginPath();
-      ctx.moveTo(rootX, rootY);
-      /* control point: midway, slightly angled */
-      ctx.quadraticCurveTo(
-        rootX + Math.sin(arc * 0.5) * neckLen * 0.55,
-        rootY - neckLen * 0.55 + neckBob * 0.5,
-        tipX, tipY
-      );
-      ctx.stroke();
-
-      /* draw a head at the tip */
+      var cx = rootX + Math.sin(arc * 0.5) * neckLen * 0.55 + sBend;
+      var cy = rootY - neckLen * 0.55 + neckBob * 0.5;
+      var isCenter = (n === centerIdx);
+      var useMech = cyborg && isCenter;
+      var np = (cyborg && !isCenter) ? goldPal : pal;
+      var nwBase = BH * 0.11  * widthMul * (1 - Math.abs(frac) * 0.22);
+      var nwTip  = BH * 0.045 * widthMul * (1 - Math.abs(frac) * 0.22);
+      /* neck */
+      var nopts = {};
+      if (thorns) { nopts.thorns = true; nopts.thornCol = np.skinLight; nopts.crestRim = pal.neckRim || 'rgba(0,224,255,0.7)'; nopts.crestW = 2.0; nopts.midVein = '#ffcf3a'; }
+      else nopts.crestRim = rimCol(isCenter ? 0.45 : 0.30);
+      drawHydraNeck(ctx, rootX, rootY, cx, cy, tipX, tipY, nwBase, nwTip,
+                    isCenter ? np.skinLight : np.skin, np.skin, np.skinDark, nopts);
+      if (useMech) {                          /* steel neck braces (cyborg center) */
+        ctx.strokeStyle = pal.skinDark; ctx.lineWidth = Math.max(1.5, nwBase * 0.35); ctx.lineCap = 'butt';
+        for (var b = 1; b <= 3; b++) { var bt = b / 4, bx = lerp(rootX, tipX, bt), by = lerp(rootY, tipY, bt);
+          ctx.beginPath(); ctx.moveTo(bx - nwBase * 0.5, by); ctx.lineTo(bx + nwBase * 0.5, by); ctx.stroke(); }
+      }
+      /* head at the tip */
       ctx.save();
       ctx.translate(tipX, tipY);
-      ctx.rotate(arc * 0.4);  /* head turns with the neck angle */
-      var headScale = 0.75 + (1 - Math.abs(frac)) * 0.18;
+      ctx.rotate(arc * 0.35 + lean * 0.10);
+      var headScale = (0.92 + (1 - Math.abs(frac)) * 0.20) * (isCenter ? 1.12 : 1.0);
       ctx.scale(headScale, headScale);
-      /* give each outer head a slight facing variation so they don't stack */
-      var fakeFg = Object.assign({}, fg);
-      fakeFg.dir   = clamp(lean + frac * 0.5, -1, 1);
-      fakeFg.headX = 0;
-      fakeFg.snout = fg.snout * 0.90;
-      drawHead(ctx, BH * 0.62, BW * 0.62, fakeFg, pal, n === Math.floor(nHeads / 2) ? atk : atk * 0.6);
+      if (useMech) {                          /* cyborg CENTER = mecha helmet head + cyan visor */
+        var fakeFg = { show: 'side', headX: 0, headScale: 1, dir: lean, snout: 0.4 };
+        var cyberPal = { skin: pal.skin, skinDark: pal.skinDark, skinLight: pal.skinLight, plate: pal.plate, plateEdge: pal.plateEdge, eye: pal.eye };
+        drawMechHead(ctx, BH * 0.60, BW * 0.60, fakeFg, cyberPal, atk, 0, { headStyle: 'helmet' });
+      } else {
+        drawGhidorahHead(ctx, BH * 0.62, BW * 0.62, np, isCenter ? atk : atk * 0.6, hornStyle, isCenter);
+      }
       ctx.restore();
     }
   }
@@ -1380,6 +1535,9 @@ window.GAME = window.GAME || {};
     hash:             hash,
     drawRidgeElement: drawRidgeElement,
     drawFissures:     drawFissures,
+    drawHydraNeck:    drawHydraNeck,
+    drawGhidorahHead: drawGhidorahHead,
+    drawBatWing:      drawBatWing,
 
     /* Sprite canvas constants — entities.js must match these exactly. */
     SPR_W:    SPR_W,
