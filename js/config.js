@@ -4,7 +4,7 @@ window.GAME.Config = {
   saveKey: 'godzilla-save-v3',
   // In-page console probe of the live asset version. The AUTHORITY is sw.js `CACHE`;
   // bump BOTH together to ship (game.js warns at boot if they drift out of sync).
-  CACHE_VERSION: 'gz-v21',
+  CACHE_VERSION: 'gz-v22',
 
   // --- Isometric grid (world units = tiles). Wide, open, zoomed-out city:
   //     21 cols of 2×2 blocks split by wide streets; 58 rows. TILE_*/WZ_PX are
@@ -18,10 +18,11 @@ window.GAME.Config = {
   //     2-tile streets, with long sightline "runways". `tierRows` decouples the
   //     HP/difficulty depth-band from street width: tier = floor(row / tierRows),
   //     still 0..18 over 58 rows regardless of how wide the streets get. ---
-  // street 2→3, streetW 3→4 (gz-v15, docs/research-2026-06b.md): a thinner city (~270→192
-  // structures, coverage 22%→16%) so movement is rewarded; tierRows:3 keeps tier=floor(row/3)
-  // decoupled from street width → ROW_HP/income ladder UNCHANGED (income-neutral by construction).
-  LAYOUT: { blockW: 2, blockD: 2, street: 3, streetW: 4, bands: 19, tierRows: 3 },
+  // gz-v15 set street 2→3, streetW 3→4 (thinner city for movement). D1 (Mike's pick, gz-v22):
+  // street 3→1 so prow = blockD + street = 3 = tierRows → EVERY HP tier gets exactly 2 building
+  // rows (the old 5-vs-3 misalignment made bands cycle 2/1/1/2/0, leaving some tiers building-less).
+  // The trade Mike accepted: a denser row-axis city. tier=floor(row/3) + ROW_HP ladder UNCHANGED.
+  LAYOUT: { blockW: 2, blockD: 2, street: 1, streetW: 4, bands: 19, tierRows: 3 },
 
   // --- Building HP ladder by TIER (depth band). HP === money payout. 19 tiers,
   //     SMOOTHED ~2.3×/tier (expert flow-channel curve), 10 → 1e9 at tier 18. ---
