@@ -50,6 +50,14 @@ window.GAME.Config = {
   //     coin-efficient path). Smooth/continuous — no breakpoints. ---
   ATKSPD: { FLOOR: 0.075, DECAY: 0.70, LEVELS: 6, BASE: 10, GROWTH: 3.2 },
 
+  // --- Move-Speed upgrade track (research-locked, docs/research-2026-06.md).
+  //     Purchasable utility track: ACCEL + MAX_SPEED × (1 + PER_LEVEL)^level.
+  //     +8%/level over 6 levels → cap ×1.587 (7.37 tiles/s = 0.123 tiles/substep @60fps,
+  //     0.246 @30fps — well under the 1.0-tile footprint, no tunneling).
+  //     Cost = round(BASE * GROWTH^level): 40/96/230/553/1327/3185 (total 5431) — sits
+  //     above ATKSPD, preserving claws < atk-speed < move-speed coin-efficiency ordering. ---
+  MOVESPD: { PER_LEVEL: 0.08, LEVELS: 6, BASE: 40, GROWTH: 2.4 },
+
   // --- Destruction / respawn timing (ms) ---
   RESPAWN: { CRUMBLE_MS: 550, RUBBLE_MS: 6500, RUBBLE_PER_TIER: 450, RISE_MS: 700 },
 

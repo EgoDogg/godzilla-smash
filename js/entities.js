@@ -965,14 +965,19 @@ window.GAME = window.GAME || {};
     var moveMag = Math.hypot(mx, my);
     if (moveMag > 1) { mx /= moveMag; my /= moveMag; moveMag = 1; }
 
+    // Move-Speed upgrade track: scale ACCEL + MAX_SPEED by the cached economy multiplier
+    // (×1 at level 0). Cached → no per-frame Math.pow. (U3 will further ×FIN.SLOW here.)
+    var spdMult = (G.Economy && G.Economy.moveSpeedMult) ? G.Economy.moveSpeedMult() : 1;
+    var accel = ACCEL * spdMult, maxSp = MAX_SPEED * spdMult;
+
     if (moveMag > 0.001) {
-      this.vel.x += mx * ACCEL * dt;
-      this.vel.y += my * ACCEL * dt;
+      this.vel.x += mx * accel * dt;
+      this.vel.y += my * accel * dt;
     }
     var fr = Math.exp(-FRICTION * dt);
     this.vel.x *= fr; this.vel.y *= fr;
     var sp = Math.hypot(this.vel.x, this.vel.y);
-    if (sp > MAX_SPEED) { var ks = MAX_SPEED / sp; this.vel.x *= ks; this.vel.y *= ks; sp = MAX_SPEED; }
+    if (sp > maxSp) { var ks = maxSp / sp; this.vel.x *= ks; this.vel.y *= ks; sp = maxSp; }
 
     var dwx = this.vel.x * dt, dwy = this.vel.y * dt;
     var hadInput = moveMag > 0.001;
@@ -1029,7 +1034,7 @@ window.GAME = window.GAME || {};
     }
 
     if (this.fsm === 'walk') {
-      this.walkPhase += dt * (1.4 + sp / MAX_SPEED * 1.6);
+      this.walkPhase += dt * (1.4 + sp / maxSp * 1.6);
       if (this.walkPhase >= 1) this.walkPhase -= 1;
     } else if (this.fsm === 'idle') {
       this.walkPhase = 0;
