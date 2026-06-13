@@ -68,8 +68,8 @@ window.GAME = window.GAME || {};
   // prongs — one separation model for every pointed feature. x,y = base center; size = height;
   // lean = apex horizontal offset as a fraction of size (toward the facing dir). coreCol null
   // → face only (a plain plate). Pure fills (no stroke/composite) per §1.6.
-  function drawRidgeElement(ctx, x, y, size, lean, faceCol, coreCol) {
-    var halfW = size * 0.42;            // slim base (taller-than-wide = ridge read)
+  function drawRidgeElement(ctx, x, y, size, lean, faceCol, coreCol, widthMul) {
+    var halfW = size * 0.42 * (widthMul != null ? widthMul : 1);   // ARTP2: independent width (razor vs blunt)
     var apexX = x + lean * size;        // lean shifts the tip toward the facing direction
     var apexY = y - size;
     if (coreCol) {                      // CORE: a wider/taller dark triangle behind the face
@@ -164,8 +164,8 @@ window.GAME = window.GAME || {};
     ctx.closePath(); ctx.fill();
   }
 
-  function drawLeg(ctx, x, BH, BW, swing, fg) {
-    var w = BH * 0.075;
+  function drawLeg(ctx, x, BH, BW, swing, fg, wMul) {
+    var w = BH * 0.075 * (wMul != null ? wMul : 1);   // wMul: wyrm elephantine pads §2.1 (hydra/mecha default 1)
     var lift    = -swing * BH * 0.05;
     var footFwd =  swing * BW * 0.10;
     ctx.beginPath();
@@ -178,8 +178,8 @@ window.GAME = window.GAME || {};
     ctx.closePath(); ctx.fill();
   }
 
-  function drawArm(ctx, x, y, BH, BW, fg, side, atk) {
-    var w     = BH * 0.040;
+  function drawArm(ctx, x, y, BH, BW, fg, side, atk, wMul) {
+    var w     = BH * 0.040 * (wMul != null ? wMul : 1);   // wMul: wyrm widens the vestigial arms §2.1 (mecha default 1)
     var reach = (side > 0) ? atk * BW * 0.28 : atk * BW * 0.06;
     var drop  = (side > 0) ? (BH * 0.14 - atk * BH * 0.05) : BH * 0.13;
     ctx.beginPath();
@@ -190,8 +190,13 @@ window.GAME = window.GAME || {};
     ctx.closePath(); ctx.fill();
   }
 
-  function drawTorso(ctx, BH, BW, fg, skin, dark, light) {
+  /* widthMul (default 1): horizontal narrowing — WYRM-ONLY (gvk warrior §2.4). hydra passes
+     nothing so its torso is byte-identical. rimGlow (default null): §1.2 self-illumination rim
+     — re-strokes the FULL torso outline in the form's aura color (burning/gxk/supernova). */
+  function drawTorso(ctx, BH, BW, fg, skin, dark, light, widthMul, rimGlow) {
     var lean = fg.dir;
+    ctx.save();
+    if (widthMul != null && widthMul !== 1) ctx.scale(widthMul, 1);
     var bg = ctx.createLinearGradient(0, -BH * 0.9, 0, -BH * 0.1);
     bg.addColorStop(0, light); bg.addColorStop(0.5, skin); bg.addColorStop(1, dark);
     ctx.fillStyle = bg;
@@ -204,43 +209,84 @@ window.GAME = window.GAME || {};
     ctx.quadraticCurveTo( BW * 0.40, -BH * 0.13, BW * 0.08, -BH * 0.13);
     ctx.quadraticCurveTo(-BW * 0.18, -BH * 0.13, -BW * 0.36, -BH * 0.30);
     ctx.closePath(); ctx.fill();
-    /* rim light on the back edge */
-    ctx.save();
-    ctx.strokeStyle = rimCol(0.22); ctx.lineWidth = 2.5; ctx.lineCap = 'round';   // §1.1 house rim (was rgba(255,250,235,0.22))
+    /* §1.1 house rim on the back/top edge */
+    ctx.strokeStyle = rimCol(0.22); ctx.lineWidth = 2.5; ctx.lineCap = 'round';
     ctx.beginPath();
     ctx.moveTo(-BW * 0.14, -BH * 0.80);
     ctx.quadraticCurveTo( BW * 0.04, -BH * 0.88, BW * (0.22 + lean * 0.06), -BH * 0.82);
     ctx.quadraticCurveTo( BW * (0.40 + lean * 0.10), -BH * 0.78, BW * (0.46 + lean * 0.08), -BH * 0.62);
-    ctx.stroke(); ctx.restore();
+    ctx.stroke();
+    /* §1.2 self-illumination rim — full silhouette outline in the aura hue (granted forms) */
+    if (rimGlow) {
+      ctx.strokeStyle = rimGlow; ctx.lineWidth = 2.5; ctx.lineJoin = 'round'; ctx.globalAlpha = 0.5;
+      ctx.beginPath();
+      ctx.moveTo(-BW * 0.36, -BH * 0.30);
+      ctx.quadraticCurveTo(-BW * 0.50, -BH * 0.68, -BW * 0.14, -BH * 0.80);
+      ctx.quadraticCurveTo( BW * 0.04, -BH * 0.88,  BW * (0.22 + lean * 0.06), -BH * 0.82);
+      ctx.quadraticCurveTo( BW * (0.40 + lean * 0.10), -BH * 0.78, BW * (0.46 + lean * 0.08), -BH * 0.62);
+      ctx.quadraticCurveTo( BW * (0.56 + lean * 0.06), -BH * 0.46, BW * (0.46 + lean * 0.04), -BH * 0.30);
+      ctx.quadraticCurveTo( BW * 0.40, -BH * 0.13, BW * 0.08, -BH * 0.13);
+      ctx.quadraticCurveTo(-BW * 0.18, -BH * 0.13, -BW * 0.36, -BH * 0.30);
+      ctx.closePath(); ctx.stroke();
+      ctx.globalAlpha = 1;
+    }
+    ctx.restore();
   }
 
-  /* glowPass=false → solid plate bodies (baking); glowPass=true → additive
-     shimmer only (live overlay in entities.js drawGlow). N=shape.plates or 9. */
-  function drawPlates(ctx, BH, BW, fg, pal, glowPass, shimmer, N) {
+  /* Broken-slate dorsal ridge (ARTP2, visual-redesign-plan §2.1). Keeps the original
+     sine-arc placement, but each plate is a drawRidgeElement (dark pal.plate CORE behind a
+     lit pal.skinLight FACE — figure-ground that survives baking) with DETERMINISTIC per-index
+     hash jitter on width/height/lean (±0.25·jag) so the row reads as irregular broken slate,
+     not uniform triangles. opts (all optional, defaults = a gentle baseline):
+       jag       0..1   jaggedness: jitter magnitude + razor narrowing + height boost (escalation knob)
+       heightMul        per-form plate-height scalar (gz2014 0.85 … supernova 1.4)
+       broken    int    N battle-scar plates rendered ~50% height (gvk)
+       faceGrad  bool    hot 2-stop face gradient base→tip (burning incandescent plates)
+     glowPass=true keeps the additive live-overlay triangle (archetypes fallback path). */
+  function drawPlates(ctx, BH, BW, fg, pal, glowPass, shimmer, N, opts) {
     if (N == null) N = 9;
+    opts = opts || {};
+    var jag       = opts.jag != null ? opts.jag : 0.45;
+    var heightMul = opts.heightMul != null ? opts.heightMul : 1.0;
+    var broken    = opts.broken | 0;
     var lean = fg.plateLean;
+    var core = pal.plate || pal.skinDark;
+    // pick `broken` deterministic interior indices for the gvk battle-scar (skip ends)
+    var brokenSet = null;
+    if (broken > 0) {
+      brokenSet = {};
+      for (var b = 0; b < broken; b++) brokenSet[1 + Math.floor(hash(b * 7 + 2) * (N - 1))] = 1;
+    }
     for (var i = 0; i <= N; i++) {
-      var t    = i / N;
-      var x    = lerp( BW * (0.24 - lean * 0.10), -BW * (0.52 + lean * 0.05), t);
-      var y    = -(lerp(0.80, 0.36, t) + Math.sin(t * Math.PI) * 0.06) * BH;
-      var size = (Math.sin(t * Math.PI) * 0.13 + 0.05) * BH;
+      var t     = i / N;
+      var x     = lerp(BW * (0.24 - lean * 0.10), -BW * (0.52 + lean * 0.05), t);
+      var y     = -(lerp(0.80, 0.36, t) + Math.sin(t * Math.PI) * 0.06) * BH;
+      var arc   = (Math.sin(t * Math.PI) * 0.13 + 0.05) * BH;          // sine-arc base height
+      var jH    = 1 + (hash(i * 2 + 3) - 0.5) * 0.5 * jag;             // ±0.25·jag height jitter
+      var jW    = 1 + (hash(i + 1)     - 0.5) * 0.5 * jag;             // ±0.25·jag width jitter
+      var jL    = (hash(i * 3 + 5) - 0.5) * 0.5 * jag;                 // lean jitter
+      var size  = arc * heightMul * jH;
+      if (brokenSet && brokenSet[i]) size *= 0.5;                      // battle-scar half-plate
+      var widthMul = (1 - jag * 0.32) * jW;                           // higher jag → razor-narrow base
+      var pLean = lean * 0.9 + jL;
       if (glowPass) {
         var a = 0.30 + 0.5 * (shimmer != null ? shimmer : 0.5) * Math.sin(t * Math.PI);
         ctx.globalAlpha = clamp(a, 0, 1);
-        ctx.fillStyle = pal.plateGlow;
-        ctx.beginPath();
-        ctx.moveTo(x + BW * 0.07, y + size * 0.30);
-        ctx.lineTo(x - BW * 0.01, y - size * 1.08);
-        ctx.lineTo(x - BW * 0.11, y + size * 0.30);
-        ctx.closePath(); ctx.fill();
+        drawRidgeElement(ctx, x, y, size, pLean, pal.plateGlow, null, widthMul);
       } else {
-        ctx.fillStyle = pal.skinLight;
+        var faceCol = pal.skinLight;
+        if (opts.faceGrad) {                                           // burning: hot base→tip gradient
+          var g = ctx.createLinearGradient(0, y, 0, y - size);
+          g.addColorStop(0, opts.faceGrad[0]); g.addColorStop(1, opts.faceGrad[1]);
+          faceCol = g;
+        }
+        drawRidgeElement(ctx, x, y, size, pLean, faceCol, core, widthMul);
+        // thin plateEdge keyline (kept; >=2px) for crisp separation on the lit side
+        ctx.strokeStyle = pal.plateEdge; ctx.lineWidth = 2.2;
         ctx.beginPath();
-        ctx.moveTo(x + BW * 0.06, y + size * 0.30);
-        ctx.lineTo(x - BW * 0.01, y - size);
-        ctx.lineTo(x - BW * 0.10, y + size * 0.30);
-        ctx.closePath(); ctx.fill();
-        ctx.strokeStyle = pal.plateEdge; ctx.lineWidth = 2.2; ctx.stroke();
+        ctx.moveTo(x - size * 0.42 * widthMul, y);
+        ctx.lineTo(x + pLean * size, y - size);
+        ctx.stroke();
       }
     }
     ctx.globalAlpha = 1;
@@ -333,6 +379,16 @@ window.GAME = window.GAME || {};
     var plateN = (shape && shape.plates != null) ? shape.plates : 9;
     var tailMult = (shape && shape.tail  != null) ? shape.tail  : 1.0;
     var bulkMult = (shape && shape.bulk  != null) ? shape.bulk  : 1.0;
+    /* ARTP2 §2 escalation knobs (data-driven; absent → gentle baseline so other forms are safe) */
+    var s         = shape || {};
+    var legMul    = s.legMul != null ? s.legMul : 1.0;       // elephantine pads (§2.1)
+    var armMul    = s.armMul != null ? s.armMul : 1.0;       // widened vestigial arms (§2.1)
+    var torsoW    = s.torsoWidth != null ? s.torsoWidth : 1; // gvk warrior narrowing (§2.4)
+    var rimGlow   = (s.selfIllum && pal.rimGlow) ? pal.rimGlow : null;  // §1.2 self-illum (burning/gxk/supernova)
+    var plateOpts = { jag: (s.plateJag != null ? s.plateJag : 0.45),
+                      heightMul: (s.plateHeightMul != null ? s.plateHeightMul : 1.0),
+                      broken: (s.broken | 0),
+                      faceGrad: pal.plateHot || null };       // burning hot plate-face gradient
 
     var BH = h * 0.74 * bulkMult;
     var BW = BH * 0.5;
@@ -359,27 +415,33 @@ window.GAME = window.GAME || {};
     drawTailScaled(ctx, BH, BW, fg, dark, tailMult);
     /* 2) far leg */
     ctx.fillStyle = dark;
-    drawLeg(ctx, fg.farLegX * BW, BH, BW, -legSwing, fg);
+    drawLeg(ctx, fg.farLegX * BW, BH, BW, -legSwing, fg, legMul);
     /* 3) far arm */
     ctx.fillStyle = dark;
-    drawArm(ctx, fg.farArmX * BW, -BH * 0.5, BH, BW, fg, -1, atk);
-    /* 4) torso */
-    drawTorso(ctx, BH, BW, fg, skin, dark, light);
-    /* 5) belly highlight */
+    drawArm(ctx, fg.farArmX * BW, -BH * 0.5, BH, BW, fg, -1, atk, armMul);
+    /* 4) torso (torsoW narrows gvk; rimGlow adds the self-illum silhouette rim) */
+    drawTorso(ctx, BH, BW, fg, skin, dark, light, torsoW, rimGlow);
+    /* 5) belly highlight (organic, KEPT §1.8) */
     ctx.save(); ctx.globalAlpha = 0.38; ctx.fillStyle = light;
     ctx.beginPath();
     ctx.ellipse(fg.bellyX * BW, -BH * 0.34, BW * 0.20, BH * 0.16, 0.15 * fg.dir, 0, 6.2832);
     ctx.fill(); ctx.restore();
-    /* 6) dorsal plates (static bodies; glow drawn live by entities.js) */
-    drawPlates(ctx, BH, BW, fg, pal, false, null, plateN);
+    /* 5b) magma/energy fissures across chest/belly/thigh (burning + supernova, §2.3/§2.6) */
+    if (s.fissures && pal.fissureCore) {
+      drawFissures(ctx, BH, BW, fg, pal.fissureCore, pal.fissureGlow, s.fissures);
+    }
+    /* 6) dorsal broken-slate ridge (static bodies; live glow drawn by entities.js) */
+    drawPlates(ctx, BH, BW, fg, pal, false, null, plateN, plateOpts);
     /* 7) near leg */
     ctx.fillStyle = skin;
-    drawLeg(ctx, fg.nearLegX * BW, BH, BW, legSwing, fg);
+    drawLeg(ctx, fg.nearLegX * BW, BH, BW, legSwing, fg, legMul);
     /* 8) near arm */
     ctx.fillStyle = skin;
-    drawArm(ctx, fg.nearArmX * BW, -BH * 0.5, BH, BW, fg, 1, atk);
-    /* 9) head */
+    drawArm(ctx, fg.nearArmX * BW, -BH * 0.5, BH, BW, fg, 1, atk, armMul);
+    /* 9) head — lowered ~BH*0.02 to sell scale (small low-slung head §2.1; wyrm-local translate) */
+    ctx.save(); ctx.translate(0, BH * 0.02);
     drawHead(ctx, BH, BW, fg, pal, atk);
+    ctx.restore();
 
     ctx.restore();
   }
