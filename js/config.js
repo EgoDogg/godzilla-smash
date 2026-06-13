@@ -229,31 +229,31 @@ window.GAME.Config = {
     // ============ Mechagodzilla (mecha) — t1, t2, t3, t4 (ASCENDING) ============
     { id: 'mecha_1', name: 'Mechagodzilla', label: 'T1', family: 'mecha', archetype: 'mecha', tier: 16, base: 9000000, cost: 44000000,
       palette: {
-        skin: '#a9a9a9', skinDark: '#696969', skinLight: '#dcdcdc',
-        plate: '#c0c0c0', plateEdge: '#e8e8e8', plateGlow: 'rgba(200,200,200,0.7)',
+        skin: '#b8b8b8', skinDark: '#6e6e6e', skinLight: '#f0f0f0',
+        plate: '#c0c0c0', plateEdge: '#8a8a8a', plateGlow: 'rgba(200,200,200,0.7)',
         breath: ['#ff0000', '#ffff00'], breathGlow: 'rgba(255,100,0,0.9)', eye: '#ff0000', aura: null, fxMotes: null },
-      shape: { archetype: 'mecha', plates: 9, antennae: 1, panel: true },
+      shape: { archetype: 'mecha', plates: 5, antennae: 1, panel: true, joints: 'round', cybanek: true, headStyle: 'roundShowa', bulk: 0.95, spineSize: 0.7 },
       attack: { kind: 'volley', hits: 5, cooldown: 0.42 } },
     { id: 'mecha_2', name: 'Mechagodzilla', label: 'T2', family: 'mecha', archetype: 'mecha', tier: 17, base: 13900000, cost: 72000000,
       palette: {
-        skin: '#4682b4', skinDark: '#1e3a5f', skinLight: '#6fa8dc',
-        plate: '#36648b', plateEdge: '#87ceeb', plateGlow: 'rgba(100,180,255,0.8)',
+        skin: '#4a86bd', skinDark: '#1c3858', skinLight: '#86bade',
+        plate: '#36648b', plateEdge: '#bfe3ff', plateGlow: 'rgba(100,180,255,0.8)',
         breath: ['#0080ff', '#ffffff'], breathGlow: 'rgba(0,150,255,0.95)', eye: '#0080ff', aura: null, fxMotes: null },
-      shape: { archetype: 'mecha', plates: 9, antennae: 2, panel: true },
+      shape: { archetype: 'mecha', plates: 7, antennae: 2, panel: true, joints: 'angular', shoulderCannon: true, headStyle: 'helmet', bulk: 1.05, spineSize: 0.95 },
       attack: { kind: 'volley', hits: 5, cooldown: 0.42 } },
     { id: 'mecha_3', name: 'Mechagodzilla', label: 'T3', family: 'mecha', archetype: 'mecha', tier: 18, base: 15000000, cost: 80000000,
       palette: {
         skin: '#1a1a1a', skinDark: '#0d0d0d', skinLight: '#4a4a4a',
         plate: '#2a2a2a', plateEdge: '#ff2020', plateGlow: 'rgba(255,50,50,0.85)',
         breath: ['#ff0000', '#ffaa00'], breathGlow: 'rgba(255,50,0,0.98)', eye: '#ff0000', aura: null, fxMotes: null },
-      shape: { archetype: 'mecha', plates: 9, antennae: 2, panel: true },
+      shape: { archetype: 'mecha', plates: 10, antennae: 0, horns: 2, panel: true, joints: 'angular', headStyle: 'ghidorah', drillTail: true, bulk: 1.0, leanPose: true, spineSize: 0.75 },
       attack: { kind: 'volley', hits: 6, cooldown: 0.42 } },
     { id: 'super_mecha', name: 'Mechagodzilla', label: 'Super', family: 'mecha', archetype: 'mecha', tier: 19, base: 16800000, cost: 90000000,
       palette: {
         skin: '#d4a574', skinDark: '#8b6f47', skinLight: '#e8d7c3',
         plate: '#a9a9a9', plateEdge: '#ffd700', plateGlow: 'rgba(255,215,0,0.88)',
         breath: ['#ffff00', '#ff8c00'], breathGlow: 'rgba(255,150,0,0.98)', eye: '#ffd700', aura: 'rgba(255,215,0,0.18)', fxMotes: null },
-      shape: { archetype: 'mecha', plates: 9, antennae: 2, panel: true },
+      shape: { archetype: 'mecha', plates: 11, antennae: 2, panel: true, joints: 'angular', headStyle: 'helmet', backpack: true, leadFin: true, bulk: 1.12, spineSize: 1.0 },
       attack: { kind: 'volley', hits: 6, cooldown: 0.42 } }
   ],
 
