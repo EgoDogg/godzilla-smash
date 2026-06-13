@@ -55,7 +55,8 @@ window.GAME = window.GAME || {};
     activeFormId:   'gz2014',
     maxReachedRow:  0,
     world2Unlocked: false,
-    muted:          false
+    muted:          false,
+    lastSeen:       0           // ms timestamp of last save (for a future offline-income floor)
   };
 
   // HUD dirty flag — UI polls and repaints when set.
@@ -70,6 +71,14 @@ window.GAME = window.GAME || {};
   function recalcMoveMult() {
     moveMult = Math.pow(1 + Cfg.MOVESPD.PER_LEVEL, state.moveSpeedLevel);
   }
+
+  // ---- Save cadence ---------------------------------------------------------------------------
+  // High-frequency events (bankDestroy on every kill, frontier advance) set a dirty flag
+  // instead of writing localStorage each time; a 2s timer + visibilitychange/pagehide flush it.
+  // Purchases / mute keep an IMMEDIATE save (never risk losing a paid upgrade on a crash).
+  var _saveDirty = false;
+  function markSaveDirty() { _saveDirty = true; }
+  function flushSave() { if (_saveDirty) { _saveDirty = false; save(); } }
 
   // ===========================================================================================
   // Audio helpers
@@ -147,7 +156,7 @@ window.GAME = window.GAME || {};
     state.money += payout;
     bumpCombo();
     hudDirty = true;
-    save();
+    markSaveDirty();   // batched (was save() every kill) — flushed on a 2s timer + page-hide
     return payout;
   }
 
@@ -336,8 +345,10 @@ window.GAME = window.GAME || {};
 
   var _saveWarnShown = false;   // surface a save failure (quota / private mode) once
   function save() {
+    state.lastSeen = Date.now();
     var ok = U.safeSave(SAVE_KEY, {
-      v: 3,
+      v: 3,                       // schema version (load() rejects non-3; satisfies the migration hook)
+      lastSeen:       state.lastSeen,
       money:          state.money,
       clawsLevel:     state.clawsLevel,
       atkSpeedLevel:  state.atkSpeedLevel,
@@ -393,6 +404,7 @@ window.GAME = window.GAME || {};
     state.maxReachedRow  = U.clamp(s.maxReachedRow | 0, 0, Cfg.GRID.rows - 1);
     state.world2Unlocked = !!s.world2Unlocked;
     state.muted          = !!s.muted;
+    state.lastSeen       = (typeof s.lastSeen === 'number' && isFinite(s.lastSeen)) ? s.lastSeen : 0;
 
     hudDirty = true;
     return true;
@@ -871,6 +883,8 @@ window.GAME = window.GAME || {};
     get atkSpeedLevel()  { return state.atkSpeedLevel; },
     get moveSpeedLevel() { return state.moveSpeedLevel; },
     get finisherOwned()  { return state.finisherOwned; },
+    get lastSeen()       { return state.lastSeen; },
+    flushSave:           flushSave,   // exposed so the boot/host can force a flush
     get activeFormId()   { return state.activeFormId; },
     get ownedFormIds()   { return state.ownedFormIds.slice(); },
     get world2Unlocked() { return state.world2Unlocked; },
@@ -906,7 +920,7 @@ window.GAME = window.GAME || {};
       if (row > state.maxReachedRow) {
         state.maxReachedRow = row;
         hudDirty = true;
-        save();
+        markSaveDirty();   // batched with bankDestroy (was a 2nd save() on every frontier kill)
       }
     },
 
@@ -915,5 +929,15 @@ window.GAME = window.GAME || {};
     clearHudDirty:    function () { hudDirty = false; },
     markHudDirty:     function () { hudDirty = true; }
   };
+
+  // Flush the batched save on a 2s cadence + whenever the page is hidden/closed, so the
+  // dirty-flagged bankDestroy/frontier writes can't strand more than ~2s of progress.
+  try {
+    if (typeof window !== 'undefined') {
+      setInterval(flushSave, 2000);
+      document.addEventListener('visibilitychange', function () { if (document.hidden) flushSave(); });
+      window.addEventListener('pagehide', flushSave);
+    }
+  } catch (e) { /* no window/timer — flushes still fire on explicit save() paths */ }
 
 })(window.GAME);
