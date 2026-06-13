@@ -18,6 +18,11 @@ window.GAME = window.GAME || {};
   var Cfg = G.Config;
   var U   = G.Utils;
 
+  // Bounded-economy ceiling (research-2026-06c): the game is finite — once attack power can
+  // one-shot the strongest building, the damage upgrade hard-stops and the win-finale is in
+  // reach. Data-derived from the HP ladder so it survives ROW_HP retuning (currently 1e9).
+  var CAP_HP = Math.max.apply(null, Cfg.ROW_HP);
+
   // ---- FORMS helpers -------------------------------------------------------------------------
   // formDef(id) — look up a form by id in Config.FORMS.
   function formDef(id) {
@@ -165,8 +170,14 @@ window.GAME = window.GAME || {};
   // ===========================================================================================
   function canAfford(n) { return state.money >= n; }
 
+  // Bounded-economy pricing (research-2026-06c): cost = the NEW TOTAL attack power the buy
+  // grants = base × CLAWS_MULT^(level+1). With HP===payout, the building worth D funds the
+  // upgrade that makes you deal D. Replaces the old round(CLAWS_BASE×CLAWS_GROWTH^level) curve
+  // (which outran income ~5000× by the finale). Back-compat: gz2014 L0 = round(6×2^1)=12 == old.
   function clawsCost() {
-    return Math.round(Cfg.CLAWS_BASE * Math.pow(Cfg.CLAWS_GROWTH, state.clawsLevel));
+    var f = formDef(state.activeFormId);
+    var base = f ? f.base : Cfg.START_ATTACK;
+    return Math.round(base * Math.pow(Cfg.CLAWS_MULT, state.clawsLevel + 1));
   }
 
   function atkSpeedCost() {
@@ -214,6 +225,7 @@ window.GAME = window.GAME || {};
   // ===========================================================================================
 
   function buyClaws() {
+    if (attackPower() >= CAP_HP) { sfxDeny(); return false; } // bounded: already one-shots the strongest
     var cost = clawsCost();
     if (!canAfford(cost)) { sfxDeny(); return false; }
     state.money -= cost;
@@ -500,19 +512,32 @@ window.GAME = window.GAME || {};
     var base   = f ? f.base : Cfg.START_ATTACK;
     var nxtPow = base * Math.pow(Cfg.CLAWS_MULT, state.clawsLevel + 1);
     body.appendChild(hintLine(
-      'Each level DOUBLES attack power for EVERY form. Power, not cash, is the gate — dig deeper, earn more.'
+      'Each level DOUBLES attack power for EVERY form. Max it to one-shot the strongest building — that levels the city.'
     ));
-    body.appendChild(itemRow({
-      swatch: '#36c9ff',
-      title:  'Stronger Atomic Breath · Lv ' + state.clawsLevel,
-      sub:    U.fmt(curPow) + ' → ' + U.fmt(nxtPow) + ' attack (×2)',
-      button: {
-        label:      '💰 ' + U.fmt(cost),
-        affordable: canAfford(cost),
-        disabled:   !canAfford(cost),
-        onClick:    function () { buyClaws(); }
-      }
-    }));
+    if (curPow >= CAP_HP) {
+      // Bounded-economy cap reached: one-shots everything; nothing left to upgrade.
+      body.appendChild(itemRow({
+        swatch: '#36c9ff',
+        title:  'Stronger Atomic Breath · MAX',
+        sub:    U.fmt(curPow) + ' attack — one-shots EVERY building',
+        tag:    'MAX'
+      }));
+    } else {
+      var crosses = nxtPow >= CAP_HP;   // this buy crosses the one-shot threshold
+      body.appendChild(itemRow({
+        swatch: '#36c9ff',
+        title:  'Stronger Atomic Breath · Lv ' + state.clawsLevel,
+        sub:    crosses
+          ? (U.fmt(curPow) + ' → ' + U.fmt(nxtPow) + ' · one-shots EVERY building!')
+          : (U.fmt(curPow) + ' → ' + U.fmt(nxtPow) + ' attack (×2)'),
+        button: {
+          label:      '💰 ' + U.fmt(cost),
+          affordable: canAfford(cost),
+          disabled:   !canAfford(cost),
+          onClick:    function () { buyClaws(); }
+        }
+      }));
+    }
 
     // Attack-Speed track — "Rapid Fire Breath". Sub shows the attacks/sec transition.
     var asLvl  = state.atkSpeedLevel;
