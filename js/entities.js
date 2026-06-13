@@ -1136,7 +1136,7 @@ window.GAME = window.GAME || {};
 
     // 3) nearest standing (on ground: prefer ground; airborne: prefer flying)
     //    Band widened 2.2→2.6 for a more forgiving "grab what's near me" pick.
-    var near = (W.footprintsNear ? W.footprintsNear(this.pos.wx, this.pos.wy, 2.6) : []) || [];
+    var near = (W.footprintsNear ? W.footprintsNear(this.pos.wx, this.pos.wy, 2.6, airborne || permFlyer) : []) || [];   // include planes for airborne/flyers (UH3)
     if (!primary) {
       var best = null, bestD = Infinity;
       for (var i = 0; i < near.length; i++) {
@@ -1304,7 +1304,7 @@ window.GAME = window.GAME || {};
     FX.shake(REDUCED ? 0 : (atkDef && atkDef.shake != null ? atkDef.shake : 9));
     FX.debris({ col: Math.floor(ccol), row: Math.floor(crow), height: 1, style: null });
 
-    var near = (G.World && G.World.footprintsNear) ? G.World.footprintsNear(ccol, crow, radius + 1) : [];
+    var near = (G.World && G.World.footprintsNear) ? G.World.footprintsNear(ccol, crow, radius + 1, true) : [];   // dive AOE hits planes too (UH3)
     for (var i = 0; i < near.length; i++) {
       var b = near[i];
       if (!b || b.state !== 'standing') continue;

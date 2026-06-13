@@ -607,30 +607,7 @@ window.GAME = window.GAME || {};
     ctx.restore();
   }
 
-  /* Flyer torso: slimmer, more tapered than wyrm */
-  function drawFlyerTorso(ctx, BH, BW, fg, skin, dark, light) {
-    var lean = fg.dir;
-    var bg = ctx.createLinearGradient(0, -BH * 0.9, 0, -BH * 0.1);
-    bg.addColorStop(0, light); bg.addColorStop(0.45, skin); bg.addColorStop(1, dark);
-    ctx.fillStyle = bg;
-    ctx.beginPath();
-    ctx.moveTo(-BW * 0.28, -BH * 0.25);
-    ctx.quadraticCurveTo(-BW * 0.40, -BH * 0.60, -BW * 0.10, -BH * 0.74);
-    ctx.quadraticCurveTo( BW * 0.04, -BH * 0.84, BW * (0.18 + lean * 0.06), -BH * 0.78);
-    ctx.quadraticCurveTo( BW * (0.34 + lean * 0.08), -BH * 0.72, BW * (0.40 + lean * 0.06), -BH * 0.58);
-    ctx.quadraticCurveTo( BW * (0.46 + lean * 0.04), -BH * 0.42, BW * (0.36 + lean * 0.02), -BH * 0.25);
-    ctx.quadraticCurveTo( BW * 0.28, -BH * 0.10, BW * 0.04, -BH * 0.10);
-    ctx.quadraticCurveTo(-BW * 0.14, -BH * 0.10, -BW * 0.28, -BH * 0.25);
-    ctx.closePath(); ctx.fill();
-    /* rim light */
-    ctx.save();
-    ctx.strokeStyle = rimCol(0.20); ctx.lineWidth = 2.0; ctx.lineCap = 'round';   // §1.1 house rim (was rgba(255,250,235,0.20))
-    ctx.beginPath();
-    ctx.moveTo(-BW * 0.10, -BH * 0.74);
-    ctx.quadraticCurveTo( BW * 0.04, -BH * 0.84, BW * (0.18 + lean * 0.06), -BH * 0.78);
-    ctx.quadraticCurveTo( BW * (0.34 + lean * 0.08), -BH * 0.72, BW * (0.40 + lean * 0.06), -BH * 0.58);
-    ctx.stroke(); ctx.restore();
-  }
+  /* (drawFlyerTorso removed UH3 — buildFlyer's §7 rewrite uses drawMothThorax/drawPteranoBody.) */
 
   /* Moth wing: two overlapping quads, upper and lower lobe per wing.
      front=false → draw the far (back) side; front=true → near (front) side. */
@@ -724,20 +701,7 @@ window.GAME = window.GAME || {};
     ctx.restore();
   }
 
-  /* Flyer legs: thin bird-style talons */
-  function drawBirdLeg(ctx, x, BH, BW, fg) {
-    var w = BH * 0.045;
-    ctx.beginPath();
-    ctx.moveTo(x, -BH * 0.22);
-    ctx.quadraticCurveTo(x + w * 0.5, -BH * 0.10, x, -BH * 0.02);
-    ctx.lineTo(x + w * 1.2, -BH * 0.02);
-    ctx.lineTo(x + w * 1.5, BH * 0.00);   /* talon forward */
-    ctx.lineTo(x + w * 0.3, -BH * 0.05);
-    ctx.lineTo(x - w * 0.8, -BH * 0.02);  /* talon back */
-    ctx.lineTo(x - w, -BH * 0.05);
-    ctx.quadraticCurveTo(x - w * 0.4, -BH * 0.12, x - w * 0.2, -BH * 0.22);
-    ctx.closePath(); ctx.fill();
-  }
+  /* (drawBirdLeg removed UH3 — flyers no longer have planted walk legs; buildFlyer uses drawTuckedTalons.) */
 
   /* Flyer head: moth = round with large compound-eye suggestion;
      pteranodon = elongated crest + beak. */
