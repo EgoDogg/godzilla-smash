@@ -38,8 +38,11 @@ window.GAME = window.GAME || {};
    *  Iso geometry helpers (mirrored from assets.js so this file is      *
    *  self-contained; assets.js is the only caller so no divergence risk)*
    * ------------------------------------------------------------------ */
-  var HW = 32;   // iso diamond half-width  (TILE_W/2)
-  var HH = 16;   // iso diamond half-height (TILE_H/2)
+  // MUST equal assets.js' GRID-derived half-tile (Config.GRID TILE_W/2, TILE_H/2 = 56/2, 28/2).
+  // Were 32/16 — stale from the old 64×32 grid; the mismatch drew every special 4px/tile too
+  // wide inside the assets-sized canvas, clipping 2-tile sprites (statue/pyramid). (U10 fix.)
+  var HW = 28;   // iso diamond half-width  (TILE_W/2 = 56/2)
+  var HH = 14;   // iso diamond half-height (TILE_H/2 = 28/2)
   var MARGIN = 4;
 
   /* Reconstruct prismMetrics from canvas dimensions w×h.

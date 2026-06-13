@@ -524,7 +524,7 @@ window.GAME = window.GAME || {};
     }
 
     var cv = get(cacheKey, m.w, m.h, function (ctx) {
-      bakeFn(ctx, m.w, m.h, { tier: tier, fw: fw, stage: stage, tint: tintStr, metrics: m, band: band });
+      bakeFn(ctx, m.w, m.h, { tier: tier, fw: fw, footprint: { w: fw }, stage: stage, tint: tintStr, metrics: m, band: band });
     });
     cv._anchorX = m.ax;
     cv._anchorY = m.ay;
