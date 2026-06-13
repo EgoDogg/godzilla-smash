@@ -6,4 +6,10 @@ Use **NOTE** for feel feedback after a live deploy (G1) — e.g. "Nova Slam char
 
 ---
 
-(no directives yet)
+## 2026-06-13 · NOTE · respawn pacing (G1 feel verdict on gz-v14) · [pending → U9 tuning]
+Mike: "Faster respawns aren't needed. So many buildings/structures — I'd encourage SLOWER respawns to encourage more movement. Either that or fewer structures so faster respawns make sense."
+→ OVERRIDES the research-locked U5 cut (RUBBLE_MS 6500→2800). In the dense city the dead-zone the research optimized against doesn't occur; fast respawn just lets the player camp. Human-arbiter wins. **RESOLVED 2026-06-13: Mike picked BOTH levers — slightly slower respawn AND a somewhat thinner city — and deferred the exact handling/values to the research's ≥97% recommendation** (workflow wf_60ad6a93-5f1). Folds into the gz-v15 deploy (new respawn-density-tuning unit). Live gz-v14 keeps fast respawns until then (async-queue by design).
+
+## 2026-06-13 · NOTE · desktop/web control parity (G1, review item) · [pending → new unit]
+Mike: "I played via HTML preview. I can't see how to use the upgrades via my PC. Review and unify so game actions have parity and are clear and obvious for both iOS and web."
+→ Confirmed gap: `render.js drawTouchControls` early-returns when `Input.isTouch===false`, so on desktop there are NO visible SMASH/JUMP/NOVA discs. Desktop input exists (Space/left-click=attack, Shift/J=jump, F=charge Nova) but is UNDISCOVERABLE, and the Nova charge/cooldown ring only draws on the touch disc (the U3 "desktop F-charge feedback = glow only" v1 limitation). Needs a cross-platform control-affordance unit (clickable discs on desktop and/or a key legend + desktop Nova indicator). **RESOLVED 2026-06-13: Mike deferred the approach to the research's ≥97% recommendation** (workflow wf_60ad6a93-5f1, weighing discs-on-desktop vs key-legend vs auto-detect hybrid + a desktop Nova charge/cooldown indicator). New campaign unit "UP-parity" to be slotted into v16 (ships with gz-v16), filled from the research.
