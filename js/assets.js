@@ -35,11 +35,11 @@ window.GAME = window.GAME || {};
   var Cfg = G.Config;
   var U = G.Utils;
   var GRID = Cfg.GRID;
-  var TILE_W = GRID.TILE_W;   // 64
-  var TILE_H = GRID.TILE_H;   // 32
-  var HW = TILE_W / 2;        // 32
-  var HH = TILE_H / 2;        // 16
-  var WZ_PX = GRID.WZ_PX;     // 44 — screen-rise per world-Z unit
+  var TILE_W = GRID.TILE_W;   // 56
+  var TILE_H = GRID.TILE_H;   // 28
+  var HW = TILE_W / 2;        // 28
+  var HH = TILE_H / 2;        // 14
+  var WZ_PX = GRID.WZ_PX;     // 40 — screen-rise per world-Z unit
 
   // Read the render dpr lazily at bake time (game.js sets GAME.dpr on resize).
   function dpr() {

@@ -30,8 +30,8 @@ window.GAME = window.GAME || {};
   var U = G.Utils;
   var GRID = Cfg.GRID;
   var TILE_W = GRID.TILE_W, TILE_H = GRID.TILE_H, WZ_PX = GRID.WZ_PX;
-  var HALF_W = TILE_W / 2;   // 32
-  var HALF_H = TILE_H / 2;   // 16
+  var HALF_W = TILE_W / 2;   // 28
+  var HALF_H = TILE_H / 2;   // 14
   var REDUCED = U.reducedMotion;
 
   var clamp = U.clamp, lerp = U.lerp;
@@ -1642,7 +1642,9 @@ window.GAME = window.GAME || {};
     ATTACK_KINDS: ATTACK_KINDS,
     MOTE_FX: MOTE_FX,
     FACING_MAP: FACING_MAP,
-    // Wyrm drawing helpers exposed for archetypes.js
+    // Debug/verification seam: the wyrm draw helpers + the shared facingGeom (archetypes.js
+    // owns its own draw path and does NOT read this). Kept for campaign unit-tests — e.g. U12
+    // asserted _wyrmHelpers.facingGeom === Archetypes.facingGeom; the art phases re-use it.
     _wyrmHelpers: {
       facingGeom: facingGeom,
       drawTail: drawTail,

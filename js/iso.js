@@ -11,17 +11,17 @@ window.GAME = window.GAME || {};
 
   // --- Iso constants from Config.GRID (never hardcode). ---
   // worldToScreen: x = (wx - wy) * HW ; y = (wx + wy) * HH - wz * WZ
-  var HW = GRID.TILE_W / 2;   // 32  half-tile width  (x spread per +1 col/-1 row)
-  var HH = GRID.TILE_H / 2;   // 16  half-tile height (y spread per +1 col/+1 row)
-  var WZ = GRID.WZ_PX;        // 44  screen pixels of rise per +1 world-Z
-  var COLS = GRID.cols;       // 12
-  var ROWS = GRID.rows;       // 19
+  var HW = GRID.TILE_W / 2;   // 28  half-tile width  (x spread per +1 col/-1 row)
+  var HH = GRID.TILE_H / 2;   // 14  half-tile height (y spread per +1 col/+1 row)
+  var WZ = GRID.WZ_PX;        // 40  screen pixels of rise per +1 world-Z
+  var COLS = GRID.cols;       // 21
+  var ROWS = GRID.rows;       // 58
 
   // Inverse of the 2x2 iso matrix [[HW,-HW],[HH,HH]] for screen→ground (wz=0).
   //   sx = (wx-wy)*HW           → wx = sx/(2HW) + sy/(2HH)
   //   sy = (wx+wy)*HH           → wy = sy/(2HH) - sx/(2HW)
-  var INV_X = 1 / (2 * HW);   // 1/64
-  var INV_Y = 1 / (2 * HH);   // 1/32
+  var INV_X = 1 / (2 * HW);   // 1/56
+  var INV_Y = 1 / (2 * HH);   // 1/28
 
   // --- Trauma-based screen shake. trauma∈[0,1] CLAMPED on add → sustained 8/sec
   //     autofire can NEVER compound into a quake (the old additive cap-64 bug).

@@ -93,7 +93,6 @@ window.GAME = window.GAME || {};
 
   // ---- Keyboard state (8-way digital + jump) --------------------------------
   var keyUp = false, keyDown = false, keyLeft = false, keyRight = false;
-  var keyJump = false;                // Shift or KeyJ
   var spaceHeld = false;              // Space held → autofire (rate-gated downstream by the kaiju)
   var keyFHeld = false;               // F held → charging Nova Slam (level state, read in consume)
   var chargeReleaseLatched = false;   // one-shot: NOVA disc/F released → fire the finisher
@@ -579,8 +578,7 @@ window.GAME = window.GAME || {};
         chargeReleaseLatched = true;   // release → fire the charged slam
         return;
       case 'ShiftLeft': case 'ShiftRight': case 'KeyJ':
-        keyJump = false;
-        return;
+        return;   // jump is edge-triggered on keydown (fireJump); release is a no-op
       default: return;
     }
     updateKeyboardVector();
@@ -680,7 +678,6 @@ window.GAME = window.GAME || {};
 
   function clearAllHeld() {
     keyUp = keyDown = keyLeft = keyRight = false;
-    keyJump = false;
     moveX = 0; moveY = 0;
     if (joyPointerId !== null) releaseJoystick();
     smashPointerId = null;

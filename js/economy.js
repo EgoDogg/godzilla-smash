@@ -410,7 +410,7 @@ window.GAME = window.GAME || {};
     if (!s || s.v !== 3) return false;
 
     state.money      = (typeof s.money === 'number' && isFinite(s.money)) ? Math.max(0, s.money) : 0;
-    state.clawsLevel = (s.clawsLevel | 0) >= 0 ? (s.clawsLevel | 0) : 0;
+    state.clawsLevel = U.clamp(s.clawsLevel | 0, 0, 64);   // upper-bound a corrupt save (normal ceiling ~28; 64 keeps attackPower finite)
     state.atkSpeedLevel = U.clamp(s.atkSpeedLevel | 0, 0, Cfg.ATKSPD.LEVELS);
     state.moveSpeedLevel = U.clamp(s.moveSpeedLevel | 0, 0, Cfg.MOVESPD.LEVELS);
     state.finisherOwned = !!s.finisherOwned;

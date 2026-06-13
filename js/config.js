@@ -33,6 +33,10 @@ window.GAME.Config = {
 
   // --- Universal claws (multiplies all forms): power = form.base × CLAWS_MULT^clawsLevel ---
   CLAWS_MULT: 2.0,            // each Stronger Claws level DOUBLES damage
+  // Fallback attack base = gz2014.base, used ONLY if the active form id is ever unknown
+  // (formDef -> null). Without it the defensive `: Cfg.START_ATTACK` paths in economy/entities
+  // computed undefined*2^n = NaN. Unreachable in normal play (load() pins a valid owned form).
+  START_ATTACK: 6,
   // (CLAWS_BASE/CLAWS_GROWTH removed in U9 — UE1's clawsCost = base×CLAWS_MULT^(L+1) made
   //  the old round(CLAWS_BASE×CLAWS_GROWTH^level) curve dead.)
 
@@ -248,20 +252,6 @@ window.GAME.Config = {
         breath: ['#ffff00', '#ff8c00'], breathGlow: 'rgba(255,150,0,0.98)', eye: '#ffd700', aura: 'rgba(255,215,0,0.18)', fxMotes: null },
       shape: { archetype: 'mecha', plates: 9, antennae: 2, panel: true },
       attack: { kind: 'volley', hits: 6, cooldown: 0.42 } }
-  ],
-
-  // --- Stronger Atomic Breath progression (§0 economy rule; internal keys remain CLAWS/claws) ---
-  CLAWS: [
-    { level: 0, cost: 0 },
-    { level: 1, cost: 12 },
-    { level: 2, cost: 31 },
-    { level: 3, cost: 81 },
-    { level: 4, cost: 211 },
-    { level: 5, cost: 549 },
-    { level: 6, cost: 1428 },
-    { level: 7, cost: 3713 },
-    { level: 8, cost: 9655 },
-    { level: 9, cost: 25103 }
   ],
 
   // --- Special buildings (non-standard footprints, sprites, effects) ---
