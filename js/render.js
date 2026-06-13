@@ -171,6 +171,10 @@ window.GAME = window.GAME || {};
   // ------------------------------------------------------------------------
   function buildSky(w, h) {
     var layers = [];
+    // U11: bake at device resolution (mirror assets.makeCanvas) so the skyline is
+    // crisp on retina. dp matches the capped ratio Main applies to the base ctx
+    // transform, so the device-sized layers blit back 1:1 (see drawSkyLayers).
+    var dp = (typeof G.dpr === 'number' && G.dpr > 0) ? G.dpr : Math.min(window.devicePixelRatio || 1, 2);
     var defs = [
       { speed: 0.18, top: '#0a1430', bot: '#142a55', sil: '#0c1838', minH: 0.10, maxH: 0.20, density: 26, y: 0.46 },
       { speed: 0.34, top: '#0c1c44', bot: '#1d3e74', sil: '#10224a', minH: 0.16, maxH: 0.34, density: 20, y: 0.54 },
@@ -178,13 +182,14 @@ window.GAME = window.GAME || {};
     ];
     for (var d = 0; d < defs.length; d++) {
       var def = defs[d];
-      var lw = Math.max(2, Math.ceil(w));
+      var lw = Math.max(2, Math.ceil(w));            // CSS authoring dims (draw code below unchanged)
       var lh = Math.max(2, Math.ceil(h));
       var cv = document.createElement('canvas');
-      cv.width = lw;
-      cv.height = lh;
+      cv.width = Math.max(2, Math.round(lw * dp));   // device-px backing
+      cv.height = Math.max(2, Math.round(lh * dp));
       var c = cv.getContext('2d');
       c.imageSmoothingEnabled = false;
+      c.setTransform(dp, 0, 0, dp, 0, 0);            // author in CSS units, bake at device res
 
       // Layer 0: the silhouette is dark, drawn transparently over the dynamic sky.
       // We skip filling a background gradient here so the live sky shows through.
@@ -234,20 +239,26 @@ window.GAME = window.GAME || {};
       }
       layers.push({ cv: cv, speed: def.speed });
     }
-    return { layers: layers, w: w, h: h };
+    return { layers: layers, w: w, h: h, d: dp };
   }
 
   // Draw the parallax skyline (untransformed CSS space).
   function drawSkyLayers(camX, w, h) {
-    if (!sky || sky.w !== w || sky.h !== h) sky = buildSky(w, h);
+    var dp = (typeof G.dpr === 'number' && G.dpr > 0) ? G.dpr : Math.min(window.devicePixelRatio || 1, 2);
+    // Rebuild on size OR dpr change — the module-local `sky` isn't an Assets
+    // cache, so resize()'s Assets.invalidate('') never reaches it (U11).
+    if (!sky || sky.w !== w || sky.h !== h || sky.d !== dp) sky = buildSky(w, h);
     var L = sky.layers;
+    // Tile by CSS width (each device-sized layer blits back into a w×h CSS box).
+    // Snap the dest origin to a whole device pixel so 1px stars/silhouette edges
+    // stay crisp (no sub-pixel nearest-neighbour shimmer) while scrolling (U11).
     for (var i = 0; i < L.length; i++) {
       var layer = L[i];
-      var lw = layer.cv.width;
-      var off = -((camX * layer.speed) % lw);
-      if (off > 0) off -= lw;
-      ctx.drawImage(layer.cv, off, 0);
-      ctx.drawImage(layer.cv, off + lw, 0);
+      var off = -((camX * layer.speed) % w);
+      if (off > 0) off -= w;
+      off = Math.round(off * dp) / dp;
+      ctx.drawImage(layer.cv, off, 0, w, h);
+      ctx.drawImage(layer.cv, off + w, 0, w, h);
     }
   }
 
