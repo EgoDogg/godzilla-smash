@@ -1,108 +1,118 @@
-# Save System Plan — Backend-Free, Multi-Slot, Export/Import (2026-06-14)
+# Save System — Implementation-Ready Spec (backend-free, multi-slot)
 
-Scope locked with Mike (AskUserQuestion): **backend-free** (static GitHub Pages PWA stays
-static — no server, no auth, no third-party); goals = **backup/anti-loss + multiple save slots
-+ shareable identity**; build **multiple slots now**; design the schema so a future **NG+/
-prestige** loop layers on without another migration.
+Scope (Mike): **backend-free** (PWA stays static); **multiple named slots** (build now, default 3);
+**export/import save-codes** = backup + portability + shareable identity (no login); IndexedDB
+anti-loss; v3→v4 migration; reserved `prestige` per slot for a future **NG+** (don't build NG+ now).
+Hardened by a 7-agent prep fleet (storage · durability+research · export · slots · migration · adversarial → synth). Full raw: `save-system-prep-raw.json`.
 
-> **"Account / shareable identity" backend-free** = a **named slot** + its **exportable
-> save-code string**. The code IS the identity you can back up, move to another device, or
-> share — no login, no server, no personal data.
+## ⚠️ The honest durability truth (corrects the first draft)
+The IndexedDB mirror does **NOT** survive Safari/WebKit **ITP 7-day eviction** — WebKit deletes
+localStorage, IndexedDB *and* Service-Worker registrations **together** after 7 days of no
+interaction. So the layers are:
+- **Tier 1 — reduce loss probability (best-effort):** localStorage (source of truth) + an
+  IndexedDB *mirror* (covers an LS-only quota error / clear / corruption — **intra-origin only**)
+  + `navigator.storage.persist()` (exempts the origin where granted) + a **PWA "Add to Home
+  Screen"** nudge (installed PWAs have their own use-counter, exempt from the 7-day idle rule).
+- **Tier 2 — the ONLY true guarantee:** the **export code** — it leaves the storage sandbox
+  entirely (clipboard/notes/email). The UI must never say "saved" without "**on this device**".
 
-## Current state
-`localStorage['godzilla-save-v3']` — a single object (money, clawsLevel, atk/moveSpeedLevel,
-finisherOwned, ownedFormIds, activeFormId, maxReachedRow, world2Unlocked, muted, finaleSeen,
-maxPowerSeen, formAxisSeen, peakCombo). `economy.js` save() (dirty-flag batched, flush on 2s +
-pagehide) / load() (validates + clamps + sanitizes). Vulnerable to eviction (Safari ITP clears
-localStorage after ~7 days idle; private mode; quota) — warns ONCE on a failed write, but no
-backup, no portability, one slot.
+## Architecture
+- **One localStorage key** `godzilla-save-v4` = the whole container, written as a single atomic
+  `setItem` (slots can't cross-corrupt; quota is all-or-nothing). Synchronous **source of truth**,
+  read once at boot (`game.js:58`) — as cheap as today.
+- **IndexedDB** db `godzilla` / store `saves` / record `{k:'container', rev, blob}` = a
+  fire-and-forget **secondary mirror** (debounced ~5s, forced on pagehide/purchase). Read at boot
+  **only** as a post-paint recovery fallback (async, never blocks).
+- **Conflict authority = a monotonic container-level `rev` integer** (++ each persist) — immune to
+  clock skew; `lastPlayed` is a human tiebreak only. Restore from IDB **only** when LS was
+  absent/invalid/fresh AND `IDB.rev` is strictly higher (never clobbers a live session; any
+  restore is visible: "Restored your save from device backup.").
+- **All new logic folds into `js/economy.js`** (+ `U.crc32`/`U.b64u*` in `utils.js`) — no new
+  file, so `sw.js` ASSETS + script load order are untouched (dodges the cache gotcha).
+- **Slots keyed by STRING id** (`'s'+base36ts+'-'+rand`), never array index; `activeSlot` stores
+  an id; delete/switch self-heal a dangling id.
 
----
-
-## Architecture (all client-side)
-
-### 1. Schema v4 — a slot container
+### Schema v4
 ```js
 localStorage['godzilla-save-v4'] = {
-  v: 4,
-  activeSlot: <slotId>,
-  slots: [
-    { id, name: 'Save 1', createdAt, lastPlayed,
-      prestige: 0,                 // RESERVED for a future NG+ loop (no migration needed)
-      game: { /* exactly today's v3 state shape */ } },
-    ...
-  ]
+  v: 4, rev: <int>, activeSlot: <slotId>, migratedFrom?: 'v3',
+  slots: [{
+    id, name, createdAt, lastPlayed, lastBackupAt: 0, backupPromptSeen: false,
+    prestige: 0,                       // RESERVED for NG+ (never read by current gameplay)
+    game: { /* EXACTLY today's flat v3 shape minus the `v` field — 15 fields */ }
+  }]   // 1..Cfg.SAVE.SLOTS
 }
 ```
-- **One container key** = atomic writes; the blob is a few KB even with 3 slots. The game
-  reads/writes `slots[activeSlot].game` — same shape economy.js already uses, just slot-keyed.
-- **Migration v3→v4** (on load): if v4 is absent but `godzilla-save-v3` exists → wrap it as
-  `slots:[{name:'Save 1', game:<v3>}]`, `activeSlot=that`. Keep the v3 key one version as a
-  safety net (delete after a confirmed v4 write). A brand-new player starts with one empty slot.
-- **Headroom:** `prestige` (per slot) reserved now so NG+ is a pure feature-add later.
 
-### 2. Multiple slots (build now)
-- Default **3 slots** (`Cfg.SAVE.SLOTS`, easy to raise). API in economy.js: `listSlots()`,
-  `switchSlot(id)`, `newSlot(name)`, `renameSlot(id,name)`, `deleteSlot(id)`, `activeSlotId()`.
-- Each slot shows a **summary**: name · forms X/20 · ⚡ power · last played. Switching reloads
-  the game from that slot (re-`syncForm`, re-render, recompute collectionMult).
+## The one required refactor (highest leverage)
+Lift the body of `load()` (`economy.js:452-497`) **verbatim** into one pure
+**`sanitizeGame(raw)→cleanGame`** — an **allowlist build** (emit a fresh object reading only the
+15 known fields by name; never spread raw → prototype-pollution-proof; clamp every field). `load()`,
+`switchSlot()`, and `importSlotCode()` all call it → an imported/migrated save can never carry a
+state a normal load couldn't.
 
-### 3. Export / import codes (backup + portability + shareable identity)
-- **Export** the active slot → `'GZS1:' + base64(JSON.stringify(slot))` (+ a short checksum so
-  import can reject corruption). Copy to clipboard (`navigator.clipboard`, with a select-the-
-  textarea fallback). ~1KB string — fine to paste. *(Optional: LZ-string compression for a
-  shorter code; base64 is the simple default.)*
-- **Import** a pasted code → strip prefix → `atob` → `JSON.parse` → **validate + sanitize**
-  (below) → load into a **new slot** (or overwrite a chosen one). This single feature delivers
-  backup, cross-device portability (paste on the other device), AND shareable identity.
+## economy.js API (key fns)
+`sanitizeGame(raw)` · `applySlotToState(game)` (sanitize→assign→recompute collMult/moveMult→formAxis
+toast) · `load()` (slot-aware, sync) · `save()` (writes the container, bumps rev, mirrors) ·
+`listSlots()` (id/name/active/summary{forms X/20, ⚡power, lastPlayed}) · `switchSlot(id)` (flush→swap→
+applySlotToState→spawnCity→rebuildPlayer→refresh) · `newSlot(name)` · `renameSlot(id,name)` ·
+`deleteSlot(id)` (last→reseed+reset; active→switch to most-recent; +`_lastDeleted` undo) ·
+`exportSlotCode(id)` · `parseSlotCode(raw)` · `importSlotCode(raw,target)` · `isPersisted()` ·
+`durabilityStatus()→'green'|'amber'|'red'`.
 
-### 4. Anti-loss (backend-free durability)
-- **IndexedDB mirror:** on every save, also write the container to IndexedDB. IndexedDB
-  survives several eviction scenarios localStorage doesn't. On load, if localStorage is
-  empty/older but IndexedDB has data → restore. Belt-and-suspenders, zero infra.
-- **Backup nudge:** a contextual "Back up your save" banner in the Saves panel + a one-time
-  prompt after the finale (Export button right there). Can't *prevent* eviction without a
-  backend, so the export code is the user's guaranteed recovery path.
+## Migration v3→v4 (crash-safe, idempotent)
+At boot, if `godzilla-save-v4` absent: wrap `godzilla-save-v3` as slot 1 (or `freshContainer()` for a
+new player). **Keep the v3 key as a safety net**; only `removeItem('godzilla-save-v3')` on a
+*subsequent* boot that re-parsed a well-formed v4 with `migratedFrom:'v3'` (read-back-verified — never
+delete the only good copy after a failed v4 write). The gz-v26 "power rebalanced" toast still fires
+once (preserve `_formAxisWasAbsent`).
 
-### 5. Validation / security
-- Imported + loaded saves run the **existing load() sanitization, extended**: reject non-v4 /
-  malformed / oversized strings; clamp `clawsLevel 0..64`; validate `ownedFormIds` against
-  `Cfg.FORMS` (drop unknown — already done); force `gz2014` owned; valid `activeFormId`; clamp
-  `maxReachedRow`; coerce numbers (no NaN/Infinity — the boot assert + clamps already guard).
-- Single-player, no leaderboard → a user editing their own code to "cheat" is harmless and
-  accepted. (If a leaderboard is ever added, that needs server-side validation — out of scope.)
+## Export / import codes
+`'GZS1:' + base64url(TextEncoder→UTF-8 JSON of {fmt,v,exportedAt,slot}) + '.' + crc32hex`. ~810 chars
+for a maxed slot — pasteable. **base64 not LZ-string** (lz-string = a 3.4KB offline dep for ~250 chars
+saved — loses; `GZS2:` is the escape hatch). **Unicode-safe** (TextEncoder/TextDecoder, never
+`btoa(JSON)` — emoji slot names). Import: reject `len>20000` → charset regex → CRC32 → JSON.parse →
+`sanitizeGame` → new slot (or confirm-gated overwrite). CRC = corruption-detection only; self-cheating
+a single-player code is **accepted** (no leaderboard).
 
-### 6. UI — a "Saves" panel
-A new shop tab **"Saves"** (or a dedicated modal): the slot list (summary + active marker) with
-**Switch · New · Rename · Delete**, and **Export (copy code) · Import (paste code)** actions +
-the backup banner. Reuses the existing shop chrome/CSS.
+## Saves UI — a 5th shop tab
+`<button data-tab="saves">Saves</button>` after Worlds (auto-wired by the generic `data-tab`
+delegation; the shop already auto-pauses — ideal for destructive ops). `buildSaves(body)` reuses
+`itemRow()`/`.shop-item`/`.buy`/`.tag` (no new CSS for MVP): a conditional **backup banner**
+(+ red "won't keep your progress" variant when `durabilityStatus()==='red'`), the slot list
+(summary + active marker), **Switch/New/Rename/Delete** (two-step *inline* confirm, never
+`window.confirm`) + **Export (copy)/Import (paste)**, a durability chip, and a capacity footer.
 
----
+## Rollout (6 phases, each verified on a fresh origin)
+1. **v4 container + migration + the shared `sanitizeGame`** (no UI). 2. **Slot core API**. 3. **Saves
+UI** (the tab). 4. **Export/import** (`crc32`/`b64u` + serialize + clipboard/paste + live pre-validate).
+5. **Anti-loss** (IDB mirror + `asyncIdbRecover` + `persist()` gated on first engagement + the backup
+nudge). 6. **Ship** (bump `sw.js` CACHE + `CACHE_VERSION` together).
 
-## Files touched
-- `js/economy.js` — the slot container + migration + the slot API + export/import serialize/
-  validate; save()/load() operate on the active slot; IndexedDB mirror.
-- `js/ui.js` + `index.html` — the Saves panel (tab + list + buttons + paste textarea + banner).
-- `js/config.js` — `Cfg.SAVE = { SLOTS: 3, KEY_V4: 'godzilla-save-v4', EXPORT_PREFIX: 'GZS1:' }`
-  + `CACHE_VERSION` bump on ship.
+## Test matrix (24 cases) — highlights
+v3→v4 migration preserves progress + fires the rebalance toast once · corrupt-v3 → fresh, v3 kept ·
+export→import round-trips + rejects a truncated/old/oversized code · IDB restore only when LS
+fresh/absent & IDB.rev higher (never clobbers a live session) · delete-active switches to most-recent ·
+delete-last resets · two concurrent tabs → slot-granular last-writer-wins, no field merge · quota
+mid-write → sticky "NOT SAVING — Export now" · private-mode (IDB blocked) → silent LS-only.
 
-## Rollout (phased, each verified)
-1. **v4 container + migration** (no UI yet): v3→v4 wrap; verify an existing save loads intact.
-2. **Slot core API** (economy): list/switch/new/rename/delete; active-slot read/write.
-3. **Saves UI** (panel + slot CRUD).
-4. **Export/import** (serialize + clipboard + paste + validate; round-trip + reject-malformed).
-5. **Anti-loss** (IndexedDB mirror + restore + backup nudge).
-6. Ship (cache bump + live poll). `prestige` reserved for NG+.
+## Risk register — the 6 highs (all mitigated)
+1. *Mistaking the IDB mirror for eviction-proofing* → persist()+install+export are the PRIMARY layer.
+2. *Restoring a stale IDB backup over good progress* → same-rev mirror + strict higher-rev-only restore.
+3. *Malformed import corrupts memory* → the one shared allowlist `sanitizeGame`.
+4. *Deleting the v3 safety-net after a failed v4 write* → read-back-verified reap on a later boot.
+5. *`switchSlot` missing a re-sync step* → codified ordered sequence shared with `load()`.
+6. *Accidental destructive op* → two-step inline confirm + a session undo for delete.
 
-## Verification
-Migration (v3 save → slot 1, progress intact + the gz-v26 rebalance toast still fires once);
-slot CRUD; export→import round-trip preserves state + rejects a corrupted/old code; IndexedDB
-restore (clear localStorage → game restores from IDB); no regression to the live loop, the
-forms-axis multiplier, or the finale. Fresh-origin port per verify cycle.
+## Open decisions for Mike (all with a fleet recommendation)
+1. **`persist()` / install-nudge timing** — cold boot vs gated on first engagement. **Rec: gate it**
+   (a cold first-visit request is usually silently denied, burning the signal; re-attempt at milestones).
+2. **Overwrite-on-import** — new-slot only vs new-default + confirm-gated per-slot overwrite. **Rec: both**
+   (overwrite is the only sane behavior at 3/3 slots + "restore onto this device").
+3. **Delete undo** — none vs a one-tap session-only undo (`_lastDeleted`, in-memory). **Rec: yes** (cheap;
+   turns a mis-tap into a non-event).
+4. **Backup-nudge aggressiveness** — passive banner only vs banner + contextual prompts (after first
+   progress, at the finale, red on private-mode) + a 5-day staleness re-nudge. **Rec: the fuller set**
+   (eviction is silent and ~7 days out; the 5-day cadence sits under the cap; never modal).
 
-## Open decisions (sensible defaults chosen; flag any)
-- **Slot count:** default **3** — raise/lower?
-- **Export format:** base64 (simple) vs LZ-string (shorter codes). Default base64.
-- **IndexedDB mirror:** include it (recommended for real anti-loss) vs export-only. Default include.
-- **Where the Saves UI lives:** a 5th shop tab vs a dedicated gear/profile modal. Default: shop tab.
-- **Build now vs after the fidelity phase:** this is independent of Stream A/B — can slot in anytime.
+`Cfg.SAVE = { SLOTS:3, KEY_V4:'godzilla-save-v4', CODE_VERSION:1, EXPORT_PREFIX:'GZS1:', MAX_CODE_LEN:20000, BACKUP_NUDGE_MS:~5d, PRESTIGE_MAX:… }`.

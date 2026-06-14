@@ -1,0 +1,315 @@
+{
+  "executiveSummary": "GODZILLA SMASH moves from a single flat localStorage key ('godzilla-save-v3') to a v4 SLOT CONTAINER: one localStorage key 'godzilla-save-v4' holding {v, rev, activeSlot, slots[]}, each slot embedding today's exact flat game shape under slot.game plus a reserved per-slot prestige:0 for a FUTURE NG+ loop (do NOT build NG+ now). The container is the unit of persistence \u2014 one synchronous, atomic setItem across all slots, so slots can never cross-corrupt. An IndexedDB mirror of the same container blob is written fire-and-forget (debounced) as a SECONDARY intra-origin durability copy. localStorage stays the synchronous source of truth read at boot (game.js:58) exactly as today; IDB is never on the hot/boot path.\n\nTHE ONE LOAD-BEARING HONEST CORRECTION to the draft (save-system-plan.md:60-62): the IDB mirror does NOT survive Safari ITP's 7-day eviction \u2014 WebKit deletes localStorage, IndexedDB, SessionStorage and Service Worker registrations TOGETHER after 7 days of no interaction. So the mirror is belt-and-suspenders WITHIN the origin (covers an LS-only QuotaExceededError, an LS-only clear, or corrupt-LS-but-clean-IDB) \u2014 it is NOT eviction-proofing. The true cross-eviction defenses are layered separately: navigator.storage.persist() (exempts the origin), the PWA 'Add to Home Screen' nudge (its own use-counter, exempt from the 7-day idle rule), and above all the EXPORT CODE (the only guaranteed, user-owned recovery \u2014 it leaves the storage sandbox entirely). The UI must say this honestly, never the word 'saved' without 'on this device'.\n\nTHE SINGLE MOST IMPORTANT CODE CHANGE: extract the body of load() (economy.js:452-497) into ONE pure validator sanitizeGame(raw)->cleanGame that load(), switchSlot(), and importCode() all call. This removes the only place a malformed slot could enter memory and guarantees an imported/migrated save can never carry a state a normal load couldn't. Conflict resolution between stores/tabs uses a monotonic container-level rev integer (immune to clock skew), NOT wall-clock timestamps. Export codes are single-slot, base64url(UTF-8 JSON) with a CRC32 corruption check and a 'GZS1:' version-magic prefix \u2014 measured ~810 chars, comfortably pasteable; base64 beats LZ-string (a 3.4KB offline-vendored dependency for a ~250-char saving on a tiny numeric JSON). Cheating one's own single-player code is explicitly accepted (no leaderboard); the checksum is corruption-detection, not anti-tamper. The Saves UI is a 5th shop tab (data-tab='saves'), reusing the existing shop chrome which already auto-pauses the sim. Phased rollout (5 phases) lands migration first, UI/export/anti-loss after, each verified on a fresh origin per the project's cache-bump ritual.",
+  "finalArchitecture": "STORES (two independent best-effort stores, reconciled by rev \u2014 NEVER a 2-phase commit):\n- localStorage['godzilla-save-v4'] = the v4 container. SYNCHRONOUS source of truth. Read once at boot (one getItem + one JSON.parse, as cheap as today). setItem is atomic per W3C (all-or-nothing; QuotaExceededError applies no part).\n- IndexedDB db 'godzilla' (v1), objectStore 'saves' (keyPath 'k'), single record {k:'container', rev, blob:<container>}. MIRROR ONLY. Written fire-and-forget, debounced ~5s + forced on pagehide/purchase. Read at boot ONLY as a post-paint recovery fallback (async, never blocks).\n\nIN-MEMORY: economy.js holds one parsed container in a module var _container, with _activeIdx and a per-tab TAB_ID. The game-state object (economy.js:53-69) is UNCHANGED in shape; save() mutates _container.slots[_activeIdx].game in place and re-stringifies the whole container (sub-millisecond at <2KB). All existing accessors (attackPower, _collMult, getters at 980-1031) keep reading from in-memory `state` and never touch storage.\n\nSCRIPT LOAD ORDER: fold ALL new logic into js/economy.js (already loaded at index.html:172, before game.js:179). Do NOT add a persist.js \u2014 keeping it in economy.js leaves the load order and sw.js ASSETS untouched and matches 'minimal blast radius'. Add U.crc32 + U.b64uEncode/Decode to js/utils.js.\n\nBOOT FLOW (game.js:58 still calls G.Economy.load(), now slot-aware, all SYNC):\n1. safeLoad(KEY_V4) -> sanitizeContainer() ; else migrateV3 from KEY_V3 ; else freshContainer(). Game is fully playable on the LS value in the same tick \u2014 IDB is never awaited.\n2. applySlotToState(container.slots[activeSlot].game) = the existing sanitizer, now reading from the slot.\n3. write-back save() (persists v4, bumps rev, mirrors), requestPersist() (best-effort), then asyncIdbRecover() AFTER first paint (only restores when LS produced freshContainer() OR LS was absent/invalid AND IDB.rev is strictly higher \u2014 never clobbers a live session).\n\nWRITE ORDER on every persist: localStorage FIRST (synchronous, commits under page-teardown), THEN fire-and-forget IDB mirror (debounced). If LS throws (quota/private), still attempt IDB (its ~60%-of-disk quota can absorb what LS's ~5MB cannot) and surface the one-time warning.\n\nSAVE CADENCE: preserved verbatim (economy.js:88-90, 1036-1042) \u2014 _saveDirty flag, 2s flush, visibilitychange+pagehide flush; purchases save immediately. Only change: save() writes the container, not the flat key. IDB mirror debounced separately and FORCED on pagehide/purchase. pagehide path stays SYNCHRONOUS-LS-only (never rely on an async IDB put completing under freeze).\n\nCROSS-TAB: a 'storage' event listener + a rev-guard in persistContainer (re-read disk just before write; if disk.rev>mine, adopt foreign slots whole, keep my active slot's game, bump rev). Merge at SLOT granularity only \u2014 never field-level merge a game (that corrupts). Single-tab is the assumed model; multi-tab degrades to last-writer-wins bounded to one slot's ~2s of un-flushed banking (purchases save immediately so are never lost).\n\nSLOTS keyed by STRING id everywhere (never array index): id = 's'+Date.now().toString(36)+'-'+rand. activeSlot stores an id. Delete/switch/save guard a dangling activeSlot id and self-heal to slots[0] or a fresh slot.",
+  "schemaV4": "localStorage['godzilla-save-v4'] (JSON):\n{\n  v: 4,\n  rev: <int>,                 // monotonic, ++ on every successful persist. MACHINE conflict authority (immune to clock skew). NOT a timestamp.\n  writerId: <string>,         // TAB_ID of last writer (debug + cross-tab lease). Optional but cheap.\n  activeSlot: <slotId string>,// the id (NOT an index) of the live slot\n  migratedFrom: 'v3'|absent,  // set by migration; cleared only after a CONFIRMED subsequent v4 boot (reaps the v3 safety-net key)\n  slots: [\n    {\n      id:        's<base36ts>-<rand>',   // stable string id; re-stamped only if 0/blank/duplicate\n      name:      'Save 1',                // string, sanitized: strip control chars, trim, <=24 chars, fallback 'Save N'\n      createdAt: <ms epoch>,\n      lastPlayed:<ms epoch>,              // updated on each save of the active slot; DISPLAY + human tiebreak only\n      lastBackupAt: 0,                    // ms of last successful exportSlotCode(); drives the staleness backup nudge\n      backupPromptSeen: false,            // first-progress export prompt fired (per slot)\n      prestige:  0,                       // RESERVED for NG+; int 0..Cfg.SAVE.PRESTIGE_MAX; never read by current gameplay\n      game: {                             // EXACTLY today's flat shape (economy.js:418-434) MINUS the v:3 field\n        lastSeen, money, clawsLevel, atkSpeedLevel, moveSpeedLevel,\n        finisherOwned, ownedFormIds[], activeFormId, maxReachedRow,\n        world2Unlocked, muted, finaleSeen, maxPowerSeen, formAxisSeen, peakCombo\n      }\n    }\n    // 1..Cfg.SAVE.SLOTS slots\n  ]\n}\n\nIndexedDB mirror record (db 'godzilla' v1, store 'saves' keyPath 'k'):\n{ k:'container', rev:<same rev as the LS write it mirrors>, blob:<the entire v4 container object> }\n\nCfg.SAVE (js/config.js, near CACHE_VERSION at line 7):\nSAVE: {\n  SLOTS: 3,                    // default + new-slot creation cap (NOT a destructive trim of a larger imported container)\n  SLOTS_MAX: 8,                // hard structural cap; sanitizeContainer truncates beyond this\n  KEY_V4: 'godzilla-save-v4',\n  KEY_V3: 'godzilla-save-v3',  // legacy migration source + one-version safety net\n  EXPORT_PREFIX: 'GZS1:',      // code wire-format magic; bump to GZS2: only if the CODE format changes\n  CODE_VERSION: 4,             // payload schema version inside the code (mirrors container v)\n  IDB_NAME: 'godzilla', IDB_STORE: 'saves', IDB_KEY: 'container',\n  IDB_TIMEOUT_MS: 1500, MIRROR_DEBOUNCE_MS: 5000,\n  MAX_CODE_LEN: 20000,         // reject a pasted code longer than this BEFORE atob (DoS bound; a real maxed code is ~810 chars)\n  PRESTIGE_MAX: 999,\n  BACKUP_NUDGE_MS: 432000000   // 5 days (5*864e5) \u2014 re-nudge under the Safari 7-day cap\n}\nKeep Config.saveKey:'godzilla-save-v3' for one version (migration reads it).",
+  "economyApi": [
+    {
+      "fn": "sanitizeGame",
+      "signature": "sanitizeGame(raw) -> cleanGameObject",
+      "behavior": "THE shared validator \u2014 the body of load() (economy.js:452-497) lifted VERBATIM into a pure function. Allowlist-builds a FRESH object from the 16 known fields by name (never spreads raw -> prototype-pollution-proof). Clamps: money finite>=0 else 0; clawsLevel U.clamp(|0,0,64); atk/moveSpeedLevel clamp to Cfg.ATKSPD/MOVESPD.LEVELS; finisherOwned/world2Unlocked/muted/finaleSeen/maxPowerSeen via !!; ownedFormIds bounded-loop (min(len,Cfg.FORMS.length)) filtered to formDef-known + dedup + force-unshift 'gz2014'; activeFormId must be in owned else 'gz2014'; maxReachedRow clamp 0..Cfg.GRID.rows-1; lastSeen finite else 0; peakCombo>=1 else 1. Captures _formAxisWasAbsent=(raw.formAxisSeen===undefined) and sets formAxisSeen=true so the one-time rebalance toast fires exactly once. NO module-state writes, NO toast side-effect (caller fires it)."
+    },
+    {
+      "fn": "applySlotToState",
+      "signature": "applySlotToState(game) -> void",
+      "behavior": "Runs sanitizeGame(game), Object.assigns the 16 fields into module `state`, calls recalcMoveMult()+recomputeCollMult() (economy.js:457,489) so _collMult/moveMult are correct before any power read, fires the formAxis toast iff _formAxisWasAbsent, sets hudDirty=true. The old load() body, now reading from a slot."
+    },
+    {
+      "fn": "load",
+      "signature": "load() -> bool",
+      "behavior": "Slot-aware boot read (still called at game.js:58, SYNCHRONOUS). safeLoad(KEY_V4)->sanitizeContainer; else migrateV3(safeLoad(KEY_V3)); else freshContainer(). Sets _container/_activeIdx, applySlotToState(active slot), write-back save(), requestPersist(), asyncIdbRecover(). Reaps the v3 key only when raw.v===4 && migratedFrom==='v3' (a CONFIRMED prior v4 parse). Returns true if a real save was loaded."
+    },
+    {
+      "fn": "save",
+      "signature": "save() -> void",
+      "behavior": "Replaces economy.js:416-444. Guards !_container (boot). Re-reads disk; if disk.rev>_container.rev, reconcile (adopt foreign slots). Writes serializeActiveGame() into _container.slots[_activeIdx].game, sets lastPlayed, bumps rev, writerId. Guards a dangling activeSlot id before serialize. JSON.stringify once -> localStorage.setItem (atomic). On throw: one-time warning (economy.js:438 pattern), still attempt IDB. scheduleMirror(json,false)."
+    },
+    {
+      "fn": "flushSave",
+      "signature": "flushSave() -> void",
+      "behavior": "Unchanged trigger (economy.js:90, 2s + visibilitychange/pagehide). if(_saveDirty){_saveDirty=false;save();} PLUS forces an immediate non-debounced IDB mirror (scheduleMirror(json,true)). The LS write inside save() is synchronous and commits under teardown; the IDB put is best-effort."
+    },
+    {
+      "fn": "listSlots",
+      "signature": "listSlots() -> [{id,name,createdAt,lastPlayed,active,summary:{formsOwned,formsTotal,power,lastPlayedMs}}]",
+      "behavior": "Read-only view for the Saves UI. power = a one-shot-tier readout (e.g. \u26a1 N/19); formsTotal = Cfg.FORMS.length."
+    },
+    {
+      "fn": "activeSlotId",
+      "signature": "activeSlotId() -> slotId",
+      "behavior": "Returns _container.slots[_activeIdx].id."
+    },
+    {
+      "fn": "switchSlot",
+      "signature": "switchSlot(id) -> bool",
+      "behavior": "THE re-sync. Returns false if id===active or unknown. (1) flushSave() outgoing; (2) write live `state` into outgoing slot.game; (3) set activeSlot=id, lastPlayed=now, persist immediately (not dirty-batched); (4) applySlotToState(incoming game) \u2014 recomputes collMult/moveMult; (5) G.World.spawnCity() (re-reads frontier from new maxReachedRow, world.js:281-284); (6) G.Main.rebuildPlayer() (game.js:36 \u2014 full reset, re-snaps camera, re-points Render \u2014 NOT syncForm, which would preserve stale world pos); (7) refreshShop()+G.UI.refresh(). Optional announce."
+    },
+    {
+      "fn": "newSlot",
+      "signature": "newSlot(name) -> slotId|null",
+      "behavior": "null if slotCount>=Cfg.SAVE.SLOTS. Seeds default game state (economy.js:53-69 defaults), auto-name 'Save N' (lowest unused) editable inline, sanitized name. Appends; does NOT switch (caller may)."
+    },
+    {
+      "fn": "renameSlot",
+      "signature": "renameSlot(id,name) -> bool",
+      "behavior": "name = String(name).replace(/[\u0000-\u001f\u007f]/g,'').trim().slice(0,24) || 'Save N'. Duplicate names ALLOWED (slots keyed by id). Rendered via textContent only. Persists."
+    },
+    {
+      "fn": "deleteSlot",
+      "signature": "deleteSlot(id) -> bool",
+      "behavior": "Splice by id. If deleted the LAST slot, reseed a fresh 'Save 1' + switch (full reset). If deleted the ACTIVE slot, switch to most-recently-played remaining (lastPlayed desc) via full re-sync. Else just persist. Keeps an in-memory _lastDeleted blob for a cheap session-only undo. Never leaves 0 slots."
+    },
+    {
+      "fn": "slotCount / maxSlots",
+      "signature": "slotCount() -> int ; maxSlots() -> Cfg.SAVE.SLOTS",
+      "behavior": "For the UI capacity readout and New-Slot enablement."
+    },
+    {
+      "fn": "exportSlotCode",
+      "signature": "exportSlotCode(slotId) -> 'GZS1:<base64url>.<crc8>'",
+      "behavior": "Envelope {fmt:'gzs',v:CODE_VERSION,exportedAt:now,slot:{id,name,createdAt,lastPlayed,prestige,game}}. base64url(TextEncoder UTF-8 of JSON), CRC32 over the base64 body, joined by '.'. Sets slot.lastBackupAt=now (markExported)."
+    },
+    {
+      "fn": "parseSlotCode",
+      "signature": "parseSlotCode(raw) -> {ok:true,env,slot}|{ok:false,error,detail}",
+      "behavior": "For live UI pre-validate. Trim+strip whitespace; length>MAX_CODE_LEN->'too_long'; prefix check; split on last '.'; CRC recompute (mismatch->'checksum'); base64url->atob->TextDecoder{fatal} (->'decode'); JSON.parse (->'json'); env.fmt/v/slot/game shape (->'shape'/'version'); sanitizeGame(slot.game); sanitized clean slot {name,prestige,game}. Zero state mutation."
+    },
+    {
+      "fn": "importSlotCode",
+      "signature": "importSlotCode(raw, target) -> {ok,slotId,mode}|{ok:false,error}",
+      "behavior": "target undefined/'new' -> new slot (non-destructive; 'no_free_slot' if at MAX). target=slotId -> overwrite that slot's game (keeps its id; caller MUST confirm first). Always parseSlotCode first; imported slot gets a NEW id (never reuses the embedded id)."
+    },
+    {
+      "fn": "isPersisted",
+      "signature": "isPersisted() -> bool",
+      "behavior": "Cached navigator.storage.persist() result for the durability chip."
+    },
+    {
+      "fn": "durabilityStatus",
+      "signature": "durabilityStatus() -> 'green'|'amber'|'red'",
+      "behavior": "red = private-mode probe fails OR persist supported && persisted()===false; green = persisted()===true OR (standalone PWA on iOS); amber = best-effort otherwise. Drives the chip + nudges."
+    }
+  ],
+  "migrationAlgorithm": "v3 -> v4 migration runs once at boot when KEY_V4 is absent, inside load(). Idempotent and crash-safe via a read-back-confirmed safety-net delete.\n\nALGORITHM (load()):\n  raw4 = U.safeLoad('godzilla-save-v4')\n  container = raw4 ? sanitizeContainer(raw4) : null\n  migratedOrFresh = false\n  if (!container):\n      v3 = U.safeLoad('godzilla-save-v3')\n      if (v3 && v3.v === 3): container = migrateV3toV4(v3)   // WRAP raw; sanitizeGame runs on apply\n      else:                  container = freshContainer()\n      migratedOrFresh = true\n  container = sanitizeContainer(container) || freshContainer()   // re-sanitize migrated/fresh\n  _container = container; _activeIdx = indexOfActive()\n  if (migratedOrFresh):\n      if (writeContainerVerified(container)):                  // safeSave + READ-BACK compare\n          // keep v3 this boot as a safety net; it carries migratedFrom:'v3'\n      // else: keep v3, retry next boot (v4 absent => re-migrate from still-present v3)\n  applySlotToState(_container.slots[_activeIdx].game)\n  // CONFIRMED-write reap: only on a SUBSEQUENT boot where raw4.v===4 && raw4.migratedFrom==='v3'\n  if (raw4 && raw4.v===4 && raw4.migratedFrom==='v3'):\n      try { localStorage.removeItem('godzilla-save-v3') } catch(e){}\n      delete _container.migratedFrom\n  save(); requestPersist(); asyncIdbRecover(); return true\n\nmigrateV3toV4(v3):\n  game = {}; for k in v3: if (k!=='v') game[k]=v3[k]   // copy verbatim, drop the v field\n  now = Date.now()\n  return { v:4, rev:1, activeSlot:slotId, migratedFrom:'v3',\n           slots:[ { id:slotId, name:'Save 1', createdAt:now,\n                     lastPlayed:(typeof v3.lastSeen==='number'&&isFinite(v3.lastSeen))?v3.lastSeen:now,\n                     lastBackupAt:0, backupPromptSeen:false, prestige:0, game:game } ] }\n  // game is RAW; the SAME sanitizeGame that every load uses clamps it on apply.\n  // This preserves (does NOT re-trigger) the gz2014 force-unshift and the formAxisSeen one-time\n  // rebalance toast (economy.js:490-496) for a pre-formula migrated player \u2014 they fire identically\n  // to today because applySlotToState runs the unchanged sanitizer.\n\nwriteContainerVerified(c):\n  if (!U.safeSave(KEY_V4, c)) return false            // quota/private -> keep v3, retry next boot\n  back = U.safeLoad(KEY_V4)                            // READ IT STRAIGHT BACK \u2014 'confirmed' means read-back,\n  return !!(back && back.v===4 && Array.isArray(back.slots) && back.slots.length===c.slots.length)\n  // safeSave's boolean alone is insufficient: it only catches the setItem throw, not a silent\n  // partial write or accept-then-evict. The read-back makes migration crash-safe & lossless.\n\nfreshContainer(): one default slot ('Save 1', defaults from economy.js:53-69 minus runtime-only fields), v:4, rev:0.\n\nsanitizeContainer(raw): return null on structural failure (!obj || v!==4 || slots not array || empty) -> caller falls to migrate/fresh. Otherwise: slots.slice(0,SLOTS_MAX).map(sanitizeSlot); re-stamp any 0/blank/duplicate id to a fresh unique id (a VALID unique id is preserved as-is); coerce activeSlot to a real slot id (out-of-range -> slots[0].id). A single bad slot is REPAIRED in place by sanitizeSlot (bad game->fresh via sanitizeGame, bad name->'Save N'), never dropped \u2014 only a wholly-unparseable container falls back.\n\nIf BOTH v3 and v4 exist (re-run after a crash that wrote v4 but didn't reap v3): v4 ALWAYS wins; v3 ignored (no double-migration loop overwriting v4 with stale v3).",
+  "exportImportSpec": "CODE FORMAT (single pasteable line): 'GZS1:' + base64url(TextEncoder.encode(JSON.stringify(envelope))) + '.' + crc8\n- 'GZS1:' magic (CODE wire-format version, independent of schema v; future LZ variant = 'GZS2:').\n- base64url (RFC4648 \u00a75: +->-, /->_, '=' stripped) so the code is URL-safe and survives chat/email clients that mangle +/=.\n- Suffix = CRC32 of the base64 body (lowercase hex, the project calls it crc8 = 8 hex chars). Detects truncation/transcription BEFORE atob/JSON.parse. CORRUPTION check only, NOT anti-tamper.\n\nWHY base64 NOT LZ-string (measured): a fully-maxed slot = ~597 B JSON -> ~796 base64url chars -> ~810-char code. Already pasteable. lz-string's smallest format-compatible build is ~3.4 KB minified, vendored offline (CDN forbidden), for a ~250-char saving on a small numeric JSON \u2014 loses on every axis. base64url now; 'GZS2:' is the escape hatch.\n\nUNICODE-SAFE PIPELINE (load-bearing): btoa/atob throw on code points >255; slot names can be emoji/accents. MUST go through TextEncoder/TextDecoder, NEVER btoa(JSON) directly.\n  encode: JSON -> new TextEncoder().encode(s) -> binary string -> btoa -> base64url transform.\n  decode: base64url->base64 (re-pad) -> atob -> Uint8Array.from(...,c=>c.charCodeAt(0)) -> new TextDecoder('utf-8',{fatal:true}).decode().\n\nEXPORTED OBJECT = ONE slot (not the container): {fmt:'gzs', v:Cfg.SAVE.CODE_VERSION, exportedAt:<ms>, slot:{id,name,createdAt,lastPlayed,prestige,game:{...16 fields...}}}. Single-slot keeps codes short, makes sharing one identity, and makes import non-destructive to the importer's OTHER slots.\n\nIMPORT (parseSlotCode then importSlotCode) \u2014 layered guards, zero state mutation until success:\n1. trim + strip all whitespace; length>Cfg.SAVE.MAX_CODE_LEN (20000) -> 'too_long' (BEFORE atob).\n2. prefix==='GZS1:' else 'not_a_code'.\n3. split on the last '.' -> body, crc; recompute CRC32(body); mismatch -> 'checksum'.\n4. charset regex /^[A-Za-z0-9\\-_]+$/ on body; base64url decode (fatal UTF-8) -> 'decode'; JSON.parse -> 'json'.\n5. env.fmt==='gzs' && env.v===CODE_VERSION (a strictly-higher v -> 'version', refuse a future code with a clear message; unknown EXTRA fields are tolerated \u2014 forward-compat) && env.slot/game are objects else 'shape'.\n6. sanitizeGame(env.slot.game) -> the SAME validator load() uses (clamps clawsLevel 0..64, filters ownedFormIds vs Cfg.FORMS, forces gz2014, validates activeFormId, clamps maxReachedRow, money>=0 finite, peakCombo>=1; formAxisSeen forced true so an imported save never re-fires the one-time toast).\n7. name sanitized (strip control chars, <=24, fallback 'Imported'/'<name> (imported)' on collision). prestige (typeof number && isFinite && >=0) ? min(|0,PRESTIGE_MAX):0.\n\nIMPORT TARGET: NEW slot by default (non-destructive; fresh id, never reuses the embedded id). Overwrite ONLY via an explicit per-slot pick + a confirm dialog naming the slot ('Replace \"Save 2\"? This can't be undone.'), which KEEPS the target's id (activeSlot pointers stay valid). At MAX with no free slot, New is disabled and the UI forces an explicit overwrite choice.\n\nCLIPBOARD (export): try navigator.clipboard.writeText guarded by (navigator.clipboard && window.isSecureContext); on absence/rejection fall back to a readonly auto-selected <textarea> + execCommand('copy'). ALWAYS show the code in a selectable textarea regardless of copy result (the textarea is the guarantee; clipboard is convenience). Toast 'Copied!' on success, else 'Press Cmd/Ctrl+C to copy'.",
+  "durabilityStrategy": "TWO TIERS \u2014 Tier 1 reduces loss probability, Tier 2 is the only true guarantee.\n\nTIER 1 (best-effort on-device durability):\n- localStorage = synchronous source of truth (boot read, immediate purchase saves).\n- IndexedDB mirror = SECONDARY intra-origin copy. Coordination: LS-FIRST then IDB fire-and-forget (debounced ~5s, forced on pagehide/purchase). The mirror's rev MUST equal the LS write it mirrors (write it inside save() AFTER rev is bumped). Boot reconcile prefers the higher rev (machine authority); lastPlayed is a human tiebreak only when revs are equal (cross-device equal-rev collision); a progress heuristic (sum of clawsLevel+ownedFormIds.length+maxReachedRow) is the final tiebreak so we never restore the EMPTIER of two equal-rev twins. asyncIdbRecover restores ONLY when LS produced freshContainer() OR LS was absent/invalid AND IDB.rev strictly higher \u2014 it can NEVER clobber a valid, already-advanced live session; any restore is visible ('Restored your save from device backup.'). All IDB calls are try/catch-wrapped with a 1500ms timeout; IDB-unavailable (private mode, disabled, onblocked) degrades silently to LS-only (exactly today's durability).\n- navigator.storage.persist() requested best-effort, feature-detected, AFTER a first-engagement signal (first purchase or row>=5 \u2014 a cold first-visit request is most likely silently denied), cached, re-attempted at later milestones. This is the ONLY API that exempts the origin from LRU + ITP eviction.\n- 'Add to Home Screen' nudge: an installed PWA has its OWN use-counter, exempt from the Safari 7-day idle rule, and is the strongest signal WebKit uses to grant persistence.\n\nTIER 2 (the only guarantee): the EXPORT CODE. It leaves the storage sandbox entirely (clipboard/Notes/email/another device) \u2014 the sole recovery from a full origin wipe or a device move.\n\nTHE HONEST 'WHAT SURVIVES WHAT' STATEMENT (ship this in the Saves panel 'About backups' line):\n\"Your progress is saved on THIS device and browser. It can be erased if you don't play for about a week (Safari deletes idle site storage), if you run low on disk space, in Private/Incognito windows, or if you clear browsing data. The ONLY guaranteed backup is your save code \u2014 copy it and keep it somewhere safe (Notes, email). Adding this game to your Home Screen and tapping 'Keep my save' makes on-device storage much more durable, but the save code is the only thing that survives a wipe or moves to another device.\"\n\nTHE CORRECTION (vs draft save-system-plan.md:60-62): Safari ITP deletes localStorage AND IndexedDB AND Service Worker registrations TOGETHER after 7 days of no interaction (WebKit/MDN-confirmed). So the IDB mirror does NOT survive the dominant eviction vector for idle players. Its real value is narrower: an LS-only QuotaExceededError, an LS-only clear by other code, corrupt-LS-but-clean-IDB, and Chrome/Firefox LRU where LS and IDB have independent eviction timing. NEVER advertise the mirror as eviction-proofing; persist()+install+export are the cross-eviction layer. Document this in CLAUDE.md so no future work assumes the mirror is ITP-proof.",
+  "uiSpec": "LOCATION: a 5th shop tab, NOT a modal. index.html:148 \u2014 one line after Worlds: <button data-tab=\"saves\">Saves</button>. Both tab-wiring paths auto-pick it up with ZERO new listeners (economy.js:892-899 generic data-tab delegation; ui.js per-button wiring routes through setActiveTab->openShop->refreshShop). The shop already auto-pauses the sim \u2014 exactly what destructive slot ops need (a modal would re-implement pause + keyboard capture). Dispatch in the refreshShop switch (economy.js:878): case 'saves': buildSaves(body); break. Tab order: Upgrades \u00b7 Evolutions \u00b7 Characters \u00b7 Worlds \u00b7 Saves (rightmost \u2014 it's meta). #shop-tabs already flex-wraps at narrow widths so a 5th chip wraps gracefully.\n\nbuildSaves(body) \u2014 built in DOM reusing itemRow()/.shop-item/.buy/.tag/.hint (NO new CSS required for MVP; 4 optional polish classes below). Top->bottom:\n1. BACKUP BANNER (conditional): when needsBackup(activeSlotId()) (no lastBackupAt, OR now-lastBackupAt>Cfg.SAVE.BACKUP_NUDGE_MS) AND not session-dismissed \u2014 a .hint row with an inline 'Export now' button. Also an immediate unmissable RED variant when durabilityStatus()==='red' (private mode / persist denied): 'This browser won't keep your progress \u2014 copy your save code now.'\n2. DURABILITY CHIP: a small colored .tag from durabilityStatus() (green/amber/red) so the player can see at a glance whether on-device storage is durable.\n3. SLOT LIST: one itemRow per slot + empty placeholders up to MAX. swatch = active form's plate color; title = slot.name; sub = 'Forms X/20 \u00b7 \u26a1 N/19 \u00b7 '+ago(lastPlayedMs). Active slot: green ACTIVE .tag + .owned class (no Switch button). Non-active filled slot: a 'Switch' .buy button. Empty slot: dashed .locked row with a '+ New' button.\n4. PER-SLOT ACTION STRIP (beneath each filled slot): Rename \u00b7 Export \u00b7 Delete as small .buy buttons (flat MVP, no accordion).\n5. FOOTER: 'New Slot' (disabled at MAX with .hint 'Max 3 saves \u2014 delete one to add another') \u00b7 'Import code\u2026' toggle revealing a <textarea> + 'Load' button (live non-destructive pre-validate via parseSlotCode shows a status line; mutates nothing until Load).\n6. 'About backups' line = the honest durability statement.\n\nago(ms): !ms->'never'; <6e4->'just now'; <36e5->Nm ago; <864e5->Nh ago; else Nd ago.\n\nINLINE CONFIRM-DELETE (no window.confirm \u2014 it blocks rAF and is suppressible): Delete swaps in place to a red 'Confirm delete?' / 'Cancel' pair for ~4s then auto-reverts. Confirm->deleteSlot. Reuses .buy with an optional .buy.danger class.\n\nINLINE RENAME (no prompt): replace the title div with an <input maxlength=24>; Enter/blur=commit (renameSlot), Esc=cancel. The input's keydown calls e.stopPropagation() so the window-level onKeyDown (ui.js) doesn't also fire \u2014 Esc cancels the rename WITHOUT closing the shop.\n\nSWITCH UX: tapping Switch runs switchSlot (full re-sync: spawnCity rebuilds the city + frontier, rebuildPlayer respawns at the apron + re-snaps camera). Names rendered via textContent only (XSS-safe even from an imported code's name).\n\nOptional CSS (index.html, 4 small additions, not required for MVP):\n.buy.danger{background:linear-gradient(180deg,#c2473a,#9a2f24);border-color:var(--red);}\n.slot-actions{display:flex;gap:6px;margin:-4px 2px 12px;}\n.slot-actions .buy{flex:1;padding:8px 6px;font-size:12px;}\n.shop-item.empty{border-style:dashed;opacity:.7;}",
+  "validationRules": [
+    "sanitizeGame is an ALLOWLIST build: emit a fresh object reading ONLY the 16 known fields by name. NEVER Object.assign/spread the raw input -> __proto__/constructor/prototype keys can never reach a prototype (prototype-pollution-proof). One validator, three callers (load, switchSlot, importCode) \u2014 no drift.",
+    "money: (typeof === 'number' && isFinite) ? Math.max(0, value) : 0. Rejects NaN/Infinity/strings/negatives.",
+    "clawsLevel: U.clamp(value|0, 0, 64). The |0 coerces garbage to a 32-bit int; 64 is the deliberate corrupt-save ceiling that keeps attackPower() finite (normal play ~28).",
+    "atkSpeedLevel / moveSpeedLevel: U.clamp(value|0, 0, Cfg.ATKSPD.LEVELS / Cfg.MOVESPD.LEVELS).",
+    "booleans (finisherOwned, world2Unlocked, muted, finaleSeen, maxPowerSeen): coerced via !!.",
+    "ownedFormIds: bounded loop min(src.length, Cfg.FORMS.length) (DoS bound); keep only formDef-known ids, de-duplicate, force-unshift 'gz2014'. Unknown/future ids silently dropped (forward-compat).",
+    "activeFormId: must be in the sanitized owned set else fall back to 'gz2014'.",
+    "maxReachedRow: U.clamp(value|0, 0, Cfg.GRID.rows-1) = 0..57. Re-clamped on EVERY load so a future grid-shrink auto-corrects.",
+    "lastSeen: finite number else 0. peakCombo: (number && >=1) ? min(value, Cfg.COMBO.MAX) : 1.",
+    "formAxisSeen: capture _formAxisWasAbsent = (raw.formAxisSeen===undefined) for the one-time rebalance toast, then force formAxisSeen=true. Imported saves never re-toast.",
+    "prestige (slot-level): (typeof === 'number' && isFinite && >=0) ? Math.min(value|0, Cfg.SAVE.PRESTIGE_MAX) : 0. Infinity->0, -3->0, 2.7->2, '5'->0. Absent->0. Can't poison future NG+ math.",
+    "slot.name: String(name).replace(/[\u0000-\u001f\u007f]/g,'').trim().slice(0,24) || 'Save N'. Rendered via textContent only.",
+    "slot.id: re-stamp to a fresh unique string id ONLY if 0/blank/duplicate; a valid unique id is preserved (stable across loads).",
+    "sanitizeContainer returns null ONLY on container-level structural failure (!obj / v!==4 / slots not array / empty) -> caller falls to migrate/fresh. A single bad slot is REPAIRED in place, never drops all slots.",
+    "Import string: reject length>Cfg.SAVE.MAX_CODE_LEN (20000) BEFORE atob; charset regex on the base64 body; CRC32 before JSON.parse; reject env.v strictly > CODE_VERSION ('newer version') but TOLERATE unknown extra fields.",
+    "CRC32 is corruption-detection ONLY (paste truncation/mangling). NOT anti-tamper: single-player self-cheating is explicitly accepted; a hand-edited code that recomputes its own checksum loads, then every field is still clamped \u2014 so even a forged code can't produce NaN/Infinity/unknown-form/crash, only a bounded unearned state.",
+    "Client sanitization is INTEGRITY-only \u2014 values are user-editable by design. A future leaderboard MUST re-validate server-side (out of the backend-free scope). Comment this at the boundary so it isn't silently assumed safe."
+  ],
+  "rolloutPhases": [
+    "Phase 1 \u2014 v4 container + migration + the shared sanitizer (NO UI). Extract sanitizeGame/applySlotToState from load() (economy.js:452-497); add sanitizeSlot/sanitizeContainer/migrateV3toV4/freshContainer/writeContainerVerified; rewrite load()/save() to be slot-aware on _container; add Cfg.SAVE. VERIFY: an existing v3 save loads intact into slot 1 with money/claws/forms/finale/maxReachedRow preserved AND the formAxis rebalance toast still fires exactly once; a brand-new player gets one fresh slot; corrupt/absent v3 falls to a clean fresh container; read-back-confirmed v3 reap leaves v3 in place on the migrating boot.",
+    "Phase 2 \u2014 slot core API (economy, still no panel). listSlots/activeSlotId/switchSlot/newSlot/renameSlot/deleteSlot/slotCount/maxSlots + the full switchSlot re-sync (flush->swap->applySlotToState->spawnCity->rebuildPlayer->refresh) and deleteSlot active/last-slot rules. VERIFY via console: earn cash in slot A, switchSlot to a new slot B (city+frontier+kaiju+HUD all reflect B), switch back (A's cash + frontier intact); delete the active slot (auto-switch); delete the last slot (reseeds defaults).",
+    "Phase 3 \u2014 Saves UI (the 5th shop tab). index.html button + buildSaves() + inline confirm-delete + inline rename + the durability chip + capacity footer. VERIFY: tap-switch, rename (Esc cancels without closing the shop), two-step delete, narrow-viewport tab wrap at 320px.",
+    "Phase 4 \u2014 export/import. U.crc32 + U.b64uEncode/Decode; exportSlotCode/parseSlotCode/importSlotCode; clipboard copy + textarea fallback; paste textarea + Load + live pre-validate. VERIFY: export->import round-trip preserves state into a NEW slot; reject a truncated/garbage/oversize/future-version code with the right human error; emoji slot name survives the round-trip; import-at-MAX forces an explicit overwrite-with-confirm.",
+    "Phase 5 \u2014 anti-loss. IDB mirror (idbOpen/Put/Get + scheduleMirror debounce + forced-on-pagehide), asyncIdbRecover, navigator.storage.persist() (first-engagement-gated), the backup-nudge banner + cadence, the honest 'About backups' copy, and the 'Add to Home Screen' tip. VERIFY: clear localStorage only -> reload -> game restores from IDB with a visible toast; LS-newer-than-IDB -> NO restore (IDB healed instead); private-mode -> red chip + immediate export nudge, no crash; IDB-disabled -> silent LS-only, no thrown promise.",
+    "Phase 6 \u2014 SHIP. Bump BOTH sw.js CACHE and Config.CACHE_VERSION together (the drift check at game.js:91-101 guards this); add any new files to sw.js ASSETS (none if all logic stays in economy.js/utils.js); fresh-origin verify per the project ritual (location.href reload, not reload(); the SW+cache+eval gotcha in MEMORY). prestige stays reserved for a later NG+ feature-add."
+  ],
+  "testMatrix": [
+    {
+      "test": "Existing v3 save present, v4 absent -> boot",
+      "expected": "Wrapped as slots[0] (name 'Save 1', prestige 0), all 16 fields preserved & clamped, activeSlot points to it; v4 written + read-back-confirmed; v3 key KEPT this boot (reaped only on the next boot); the formAxis rebalance toast fires exactly once."
+    },
+    {
+      "test": "Brand-new player (no v3, no v4)",
+      "expected": "freshContainer() with one default slot (money 0, ownedFormIds ['gz2014'], activeFormId 'gz2014'); plays normally; v4 written."
+    },
+    {
+      "test": "Migration write fails (private mode / quota) -> safeSave false",
+      "expected": "writeContainerVerified false -> v3 NOT removed; session runs on in-memory _container; next boot re-migrates from still-present v3 (idempotent, lossless); one-time save-failure warning shown."
+    },
+    {
+      "test": "Migration safeSave true but read-back empty/mismatched (silent partial write)",
+      "expected": "writeContainerVerified false (read-back guards v===4 + slot count) -> v3 retained. The exact failure the read-back exists to catch."
+    },
+    {
+      "test": "Both v3 and v4 present (crash after v4 write before reap)",
+      "expected": "sanitizeContainer(v4) wins; v3 ignored entirely; no double-migration; orphan v3 reaped on a confirmed migratedFrom boot."
+    },
+    {
+      "test": "Corrupt v4 JSON in localStorage (truncated/hand-edited)",
+      "expected": "safeLoad returns null -> falls to v3 migrate or freshContainer; asyncIdbRecover may then restore the last-good IDB blob (higher rev); never crashes boot."
+    },
+    {
+      "test": "v4 container with slots:[] / slots not an array / activeSlot out of range",
+      "expected": "sanitizeContainer returns null on empty/non-array -> fresh; out-of-range activeSlot coerced to slots[0].id; a single corrupt slot is repaired in place, not dropped."
+    },
+    {
+      "test": "localStorage.setItem throws QuotaExceededError mid-session",
+      "expected": "setItem atomic -> prior container intact; save() catches, sets the one-time warning, STILL fires the IDB mirror; game runs on in-memory state; export nudge becomes the recovery path; no crash."
+    },
+    {
+      "test": "Safari Private Browsing (setItem throws every write; IDB may be blocked)",
+      "expected": "Both writes try/catch-wrapped; game runs from in-memory _container; durability chip RED + immediate export nudge; no exception escapes."
+    },
+    {
+      "test": "Origin eviction (Safari ITP 7-day idle)",
+      "expected": "LS + IDB deleted together (mirror does NOT survive); fresh boot starts clean, no crash; only persist()/install/export could have prevented it; backup nudge surfaced prominently. Documented honestly."
+    },
+    {
+      "test": "asyncIdbRecover resolves after the player already advanced the LS save",
+      "expected": "Recovery gated to fire ONLY when LS produced freshContainer() (or was absent/invalid); a valid live session is NEVER clobbered regardless of IDB rev."
+    },
+    {
+      "test": "LS rev=5, IDB rev=3 at boot",
+      "expected": "Boot keeps LS; IDB HEALED to rev 5; never the reverse."
+    },
+    {
+      "test": "IndexedDB unavailable / open onerror / onblocked",
+      "expected": "idbOpen rejects within timeout -> cb(null); mirror writes & recovery become no-ops; degrades to LS-only; no thrown promise, no boot hang."
+    },
+    {
+      "test": "switchSlot between two slots with different frontiers/forms",
+      "expected": "flushSave outgoing (no ~2s loss); spawnCity reshapes the frontier to the incoming maxReachedRow; rebuildPlayer respawns at the apron + re-snaps camera; collMult/moveMult recomputed; HUD/shop repaint; switch-to-active returns false (no flash)."
+    },
+    {
+      "test": "Delete the ACTIVE slot / delete the LAST slot",
+      "expected": "Active-delete auto-switches to most-recently-played remaining (full re-sync); last-delete reseeds a fresh 'Save 1' and switches; a 0-slot state is impossible."
+    },
+    {
+      "test": "Export -> import round-trip (incl. emoji slot name)",
+      "expected": "Imported into a NEW slot with a fresh id; all 16 fields + name (UTF-8 via TextEncoder) preserved & clamped; no re-fire of the one-time toast."
+    },
+    {
+      "test": "Import a truncated / garbage / wrong-prefix code",
+      "expected": "CRC32 mismatch -> 'checksum'; bad base64/JSON -> 'decode'/'json'; wrong prefix -> 'not_a_code'. Specific human error, zero state mutation, never reaches a bad load."
+    },
+    {
+      "test": "Import a future-schema code (env.v=5) or paste-bomb (4MB)",
+      "expected": "env.v>CODE_VERSION -> 'version' ('update the game'); length>MAX_CODE_LEN rejected BEFORE atob -> 'too_long'; ownedFormIds loop bounded to Cfg.FORMS.length; no main-thread freeze."
+    },
+    {
+      "test": "Hand-edited code: money:1e9, clawsLevel:1e308, unknown form ids, __proto__ key",
+      "expected": "Accepted (self-cheat allowed) but clamped: clawsLevel->64, unknown forms dropped, money finite>=0; allowlist build means __proto__ never pollutes a prototype; no crash, only a bounded state."
+    },
+    {
+      "test": "Import at MAX (3/3) slots",
+      "expected": "'new' target returns no_free_slot; UI disables New and forces an explicit overwrite pick guarded by a confirm dialog (keeps the target id)."
+    },
+    {
+      "test": "Two tabs both autosaving (different slots)",
+      "expected": "persistContainer re-reads disk before write; rev-guard adopts the foreign slot whole, overwrites only its own active slot's game; no cross-clobber. activeSlot pointer follows the freshest-rev writer."
+    },
+    {
+      "test": "Two tabs on the SAME slot, idle tab's 2s timer fires with stale money",
+      "expected": "storage event sets _remoteNewerRev; the idle tab reconciles from disk before writing so it re-writes the fresher state; worst case = bounded to ~2s of un-flushed banking (purchases save immediately, never lost)."
+    },
+    {
+      "test": "pagehide mid-flush; async IDB put dropped",
+      "expected": "The synchronous LS setItem commits atomically before pagehide returns; the in-flight IDB transaction is abandoned safely (LS is read first on next boot, IDB reconciled/healed after)."
+    },
+    {
+      "test": "Clipboard writeText rejects (lost focus / webview) on HTTPS",
+      "expected": "Falls back to execCommand('copy'); the always-visible auto-selected textarea is the final guarantee; toast tells the user to Cmd/Ctrl+C; no exception escapes."
+    }
+  ],
+  "riskRegister": [
+    {
+      "risk": "Draft's false premise that the IDB mirror is eviction-proofing -> under-investing in persist()/install/export, the ACTUAL cross-eviction defenses. If only the mirror ships, Safari ITP 7-day eviction still wipes every idle non-installed player.",
+      "severity": "high",
+      "mitigation": "Treat persist() + PWA-install nudge + export code as the PRIMARY anti-loss layer (ITP kills LS+IDB together). Ship the mirror as the SECONDARY intra-origin layer, not the headline. Make the export nudge fire after the FIRST real progress (before the 7-day window), and document in CLAUDE.md that the mirror is NOT ITP-proof."
+    },
+    {
+      "risk": "IDB reconcile restores a STALE backup over good current progress (the worst possible bug in an anti-loss system).",
+      "severity": "high",
+      "mitigation": "Mirror writes the SAME rev as the LS write. Restore ONLY when LS produced freshContainer() OR was absent/invalid AND IDB.rev strictly higher; never prefer IDB by default; tie-break never restores the emptier twin. Any restore is visible (toast). Eval-test: LS rev=5 / IDB rev=3 -> assert NO restore + IDB healed."
+    },
+    {
+      "risk": "A malformed imported slot bypasses validation and corrupts memory / crashes the running game.",
+      "severity": "high",
+      "mitigation": "ONE shared allowlist sanitizeGame() used by load + switchSlot + import (the required refactor). Oversize guard before atob, CRC before parse, every field clamped/coerced, env.v gate. Adversarial-paste tests (truncated, garbage, oversize, NaN/Infinity/__proto__ injected)."
+    },
+    {
+      "risk": "The v3 safety-net key is deleted while the only good copy is a FAILED v4 write -> total loss for a migrating player.",
+      "severity": "high",
+      "mitigation": "writeContainerVerified read-back gate: removeItem('godzilla-save-v3') runs only on a SUBSEQUENT boot that re-parsed a well-formed v4 (migratedFrom flag). Migration is idempotent \u2014 any failure just re-migrates from the retained v3 next boot."
+    },
+    {
+      "risk": "switchSlot re-sync misses a step (e.g. spawnCity skipped) -> old frontier or stale player position bleeds into the new slot.",
+      "severity": "high",
+      "mitigation": "Codify the exact ordered sequence (flush->swap->applySlotToState->spawnCity->rebuildPlayer->refresh) as switchSlot's body; share applySlotToState with load() so the sanitizer can't drift. Verify by switching between two slots with different frontiers/forms and confirming city+kaiju+HUD reflect the incoming slot. Use rebuildPlayer (full reset), NOT syncForm."
+    },
+    {
+      "risk": "Destructive op (Delete/Overwrite) fires accidentally with no undo.",
+      "severity": "high",
+      "mitigation": "Two-step inline confirm (NEVER window.confirm \u2014 it's suppressible on repeat). Overwrite is never default, requires an explicit pick + a slot-named confirm. Keep an in-memory _lastDeleted blob for a cheap session-only undo. Pair with the export nudge so a recovery code likely exists."
+    },
+    {
+      "risk": "Cross-tab reconcile/merge is genuinely subtle (Mike's 'is this too complex?' gate) \u2014 where progress-eating bugs hide.",
+      "severity": "med",
+      "mitigation": "Constrain the merge to SLOT granularity only \u2014 never field-level merge a game (no take-max-money). Each tab owns its active slot's game verbatim; foreign slots adopted whole; rev decides a shared slot. If it ever needs field-level logic, that's the signal to CUT to last-writer-wins-per-slot + a 'open in another tab' notice. Isolation eval-test on two simulated containers."
+    },
+    {
+      "risk": "Lifting load() into sanitizeGame introduces a behavioral regression (a field clamped differently, the formAxis toast double-fires or never fires).",
+      "severity": "med",
+      "mitigation": "Extract VERBATIM \u2014 copy economy.js:452-497 unchanged, only re-point source `s`->param and sink `state`->fresh object; preserve _formAxisWasAbsent for the exact one-time-toast semantics. Round-trip test: snapshot state from a known v3 load pre-refactor; migrate the same blob post-refactor; assert identical state."
+    },
+    {
+      "risk": "Quota failure mid-session leaves the player farming with NO persistence and the one-time toast already missed -> long session lost on close.",
+      "severity": "med",
+      "mitigation": "Make the storage-failure state STICKY: while a write keeps failing, show a persistent red 'NOT SAVING \u2014 Export now' indicator in the Saves panel and auto-surface the export affordance, not just the single quiet toast."
+    },
+    {
+      "risk": "Re-stringifying the full container every 2s flush costs more than today's tiny flat object.",
+      "severity": "low",
+      "mitigation": "Container <2KB at 3 slots; JSON.stringify of <2KB every 2s is sub-millisecond and off the render hot loop (it's in the flush timer). _container held in memory so save() never re-PARSES. Negligible; only stringify when _saveDirty if ever a concern."
+    },
+    {
+      "risk": "execCommand('copy') is deprecated and may be removed, breaking the only sync clipboard fallback.",
+      "severity": "low",
+      "mitigation": "The always-visible, pre-selected, focused readonly textarea makes manual Cmd/Ctrl+C a one-keystroke guarantee independent of any API; copy buttons are pure convenience. No data path depends on execCommand."
+    },
+    {
+      "risk": "sw.js caches the OLD bundle and the economy.js changes don't go live (the project's chronic cache gotcha).",
+      "severity": "med",
+      "mitigation": "Keep all logic in economy.js/utils.js (no new file in sw.js ASSETS). Bump BOTH sw.js CACHE and Config.CACHE_VERSION (drift check at game.js:91-101 guards this). Verify on a fresh origin with location.href (not reload()) per MEMORY's preview-verification gotcha."
+    },
+    {
+      "risk": "Future leaderboard ships and trusts client-sanitized values (money/prestige) as authoritative.",
+      "severity": "low",
+      "mitigation": "Comment at the boundary: client sanitization is INTEGRITY-only; values are user-editable by design. A leaderboard MUST re-validate server-side (out of the backend-free scope)."
+    }
+  ],
+  "openDecisionsForMike": [
+    {
+      "decision": "prow=5 vs tierRows=3 misalignment (the pre-existing D1 item, unrelated to saves but the only Mike-gated open question on record)",
+      "options": "A: street:1 (denser row-axis city, every HP tier gets exactly 2 building rows) \u2014 already shipped in gz-v22. B: tier=floor(row/prow) (fewer tiers, would reshape existing saves' maxReachedRow meaning).",
+      "recommendation": "Leave A as shipped (gz-v22 already chose street:1). Do NOT adopt B \u2014 it would re-map maxReachedRow semantics and force a save-reshape on the very migration we're hardening. Flag only; no action."
+    },
+    {
+      "decision": "Where the durability 'persist()' request and the install nudge sit in the funnel",
+      "options": "A: request persist() at cold boot (simplest). B: gate it behind the first engagement signal (first purchase or row>=5) and re-attempt at milestones.",
+      "recommendation": "B. A cold first-visit request is the case most likely to be silently denied (browsers grant on engagement/install), burning the signal. Gate it; cache the result; re-attempt at first-form-bought and finale."
+    },
+    {
+      "decision": "Overwrite-on-import availability",
+      "options": "A: import is NEW-slot only (never destructive). B: NEW by default + explicit per-slot Overwrite (confirm-gated), needed at the slot cap and for 'restore over this slot'.",
+      "recommendation": "B. New-slot default keeps the common case safe; the explicit confirm-gated overwrite is the only sane behavior at 3/3 slots and matches a 'restore my save onto this device' mental model. Keeps the target slot's id so activeSlot pointers never dangle."
+    },
+    {
+      "decision": "Session-undo for delete",
+      "options": "A: none (export is the recovery path). B: keep the just-deleted slot's blob in an in-memory _lastDeleted for a one-tap session-only undo.",
+      "recommendation": "B (cheap, no persistence) \u2014 it turns a mis-tap from a panic into a non-event, and pairs well with the two-step confirm. Clears on slot-switch/close."
+    },
+    {
+      "decision": "Backup-nudge aggressiveness",
+      "options": "A: passive banner only. B: passive banner + one-time prompts (after first real progress, at the finale, and an immediate red warning in private-mode/persist-denied) + a 5-day staleness re-nudge.",
+      "recommendation": "B. Eviction is silent and ~7 days out; the nudge must create a code BEFORE the window. The 5-day cadence (Cfg.SAVE.BACKUP_NUDGE_MS) sits safely under the Safari 7-day cap. Keep it contextual, never modal-spammy."
+    }
+  ]
+}
