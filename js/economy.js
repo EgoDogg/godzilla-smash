@@ -64,6 +64,7 @@ window.GAME = window.GAME || {};
     lastSeen:       0,          // ms timestamp of last save (for a future offline-income floor)
     finaleSeen:     false,      // win-finale played once (attackPower>=CAP_HP + statue destroyed)
     maxPowerSeen:   false,      // one-time "find the Statue" toast fired (attackPower first >= CAP_HP)
+    formAxisSeen:   true,       // forms-as-axis rebalance ack'd (default true → fresh players never toast; a pre-formula save lacks the field → toast once)
     peakCombo:      1           // highest combo multiplier reached this save (win-card stat)
   };
 
@@ -104,10 +105,26 @@ window.GAME = window.GAME || {};
   // Power  (contract §0 — UNIVERSAL claws)
   // attackPower() = activeForm.base × CLAWS_MULT^clawsLevel
   // ===========================================================================================
+  // Forms-as-axis (Collection Multiplier + Option B): 1 + Σ FORM_BONUS[owned] + FORM_BONUS[active].
+  // Memoized — recomputed on every ownedFormIds OR activeFormId change (afterPurchase covers
+  // buyForm/switchForm/buyClaws; load recomputes at boot). NEVER persisted (derives from state).
+  var _collMult = 1;
+  function formBonusOf(id) { var m = Cfg.FORM_BONUS; return (m && m[id]) || 0; }
+  function recomputeCollMult() {
+    var s = 0, ids = state.ownedFormIds, i;
+    for (i = 0; i < ids.length; i++) s += formBonusOf(ids[i]);
+    if (Cfg.ACTIVE_DOUBLE_COUNT) s += formBonusOf(state.activeFormId);   // Option B felt-switch
+    _collMult = 1 + s;
+    return _collMult;
+  }
+  function collectionMult() { return _collMult; }
+  function formContribLabel(f) {
+    var b = formBonusOf(f && f.id);
+    return b > 0 ? ('+' + b + ' collection power · permanent') : 'Starter form';
+  }
+
   function attackPower() {
-    var f = formDef(state.activeFormId);
-    var base = f ? f.base : Cfg.START_ATTACK;
-    return base * Math.pow(Cfg.CLAWS_MULT, state.clawsLevel);
+    return Cfg.START_ATTACK * Math.pow(Cfg.CLAWS_MULT, state.clawsLevel) * _collMult;
   }
 
   // activeUnit() → {kind, formId, family, signature, base, attack}
@@ -179,9 +196,9 @@ window.GAME = window.GAME || {};
   // upgrade that makes you deal D. Replaces the old round(CLAWS_BASE×CLAWS_GROWTH^level) curve
   // (which outran income ~5000× by the finale). Back-compat: gz2014 L0 = round(6×2^1)=12 == old.
   function clawsCost() {
-    var f = formDef(state.activeFormId);
-    var base = f ? f.base : Cfg.START_ATTACK;
-    return Math.round(base * Math.pow(Cfg.CLAWS_MULT, state.clawsLevel + 1));
+    // Carries the SAME collection multiplier as attackPower so it cancels in the cost:income
+    // ratio — the bounded invariant (clawsCost === CLAWS_MULT × attackPower) holds at every mult.
+    return Math.round(Cfg.START_ATTACK * Math.pow(Cfg.CLAWS_MULT, state.clawsLevel + 1) * _collMult);
   }
 
   function atkSpeedCost() {
@@ -374,6 +391,7 @@ window.GAME = window.GAME || {};
   }
 
   function afterPurchase() {
+    recomputeCollMult();   // forms-as-axis: refresh the memoized multiplier before any power read
     // First time the player can one-shot the strongest building, point them at the win — the
     // finale statue is otherwise undiscoverable (Mike: TASTE-1B). One-time toast; the render
     // beacon then keeps guiding them until they smash it.
@@ -412,6 +430,7 @@ window.GAME = window.GAME || {};
       muted:          state.muted,
       finaleSeen:     state.finaleSeen,
       maxPowerSeen:   state.maxPowerSeen,
+      formAxisSeen:   state.formAxisSeen,
       peakCombo:      state.peakCombo
     });
     // safeSave returns false on quota/private-mode/ITP eviction — tell the player ONCE
@@ -462,6 +481,20 @@ window.GAME = window.GAME || {};
     state.finaleSeen     = !!s.finaleSeen;
     state.maxPowerSeen   = !!s.maxPowerSeen;
     state.peakCombo      = (typeof s.peakCombo === 'number' && s.peakCombo >= 1) ? s.peakCombo : 1;
+
+    // Forms-as-axis: refresh the memoized multiplier for the loaded collection. Show a one-time
+    // "power rebalanced, progress intact" toast to anyone whose save PREDATES this formula change
+    // (the field is absent → undefined); their claws/forms/finale are all preserved, only the
+    // displayed number restates. Fresh players default formAxisSeen=true and never see it.
+    recomputeCollMult();
+    if (s.formAxisSeen === undefined && typeof setTimeout === 'function') {
+      setTimeout(function () {
+        if (G.Env && typeof G.Env.announce === 'function') {
+          G.Env.announce('Power rebalanced — your claws and collection are intact; every monster you own now permanently boosts your damage.');
+        }
+      }, 1600);
+    }
+    state.formAxisSeen = true;
 
     hudDirty = true;
     return true;
@@ -554,8 +587,7 @@ window.GAME = window.GAME || {};
     var cost   = clawsCost();
     var curPow = attackPower();
     var f      = formDef(state.activeFormId);
-    var base   = f ? f.base : Cfg.START_ATTACK;
-    var nxtPow = base * Math.pow(Cfg.CLAWS_MULT, state.clawsLevel + 1);
+    var nxtPow = Cfg.START_ATTACK * Math.pow(Cfg.CLAWS_MULT, state.clawsLevel + 1) * collectionMult();
     body.appendChild(hintLine(
       'Doubles your attack — buy this and you will smash buildings in ONE hit. (Keep upgrading to one-shot the whole city.)'
     ));
@@ -668,7 +700,8 @@ window.GAME = window.GAME || {};
   //   - Immediate next unlocked tier: buy button
   //   - Later locked tiers: LOCKED tag
   function buildEvolutions(body) {
-    body.appendChild(hintLine('Evolve Godzilla through the eras. Each form multiplies base attack.'));
+    body.appendChild(hintLine('Each form you OWN permanently multiplies ALL your attack — wielding it hits harder still.'));
+    body.appendChild(hintLine('Collection ' + state.ownedFormIds.length + '/' + (Cfg.FORMS ? Cfg.FORMS.length : 20) + ' · ×' + collectionMult().toFixed(2) + ' power'));
     var forms = wyrmForms();
     for (var i = 0; i < forms.length; i++) {
       (function (f) {
@@ -676,7 +709,7 @@ window.GAME = window.GAME || {};
         var active   = state.activeFormId === f.id;
         var unlocked = isFormUnlocked(f);  // immediate purchasable next
         var pal      = f.palette || f;     // support both old EVOLUTIONS shape and new FORMS shape
-        var sub      = (f.year ? f.year + ' · ' : '') + 'base ' + U.fmt(f.base) + ' attack';
+        var sub      = (f.year ? f.year + ' · ' : '') + formContribLabel(f);
 
         var opts = {
           swatch: formSwatch(f),
@@ -745,7 +778,7 @@ window.GAME = window.GAME || {};
           body.appendChild(itemRow({
             swatch: formSwatch(f),
             title:  f.name,
-            sub:    'base ' + U.fmt(f.base) + ' attack · Recruit to unlock',
+            sub:    formContribLabel(f) + ' · Recruit to unlock',
             button: {
               label:      '💰 ' + U.fmt(f.cost),
               affordable: canAfford(f.cost),
@@ -761,7 +794,7 @@ window.GAME = window.GAME || {};
             var owned    = ownsForm(f.id);
             var active   = state.activeFormId === f.id;
             var unlocked = isFormUnlocked(f);
-            var sub      = 'base ' + U.fmt(f.base) + ' attack' + (f.attack ? ' · ' + f.attack.kind : '');
+            var sub      = formContribLabel(f) + (f.attack ? ' · ' + f.attack.kind : '');
 
             var opts = {
               swatch: formSwatch(f),

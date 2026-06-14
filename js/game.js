@@ -56,6 +56,12 @@ window.GAME = window.GAME || {};
     G.canvas = canvas; G.ctx = ctx;
 
     if (G.Economy && G.Economy.load) G.Economy.load();        // v2 save (ignores v1)
+    // Forms-as-axis guard: FORM_BONUS must sum to 63 (→ ×64 at full 20/20). A future World-2 form
+    // added without re-balancing would silently break the clean rebate — make any drift LOUD.
+    if (G.Config && G.Config.FORM_BONUS) {
+      var _fbSum = 0; for (var _k in G.Config.FORM_BONUS) _fbSum += G.Config.FORM_BONUS[_k];
+      console.assert(Math.abs(_fbSum - 63) < 1e-9, 'FORM_BONUS sum drift: expected 63, got ' + _fbSum);
+    }
     if (G.iso && G.iso.attachCanvas) G.iso.attachCanvas(canvas);
     resize();
     window.addEventListener('resize', resize);

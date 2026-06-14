@@ -4,7 +4,7 @@ window.GAME.Config = {
   saveKey: 'godzilla-save-v3',
   // In-page console probe of the live asset version. The AUTHORITY is sw.js `CACHE`;
   // bump BOTH together to ship (game.js warns at boot if they drift out of sync).
-  CACHE_VERSION: 'gz-v25',
+  CACHE_VERSION: 'gz-v26',
 
   // --- Isometric grid (world units = tiles). Wide, open, zoomed-out city:
   //     21 cols of 2×2 blocks split by wide streets; 58 rows. TILE_*/WZ_PX are
@@ -38,6 +38,21 @@ window.GAME.Config = {
   // (formDef -> null). Without it the defensive `: Cfg.START_ATTACK` paths in economy/entities
   // computed undefined*2^n = NaN. Unreachable in normal play (load() pins a valid owned form).
   START_ATTACK: 6,
+  // --- Forms as a power axis (Collection Multiplier + Option B; design 2026-06) ---
+  // attackPower = START_ATTACK × CLAWS_MULT^claws × (1 + Σ FORM_BONUS[owned] + FORM_BONUS[active]).
+  // The SAME (1+Σ) factor is carried by clawsCost, so it CANCELS in the cost:income ratio and the
+  // bounded-economy invariant (clawsCost === CLAWS_MULT × attackPower) is preserved automatically —
+  // no unlock re-pricing, no save migration. SUM OF FORM_BONUS MUST === 63 (→ ×64 at full 20/20);
+  // boot-asserted in game.js. Owning any form is permanently net-positive; the ACTIVE form's bonus
+  // double-counts (Option B) so switching to a bigger monster is a FELT damage jump.
+  ACTIVE_DOUBLE_COUNT: true,
+  FORM_BONUS: {
+    gz2014: 0, burning: 0.25, gvk: 0.5, gxk: 0.75, supernova: 1.5,                          // wyrm Σ3
+    ghidorah: 1, king_ghidorah: 1.5, mecha_ghidorah: 2, grand_king: 2.5, void_ghidorah: 3,  // ghidorah Σ10
+    mothra_gvm: 2.5, mothra_gxk: 3.5, mothra_supernova: 5,                                   // mothra Σ11
+    rodan: 3, rodan_mv: 4, rodan_fire: 6,                                                    // rodan Σ13
+    mecha_1: 4, mecha_2: 5, mecha_3: 7, super_mecha: 10                                      // mecha Σ26
+  },
   // (CLAWS_BASE/CLAWS_GROWTH removed in U9 — UE1's clawsCost = base×CLAWS_MULT^(L+1) made
   //  the old round(CLAWS_BASE×CLAWS_GROWTH^level) curve dead.)
 
