@@ -28,6 +28,7 @@ window.GAME = window.GAME || {};
     money: null,
     badge: null,
     muteBtn: null,
+    trophyBtn: null,   // 🏆 replay-victory button, revealed after finaleSeen (TASTE-4C)
     shopBtn: null,
     shopClose: null,
     shopBackdrop: null,
@@ -230,6 +231,8 @@ window.GAME = window.GAME || {};
       el.muteBtn.textContent = icon;
       last.muteIcon = icon;
     }
+    // Reveal the 🏆 replay-victory button once the finale has been seen (Mike: TASTE-4C).
+    if (el.trophyBtn) el.trophyBtn.classList.toggle('hidden', !(G.Economy && G.Economy.finaleSeen));
   }
 
   /* ---------------------------------------------------------------- shop glue */
@@ -397,6 +400,7 @@ window.GAME = window.GAME || {};
     el.money = document.getElementById('money');
     el.badge = document.getElementById('form-badge');
     el.muteBtn = document.getElementById('mute-btn');
+    el.trophyBtn = document.getElementById('trophy-btn');
     el.shopBtn = document.getElementById('shop-btn');
     el.shopClose = document.getElementById('shop-close');
     el.shopBackdrop = document.getElementById('shop-backdrop');
@@ -426,6 +430,10 @@ window.GAME = window.GAME || {};
     if (el.shopClose) el.shopClose.onclick = function () { closeShop(); };
     if (el.shopBackdrop) el.shopBackdrop.onclick = function () { closeShop(); };
     if (el.muteBtn) el.muteBtn.onclick = function () { toggleMute(); };
+    if (el.trophyBtn) el.trophyBtn.onclick = function () {
+      var E = G.Economy;
+      showWinCard(E && typeof E.finaleStats === 'function' ? E.finaleStats() : null);
+    };
     if (el.wincardContinue) el.wincardContinue.onclick = function () { closeWinCard(); };
 
     if (el.tabs) {

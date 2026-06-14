@@ -63,6 +63,7 @@ window.GAME = window.GAME || {};
     muted:          false,
     lastSeen:       0,          // ms timestamp of last save (for a future offline-income floor)
     finaleSeen:     false,      // win-finale played once (attackPower>=CAP_HP + statue destroyed)
+    maxPowerSeen:   false,      // one-time "find the Statue" toast fired (attackPower first >= CAP_HP)
     peakCombo:      1           // highest combo multiplier reached this save (win-card stat)
   };
 
@@ -191,7 +192,13 @@ window.GAME = window.GAME || {};
   // The game is finite: when attack power can one-shot the strongest building (>=CAP_HP) AND
   // the player destroys the unique statue, the one-time completion beat fires.
   function canFinale() { return attackPower() >= CAP_HP && !state.finaleSeen; }
-  function markFinale() { if (!state.finaleSeen) { state.finaleSeen = true; save(); } }
+  function markFinale() {
+    if (!state.finaleSeen) {
+      state.finaleSeen = true;
+      state.world2Unlocked = true;   // World 2 is the FREE reward for winning (Mike: TASTE-2A)
+      save();
+    }
+  }
   function finaleStats() {
     return {
       formsOwned:  state.ownedFormIds.length,
@@ -367,6 +374,15 @@ window.GAME = window.GAME || {};
   }
 
   function afterPurchase() {
+    // First time the player can one-shot the strongest building, point them at the win — the
+    // finale statue is otherwise undiscoverable (Mike: TASTE-1B). One-time toast; the render
+    // beacon then keeps guiding them until they smash it.
+    if (!state.maxPowerSeen && !state.finaleSeen && attackPower() >= CAP_HP) {
+      state.maxPowerSeen = true;
+      if (G.Env && typeof G.Env.announce === 'function') {
+        G.Env.announce('MAXIMUM POWER! Find and smash the Statue at the city\'s heart to WIN.');
+      }
+    }
     hudDirty = true;
     save();
     refreshShop();
@@ -395,6 +411,7 @@ window.GAME = window.GAME || {};
       world2Unlocked: state.world2Unlocked,
       muted:          state.muted,
       finaleSeen:     state.finaleSeen,
+      maxPowerSeen:   state.maxPowerSeen,
       peakCombo:      state.peakCombo
     });
     // safeSave returns false on quota/private-mode/ITP eviction — tell the player ONCE
@@ -443,6 +460,7 @@ window.GAME = window.GAME || {};
     state.muted          = !!s.muted;
     state.lastSeen       = (typeof s.lastSeen === 'number' && isFinite(s.lastSeen)) ? s.lastSeen : 0;
     state.finaleSeen     = !!s.finaleSeen;
+    state.maxPowerSeen   = !!s.maxPowerSeen;
     state.peakCombo      = (typeof s.peakCombo === 'number' && s.peakCombo >= 1) ? s.peakCombo : 1;
 
     hudDirty = true;
@@ -791,22 +809,15 @@ window.GAME = window.GAME || {};
       tag:    'ACTIVE'
     }));
 
+    // World 2 is the FREE reward for the win-finale (Mike: TASTE-2A), auto-granted in
+    // markFinale — never a pre-buy that could empty the shop before the climax.
     var w2 = {
       swatch: '#b07dff',
       title:  'World 2',
-      sub:    state.world2Unlocked ? 'Unlocked — Coming soon!' : 'Unlock the next frontier.',
-      cls:    state.world2Unlocked ? 'owned' : ''
+      sub:    state.world2Unlocked ? 'Unlocked — Coming soon!' : 'Win the city to unlock — smash the Statue at its heart.',
+      cls:    state.world2Unlocked ? 'owned' : '',
+      tag:    state.world2Unlocked ? 'COMING SOON' : 'LOCKED'
     };
-    if (state.world2Unlocked) {
-      w2.tag = 'COMING SOON';
-    } else {
-      w2.button = {
-        label:      '💰 ' + U.fmt(Cfg.WORLD2_COST),
-        affordable: canAfford(Cfg.WORLD2_COST),
-        disabled:   !canAfford(Cfg.WORLD2_COST),
-        onClick:    function () { buyWorld2(); }
-      };
-    }
     body.appendChild(itemRow(w2));
   }
 

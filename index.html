@@ -38,6 +38,8 @@
     border:1px solid var(--line); border-radius:10px; padding:9px 13px; cursor:pointer; }
   #hud button:hover { border-color:var(--blue); }
   #shop-btn { background:linear-gradient(180deg,#1f6feb,#1858c4); border-color:#2f7dff; }
+  #trophy-btn { background:linear-gradient(180deg,#caa12a,#9a7d1a); border-color:#ffd24a; }
+  #trophy-btn.hidden { display:none; }
 
   /* ---------- Target HP bar (fixed top-center, under the strip) ---------- */
   #target-hp { position:fixed; top:calc(56px + env(safe-area-inset-top)); left:50%; transform:translateX(-50%);
@@ -121,6 +123,7 @@
   <div id="money">💰 0</div>
   <div id="form-badge">🦖 Godzilla <b>2014</b></div>
   <div id="hud-right">
+    <button id="trophy-btn" class="hidden" title="Replay your victory">🏆</button>
     <button id="mute-btn" title="Sound">🔊</button>
     <button id="shop-btn">🛒 Shop</button>
   </div>

@@ -553,7 +553,61 @@ window.GAME = window.GAME || {};
   function drawHud(w, h) {
     drawComboPip(w, h);
     drawDamageText();
+    drawFinaleBeacon(w, h);
     drawTouchControls(w, h);
+  }
+
+  // Finale beacon: while the player CAN win (Economy.canFinale) but hasn't found the statue,
+  // guide them to it — a pulsing gold ring when it's on-screen, else a clamped screen-edge
+  // arrow pointing toward it with a "SMASH TO WIN" label. The statue sits at row 54 back-
+  // centre and is otherwise undiscoverable (Mike: TASTE-1B).
+  function drawFinaleBeacon(w, h) {
+    var Eco = G.Economy;
+    if (!Eco || typeof Eco.canFinale !== 'function' || !Eco.canFinale()) return;
+    var GRID = Cfg.GRID, cam = G.camera;
+    var scol = Math.floor((GRID.cols - 2) / 2) + 1;   // centre of the 2×2 statue footprint
+    var srow = (GRID.rows - 4) + 1;
+    var p = G.iso.worldToScreen(scol, srow, 4);       // lift toward the statue crown
+    var sx = p.x + cam.x, sy = p.y + cam.y;
+    var t = (typeof performance !== 'undefined') ? performance.now() : 0;
+    var pulse = reduced ? 0.85 : (0.6 + 0.4 * Math.sin(t * 0.005));
+    var m = 64;
+    ctx.save();
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    if (sx >= m && sx <= w - m && sy >= m && sy <= h - m) {
+      ctx.globalAlpha = pulse;
+      ctx.strokeStyle = '#ffe08a';
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.arc(sx, sy, 24 + pulse * 7, 0, 6.2832);
+      ctx.stroke();
+      ctx.globalAlpha = 1;
+      ctx.fillStyle = '#ffe08a';
+      ctx.font = '800 13px system-ui, sans-serif';
+      ctx.fillText('SMASH TO WIN', sx, sy - 40);
+    } else {
+      var ang = Math.atan2(sy - h * 0.5, sx - w * 0.5);
+      var ex = Math.max(m, Math.min(w - m, sx));
+      var ey = Math.max(m, Math.min(h - 150, sy));   // clear the bottom-left legend / touch HUD
+      ctx.save();
+      ctx.translate(ex, ey);
+      ctx.globalAlpha = pulse;
+      ctx.rotate(ang);
+      ctx.fillStyle = '#ffd24a';
+      ctx.beginPath();
+      ctx.moveTo(22, 0); ctx.lineTo(-12, -13); ctx.lineTo(-4, 0); ctx.lineTo(-12, 13);
+      ctx.closePath();
+      ctx.fill();
+      ctx.restore();
+      // Short, edge-aware label so it never clips off-screen at the arrow's edge.
+      ctx.globalAlpha = 1;
+      ctx.fillStyle = '#ffe08a';
+      ctx.font = '800 12px system-ui, sans-serif';
+      ctx.textAlign = (ex < w * 0.2) ? 'left' : (ex > w * 0.8 ? 'right' : 'center');
+      ctx.fillText('🗽 STATUE', ex + (ex < w * 0.2 ? 16 : (ex > w * 0.8 ? -16 : 0)), ey - 22);
+    }
+    ctx.restore();
   }
 
   // Combo pip — small ring at mid-screen, fills as combo ramps.
