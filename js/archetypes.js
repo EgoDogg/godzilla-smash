@@ -266,6 +266,7 @@ window.GAME = window.GAME || {};
       var jW    = 1 + (hash(i + 1)     - 0.5) * 0.5 * jag;             // ±0.25·jag width jitter
       var jL    = (hash(i * 3 + 5) - 0.5) * 0.5 * jag;                 // lean jitter
       var size  = arc * heightMul * jH;
+      if (opts.leadPlate != null && i === Math.round(N * opts.leadPlate)) size *= 1.35;  // burning: one skyline-breaking hot lead-plate
       if (brokenSet && brokenSet[i]) size *= 0.5;                      // battle-scar half-plate
       var widthMul = (1 - jag * 0.32) * jW;                           // higher jag → razor-narrow base
       var pLean = lean * 0.9 + jL;
@@ -388,6 +389,7 @@ window.GAME = window.GAME || {};
     var plateOpts = { jag: (s.plateJag != null ? s.plateJag : 0.45),
                       heightMul: (s.plateHeightMul != null ? s.plateHeightMul : 1.0),
                       broken: (s.broken | 0),
+                      leadPlate: (s.leadPlate != null ? s.leadPlate : null), // burning: index round(N*leadPlate) gets a ×1.35 spike
                       faceGrad: pal.plateHot || null };       // burning hot plate-face gradient
 
     var BH = h * 0.74 * bulkMult;

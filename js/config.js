@@ -4,7 +4,7 @@ window.GAME.Config = {
   saveKey: 'godzilla-save-v3',
   // In-page console probe of the live asset version. The AUTHORITY is sw.js `CACHE`;
   // bump BOTH together to ship (game.js warns at boot if they drift out of sync).
-  CACHE_VERSION: 'gz-v26',
+  CACHE_VERSION: 'gz-v27',
 
   // --- Isometric grid (world units = tiles). Wide, open, zoomed-out city:
   //     21 cols of 2×2 blocks split by wide streets; 58 rows. TILE_*/WZ_PX are
@@ -124,23 +124,23 @@ window.GAME.Config = {
       palette: {
         skin: '#3c3c3c', skinDark: '#1e1e1e', skinLight: '#646464',
         plate: '#2b2b2b', plateEdge: '#8fc2ee', plateGlow: 'rgba(70,160,235,0.45)',
-        breath: ['#9bdcff', '#ffffff'], breathGlow: 'rgba(70,170,255,0.9)', eye: '#ffbe3a', aura: null, fxMotes: null },
+        breath: ['#9bdcff', '#ffffff'], breathGlow: 'rgba(70,170,255,0.9)', eye: '#e8e8e8', aura: null, fxMotes: null },
       shape: { archetype: 'wyrm', plates: 10, tail: 1.0, bulk: 1.05, plateJag: 0.35, plateHeightMul: 0.85, legMul: 1.4, armMul: 1.6 },
       attack: { kind: 'beam', cooldown: 0.30, color: 'breath', shake: 0 } },
     { id: 'burning', name: 'Burning Godzilla', label: '2019', family: 'wyrm', archetype: 'wyrm', tier: 1, base: 48, cost: 150,
       palette: {
         skin: '#2c2622', skinDark: '#150f0b', skinLight: '#54381f',
         plate: '#3a1c0e', plateEdge: '#ff7a1a', plateGlow: 'rgba(255,110,20,0.95)',
-        rimGlow: '#ff7a1a', fissureCore: '#ffd24a', fissureGlow: 'rgba(255,122,26,0.5)', plateHot: ['#ff5a14', '#ffd24a'],
+        rimGlow: '#ff7a1a', fissureCore: '#ffd24a', fissureGlow: 'rgba(255,122,26,0.5)', plateHot: ['#ffd24a', '#ff5a14'],
         breath: ['#9ad0ff', '#ffffff'], breathGlow: 'rgba(90,170,255,0.85)', eye: '#ff8a2a', aura: 'rgba(255,90,20,0.16)', fxMotes: 'heat' },
-      shape: { archetype: 'wyrm', plates: 10, tail: 1.0, bulk: 1.05, plateJag: 0.55, legMul: 1.4, armMul: 1.6, fissures: 0.5, selfIllum: true },
+      shape: { archetype: 'wyrm', plates: 10, tail: 1.0, bulk: 1.05, plateJag: 0.62, plateHeightMul: 1.10, leadPlate: 0.5, legMul: 1.4, armMul: 1.6, fissures: 0.5, selfIllum: true },
       attack: { kind: 'beam', cooldown: 0.30, color: 'breath', shake: 6 } },
     { id: 'gvk', name: 'Godzilla · GvK', label: '2021', family: 'wyrm', archetype: 'wyrm', tier: 2, base: 240, cost: 1200,
       palette: {
-        skin: '#3e444b', skinDark: '#21262b', skinLight: '#647682',
+        skin: '#3a3a3a', skinDark: '#222222', skinLight: '#646464',
         plate: '#33424c', plateEdge: '#cdecff', plateGlow: 'rgba(70,180,255,0.65)',
         breath: ['#36c9ff', '#ffffff'], breathGlow: 'rgba(54,201,255,0.95)', eye: '#ffcf4a', aura: 'rgba(60,160,255,0.13)', fxMotes: null },
-      shape: { archetype: 'wyrm', plates: 11, tail: 1.05, bulk: 1.0, plateJag: 0.6, legMul: 1.4, armMul: 1.6, torsoWidth: 0.93, broken: 2 },
+      shape: { archetype: 'wyrm', plates: 11, tail: 1.05, bulk: 1.0, plateJag: 0.68, plateHeightMul: 1.12, legMul: 1.4, armMul: 1.6, torsoWidth: 0.93, broken: 2 },
       attack: { kind: 'beam', cooldown: 0.30, color: 'breath', shake: 8 } },
     { id: 'gxk', name: 'Godzilla × Kong', label: '2024', family: 'wyrm', archetype: 'wyrm', tier: 3, base: 3000, cost: 10000,
       palette: {
@@ -148,7 +148,7 @@ window.GAME.Config = {
         plate: '#2a2330', plateEdge: '#ff6cc6', plateGlow: 'rgba(255,70,185,0.9)',
         rimGlow: '#ff6cc6',
         breath: ['#ff7ad0', '#ffe1f4'], breathGlow: 'rgba(255,60,180,0.95)', eye: '#ffd6f2', aura: 'rgba(255,40,160,0.18)', fxMotes: 'pink' },
-      shape: { archetype: 'wyrm', plates: 13, tail: 1.05, bulk: 0.98, plateJag: 0.8, plateHeightMul: 1.2, legMul: 1.4, armMul: 1.6, selfIllum: true },
+      shape: { archetype: 'wyrm', plates: 13, tail: 1.05, bulk: 0.95, plateJag: 0.8, plateHeightMul: 1.2, legMul: 1.4, armMul: 1.6, torsoWidth: 0.90, selfIllum: true },
       attack: { kind: 'beam', cooldown: 0.30, color: 'breath', shake: 10 } },
     { id: 'supernova', name: 'Supernova Godzilla', label: '2027', family: 'wyrm', archetype: 'wyrm', tier: 4, base: 18000, cost: 80000,
       palette: {
@@ -156,7 +156,7 @@ window.GAME.Config = {
         plate: '#2a0a55', plateEdge: '#dcb0ff', plateGlow: 'rgba(165,90,230,0.98)',
         rimGlow: '#dcb0ff', fissureCore: '#f0e0ff', fissureGlow: 'rgba(165,90,230,0.5)',
         breath: ['#ffffff', '#b07dff'], breathGlow: 'rgba(200,120,255,0.98)', eye: '#ffffff', aura: 'rgba(157,78,221,0.24)', fxMotes: 'cosmic' },
-      shape: { archetype: 'wyrm', plates: 16, tail: 1.15, bulk: 1.08, plateJag: 1.0, plateHeightMul: 1.18, legMul: 1.4, armMul: 1.6, fissures: 1.0, selfIllum: true },
+      shape: { archetype: 'wyrm', plates: 16, tail: 1.15, bulk: 1.13, plateJag: 1.0, plateHeightMul: 1.38, legMul: 1.4, armMul: 1.6, fissures: 1.0, selfIllum: true },
       attack: { kind: 'beam', cooldown: 0.30, color: 'breath', shake: 12 } },
 
     // ============ Mothra (flyer) — t1, t2, t3 ============

@@ -1,0 +1,145 @@
+{
+  "family": "wyrm \u2014 Godzilla (gz2014, burning, gvk, gxk, supernova)",
+  "overallRead": "The row reads correctly as ONE escalating animal \u2014 every form is unmistakably the hunched plated wyrm, never confused with the flyers/hydra rows, and the palette/glow tells (charcoal+blue, orange lava, charcoal+blue+broken, pink self-lit, violet) all land the color-ID. The family's failure is NOT color \u2014 it is that the SILHOUETTE LADDER is nearly flat. At iso the five outlines are near-clones: bulk runs 1.05/1.05/1.0/0.98/1.08 (a ~5% spread no one can see at 40px) and the dorsal-ridge heights collapse into one blunt-to-medium band, with two outright INVERSIONS that actively mis-ID forms. (1) The lean ladder is backwards: gvk (effective torso ~0.93) is drawn NARROWER than gxk (~0.98), so the 'leanest agile' tier looks chunkier than the 'lean warrior' before it \u2014 the one place a real proportion change exists, it points the wrong way. (2) The endpoint doesn't tower: supernova's ridge (heightMul 1.18) is actually SHORTER on-frame than gxk's (1.2) and its bulk (1.08) barely clears gz2014 (1.05), so the 'walking supernova' reads as a slightly-spikier purple gxk instead of the biggest/tallest mass. The whole fix is a coordinated re-rank of two shape axes \u2014 torsoWidth (to make the lean ladder monotonic gz2014 wide \u2192 gvk 0.93 \u2192 gxk 0.90) and plateHeightMul/bulk (to make supernova clearly out-tower and out-mass everything). All edits are wyrm-local config.js shape{} keys plus one opt-gated draw addition (burning lead-plate); the shared helpers already honor every knob (torsoWidth via drawTorso ctx.scale, heightMul via drawPlates), so cross-family regression risk is near-zero. Bounds verified: supernova at bulk 1.13 / heightMul 1.38 puts the tallest apex at canvas-Y 6.2px \u2014 clears the 168px top with margin, no plate-count reduction needed.",
+  "forms": [
+    {
+      "formId": "gz2014",
+      "blindIdVerdict": "reads-clearly",
+      "currentRead": "The bluntest, heaviest charcoal wyrm with the shortest stubby ridge and wide legs \u2014 correctly the baseline 'reference bulk'. Reads clearly as GareGoji 2014: matte grey rock, no self-glow, short jagged fins. Its only weakness is that 'heaviest of the five' does not actually read because the bulk ladder around it is flat \u2014 but as the wide anchor it is on-spec.",
+      "topChanges": [
+        {
+          "change": "Leave gz2014 as the WIDE anchor of the lean ladder \u2014 do NOT add torsoWidth here. The fix for 'heaviest doesn't read' lives entirely on the leaner tiers narrowing below it (gvk 0.93 \u2192 gxk 0.90). Optionally bump bulk 1.05\u21921.08 ONLY if, after gxk/gvk narrow, gz2014 still doesn't read as widest; treat as a follow-up, not a first move.",
+          "file": "js/config.js:128",
+          "target": "shape.bulk (hold at 1.05; optional \u21921.08)",
+          "severity": "polish",
+          "expectedEffect": "Once gvk/gxk narrow, gz2014 becomes the visibly widest outline, restoring the 'heaviest bear-bulk' must-have without touching this form. The optional 1.08 only widens the gap to the warrior tiers if needed.",
+          "regressionRisk": "Very low. A bulk bump scales BH and therefore BW/legs/ridge together \u2014 verify the gz2014 plate apex (currently canvas-Y 33.5) stays well clear of the top (it does at 1.08). No effect on other forms (per-form key)."
+        },
+        {
+          "change": "Do NOT add a per-form headScaleMul. The critique's smaller-head idea is real spec but sub-threshold at 40px and would need a new fg.headScale plumb through drawHead \u2014 skip it; the existing BH*0.02 head-lowering translate already implies scale.",
+          "file": "js/archetypes.js:442 (no change)",
+          "target": "none (declined)",
+          "severity": "polish",
+          "expectedEffect": "Avoids a shared-helper change for a delta invisible at iso.",
+          "regressionRisk": "N/A \u2014 declined."
+        }
+      ]
+    },
+    {
+      "formId": "burning",
+      "blindIdVerdict": "reads-clearly",
+      "currentRead": "Strong color-ID: charred near-black body with glowing orange lava fissures across chest/belly/thigh, incandescent gradient plate faces, full orange self-illum rim \u2014 unmistakably Burning Godzilla via surface. But its SILHOUETTE is a near pixel-clone of gz2014: same bulk 1.05, and with NO plateHeightMul it defaults to 1.0, so the ridge is only marginally taller than gz2014's 0.85 and has no lead-plate breaking the skyline. Disambiguation rides 100% on palette, not the spec's intended shape escalation.",
+      "topChanges": [
+        {
+          "change": "Add plateHeightMul:1.10 and raise plateJag 0.55\u21920.62 to burning's shape{}. Taller + sharper than gz2014's 0.85/0.35 so the ridge is a visible notch above baseline, re-sharpened toward 1954 jaggedness.",
+          "file": "js/config.js:136",
+          "target": "shape.plateHeightMul (new, 1.10) + shape.plateJag (0.55\u21920.62)",
+          "severity": "major",
+          "expectedEffect": "Burning's ridge becomes a legible escalation over gz2014 instead of an identical blunt row \u2014 the orange palette stops being the only separator. Verified apex at canvas-Y 28.2px (safe).",
+          "regressionRisk": "Low. heightMul/jag are read only by drawPlates for this form; no sibling touched. Slightly taller plates stay well inside canvas."
+        },
+        {
+          "change": "Add ONE deterministic lead-plate spike: in drawPlates, after computing `size` (archetypes.js:268), insert `if (opts.leadPlate != null && i === Math.round(N*opts.leadPlate)) size *= 1.35;` and wire opts.leadPlate from buildWyrm's plateOpts (archetypes.js:388-391) reading shape.leadPlate; set shape.leadPlate:0.5 ONLY on burning.",
+          "file": "js/archetypes.js:268-291 + js/config.js:136 + js/archetypes.js:388",
+          "target": "drawPlates (opt-gated leadPlate) + shape.leadPlate",
+          "severity": "minor",
+          "expectedEffect": "One tall hot plate breaks the skyline, delivering the spec's 'one taller hot lead-plate' silhouette tell. Opt-gated so the other four forms' plate rows stay byte-identical.",
+          "regressionRisk": "Low but this is the only SHARED-HELPER edit for the family \u2014 guarded by `opts.leadPlate != null` so it's a no-op for every form that doesn't set the key. Confirm the spiked plate (\u00d71.35 on a 1.10 base) still clears the top: at mid-row indices it does."
+        }
+      ]
+    },
+    {
+      "formId": "gvk",
+      "blindIdVerdict": "reads-clearly",
+      "currentRead": "The one tier with a genuine encoded proportion change: torsoWidth 0.93 narrows the body, 2 broken/chipped plates give battle-scar asymmetry, 11 sharper plates, blue keylines, no body glow \u2014 reads clearly as the lean GvK warrior. The problem is purely RELATIVE: gvk only looks 'leaner' if its neighbors are wider, and gxk currently is NOT (gxk is drawn wider), so gvk's lean read is broken from the gxk side.",
+      "topChanges": [
+        {
+          "change": "No change to gvk's torsoWidth (0.93 is correct and load-bearing). The inversion is fixed entirely on gxk's side by adding torsoWidth:0.90 there. Keep gvk as the middle rung of the lean ladder.",
+          "file": "js/config.js:143 (no width change)",
+          "target": "shape.torsoWidth (hold at 0.93)",
+          "severity": "major",
+          "expectedEffect": "Once gxk narrows to 0.90, the ladder reads monotonic: gz2014 wide \u2192 gvk 0.93 \u2192 gxk 0.90. gvk's 'leaner warrior' silhouette finally reads because the tier after it is leaner still.",
+          "regressionRisk": "None \u2014 no edit to this form for the width axis."
+        },
+        {
+          "change": "Add plateHeightMul:1.12 and raise plateJag 0.6\u21920.68 to gvk's shape{} so its razor ridge stays clearly taller/sharper than gz2014 and keeps the ridge-height ladder coherent (gz2014 0.85 \u2192 burning 1.10 \u2192 gvk 1.12 \u2192 gxk 1.2 \u2192 supernova 1.38).",
+          "file": "js/config.js:143",
+          "target": "shape.plateHeightMul (new, 1.12) + shape.plateJag (0.6\u21920.68)",
+          "severity": "minor",
+          "expectedEffect": "Prevents gvk's ridge regressing BELOW burning's raised 1.10 and sharpens the razor-maple-leaf base so 'tall sharp slim fins' reads vs gz2014's blunt stubs. Apex verified at canvas-Y 32.1px (safe).",
+          "regressionRisk": "Low. Per-form keys; drawPlates-only. Note gvk's on-frame apex stays slightly shorter than burning's because gvk's bulk is 1.0 vs burning 1.05 \u2014 acceptable, since gvk's identity tells are the torso-narrowing + broken plates, not raw ridge height."
+        }
+      ]
+    },
+    {
+      "formId": "gxk",
+      "blindIdVerdict": "reads-but-generic",
+      "currentRead": "Color and ridge density land the ID \u2014 full pink self-illum rim, 13 tall sharp plates (heightMul 1.2), pink keylines, no fissures: clearly the Evolved pink form by palette. But the BODY MASS is wrong: bulk 0.98 with NO torsoWidth makes it WIDER than gvk's effective 0.93, so the 'leanest agile form' reads as normal-or-chunky-bulk that just glows pink. Its signature 'sleekest before the nova' silhouette is absent \u2014 hence generic 'glowing pink monster' rather than specifically the lean Evolved Godzilla.",
+      "topChanges": [
+        {
+          "change": "Add torsoWidth:0.90 to gxk's shape{} (narrower than gvk's 0.93) and drop bulk 0.98\u21920.95. drawTorso already honors torsoWidth via ctx.scale (archetypes.js:199), so this is a pure config change.",
+          "file": "js/config.js:151",
+          "target": "shape.torsoWidth (new, 0.90) + shape.bulk (0.98\u21920.95)",
+          "severity": "major",
+          "expectedEffect": "Fixes the single worst silhouette inversion in the family: restores gz2014(wide) \u2192 gvk(0.93) \u2192 gxk(0.90) so gxk is visibly the leanest. Separates gxk from gvk on BUILD as well as color, killing the 'just gvk but pink' read.",
+          "regressionRisk": "Low. torsoWidth scales only the torso path horizontally; legs/head/tail unaffected. Pairs cleanly with the pink rim. Confirm the narrowed torso still tucks under the (unchanged) leg roots \u2014 at 0.90 it does."
+        },
+        {
+          "change": "Hold gxk's plateHeightMul at 1.2 / plates 13 \u2014 do NOT raise it. It is spec-correct as 'tallest of the PRACTICAL forms'. The gxk\u2194supernova ridge gap is opened by raising SUPERNOVA, not by touching gxk.",
+          "file": "js/config.js:151 (no plate change)",
+          "target": "shape.plateHeightMul (hold at 1.2)",
+          "severity": "polish",
+          "expectedEffect": "Keeps gxk the spikiest practical tier while letting supernova's 1.38 clearly out-tower it (gxk apex canvas-Y 30.7 vs supernova ~6.2).",
+          "regressionRisk": "None \u2014 no edit."
+        }
+      ]
+    },
+    {
+      "formId": "supernova",
+      "blindIdVerdict": "reads-but-generic",
+      "currentRead": "Violet body, white-violet fissures, violet self-illum rim, 16 plates \u2014 the color/crack palette IDs it as the violet endpoint and distinguishes it from pink gxk and orange burning. But its DEFINING silhouette delta is missing: the overgrown crystal spine isn't there (heightMul 1.18 is actually SHORTER on-frame than gxk's 1.2) and the bulk (1.08) barely clears gz2014 (1.05). So it reads as a slightly-spikier purple gxk, not as the biggest/tallest 'walking supernova' that dominates the frame. This is the single biggest silhouette gap in the family.",
+      "topChanges": [
+        {
+          "change": "Raise plateHeightMul 1.18\u21921.38 \u2014 the overgrown crystal spine is supernova's identity. Bounds verified: at bulk 1.13 the tallest apex lands at canvas-Y 6.2px, inside the 168px top with margin, so NO plate-count reduction is needed (count 16 is the identity).",
+          "file": "js/config.js:159",
+          "target": "shape.plateHeightMul (1.18\u21921.38)",
+          "severity": "major",
+          "expectedEffect": "The ridge finally towers \u2014 supernova apex ~6.2px vs gxk 30.7px opens a clear ~24px height gap, delivering the 'crystal spine pushing to the top of the frame' that separates it from gxk on silhouette.",
+          "regressionRisk": "Low but bounds-sensitive: this is the only edit that approaches the canvas top. Verified safe at 1.38\u00d7bulk1.13 (6.2px). If bulk is later pushed past 1.13, re-check; cap heightMul rather than dropping plates."
+        },
+        {
+          "change": "Raise bulk 1.08\u21921.13 so supernova is unmistakably the biggest mass of the ladder. BW=BH*0.5 scales with bulk, widening AND heightening the whole figure.",
+          "file": "js/config.js:159",
+          "target": "shape.bulk (1.08\u21921.13)",
+          "severity": "major",
+          "expectedEffect": "Gives the 'biggest/bulkiest endpoint' read (vs gz2014 1.05 / gxk 0.95-after-fix). Combined with the 1.38 ridge, the outline becomes the towering nova mass instead of a recolored gxk.",
+          "regressionRisk": "Low. Bulk scales everything proportionally; the legMul/armMul/tail stay relative. Coordinate with the heightMul raise for the shared apex bounds-check (done: 6.2px at the combined 1.13/1.38). Back off to 1.11 only if a later change pushes the apex under 2px."
+        },
+        {
+          "change": "Decline the tail-thickness knob. The critique's tailThick idea needs new params threaded into drawTailScaled for a polish-level delta; the bulk+ridge raises carry the mass read on their own.",
+          "file": "js/archetypes.js:457-459 (no change)",
+          "target": "drawTailScaled (declined)",
+          "severity": "polish",
+          "expectedEffect": "Avoids a shared-helper edit for a sub-threshold gain; bulk 1.13 already thickens the whole silhouette including the tail root.",
+          "regressionRisk": "N/A \u2014 declined."
+        }
+      ]
+    }
+  ],
+  "sharedHelperChanges": [
+    {
+      "helper": "drawPlates (js/archetypes.js:246-293)",
+      "change": "Add ONE opt-gated lead-plate spike for burning: after `var size = arc * heightMul * jH;` (line 268), insert `if (opts.leadPlate != null && i === Math.round(N*opts.leadPlate)) size *= 1.35;`. Plumb it by adding `leadPlate: (s.leadPlate != null ? s.leadPlate : null)` to the plateOpts object in buildWyrm (archetypes.js:388-391).",
+      "rationale": "Delivers burning's 'one taller hot lead-plate breaks the skyline' silhouette tell, which no current knob provides. Keeping it in the shared helper (rather than a burning-only branch) matches the existing data-driven pattern.",
+      "regressionRisk": "Low \u2014 fully guarded by `opts.leadPlate != null`, so it is a literal no-op for gz2014/gvk/gxk/supernova (none set shape.leadPlate); their plate rows stay byte-identical. The \u00d71.35 spike on burning's 1.10 base stays within canvas at the chosen index (leadPlate 0.5 \u2192 mid-row, apex well clear of top). This is the ONLY shared-helper edit required; all other fixes are config.js shape{} keys that existing helpers already honor (torsoWidth via drawTorso ctx.scale line 199, plateHeightMul/jag/broken via drawPlates)."
+    }
+  ],
+  "implementationOrder": [
+    "gxk: add torsoWidth:0.90 + bulk 0.98\u21920.95 (config.js:151) \u2014 fixes the worst inversion, makes the lean ladder monotonic gz2014>gvk>gxk; highest recognizability leverage, zero bounds risk",
+    "supernova: raise plateHeightMul 1.18\u21921.38 + bulk 1.08\u21921.13 (config.js:159) \u2014 delivers the towering crystal-spine endpoint, the family's biggest single silhouette gap; bounds pre-verified at 6.2px",
+    "burning: add plateHeightMul:1.10 + plateJag 0.55\u21920.62 (config.js:136) \u2014 turns the ridge escalation from color-only into shape, so burning\u2260gz2014 on outline",
+    "gvk: add plateHeightMul:1.12 + plateJag 0.6\u21920.68 (config.js:143) \u2014 keeps the ridge-height ladder monotonic and sharpens the razor base now that burning is taller",
+    "burning lead-plate: drawPlates opt-gate (archetypes.js:268) + shape.leadPlate:0.5 (config.js:136) + plateOpts plumb (archetypes.js:388) \u2014 the one shared-helper edit, adds the skyline-breaking lead plate",
+    "gz2014 (optional follow-up): bulk 1.05\u21921.08 (config.js:128) ONLY if, after gxk/gvk narrow, gz2014 still doesn't read as the widest mass \u2014 re-screenshot first"
+  ]
+}
