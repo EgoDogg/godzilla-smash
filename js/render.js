@@ -459,11 +459,21 @@ window.GAME = window.GAME || {};
   // Push the player unit entry (kind 1), depthBias +1.
   function pushPlayer(unit) {
     var pos = unit.pos;
+    var iso = G.iso;
+    var z = pos.z || 0;
     dkProbe.wx = pos.wx;
     dkProbe.wy = pos.wy;
-    dkProbe.wz = pos.z || 0;
-    dkProbe.depthBias = 1;
-    var dk = G.iso.depthKey(dkProbe);
+    dkProbe.wz = z;
+    // Elevation-aware depth: a lifted kaiju (flyer cruise altitude OR a high jump)
+    // visually covers buildings up to (z*WZ/HH) tiles toward the camera, so bias it
+    // that many tiles FORWARD in footprint-depth (×1024/tile) — it then renders OVER
+    // them, not THROUGH (Mike QA: flyers clipped through buildings the sort put in
+    // front). Capped at 3 tiles so it still ducks behind genuinely-foreground towers;
+    // at z=0 (grounded) ceil(0)=0 → the original +1, unchanged. Planes/buildings keep
+    // the plain iso.depthKey (pushBuilding) — this is player-only, zero plane regression.
+    var liftTiles = Math.min(3, z * iso.WZ / iso.HH);
+    dkProbe.depthBias = 1 + Math.ceil(liftTiles) * 1024;
+    var dk = iso.depthKey(dkProbe);
     var e = pool(visCount);
     e.kind = 1;
     e.ref = unit;
