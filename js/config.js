@@ -4,7 +4,7 @@ window.GAME.Config = {
   saveKey: 'godzilla-save-v3',
   // In-page console probe of the live asset version. The AUTHORITY is sw.js `CACHE`;
   // bump BOTH together to ship (game.js warns at boot if they drift out of sync).
-  CACHE_VERSION: 'gz-v29',
+  CACHE_VERSION: 'gz-v30',
 
   // --- Isometric grid (world units = tiles). Wide, open, zoomed-out city:
   //     21 cols of 2×2 blocks split by wide streets; 58 rows. TILE_*/WZ_PX are
@@ -188,7 +188,7 @@ window.GAME.Config = {
         skin: '#d4a000', skinDark: '#8b6914', skinLight: '#f0d070',
         plate: '#d4a000', plateEdge: '#ffcf3a', plateGlow: 'rgba(255,200,60,0.78)',
         breath: ['#ffd24a', '#ffffff'], breathGlow: 'rgba(255,200,60,0.95)', eye: '#ffd24a', aura: null, fxMotes: null },
-      shape: { archetype: 'hydra', heads: 3, neckSpread: 1.25, wingSpan: 2.4, mech: false, tails: 2, neckLenMul: 1.0, headHornStyle: 'crown' },
+      shape: { archetype: 'hydra', heads: 3, neckSpread: 1.25, wingSpan: 2.4, mech: false, tails: 2, neckLenMul: 1.0, headHornStyle: 'crown', centerForward: true },
       attack: { kind: 'bolts', hits: 3, cooldown: 0.5, color: 'eye' } },
     { id: 'king_ghidorah', name: 'King Ghidorah', label: 'T2', family: 'ghidorah', archetype: 'hydra', tier: 9, base: 750000, cost: 2600000,
       palette: {

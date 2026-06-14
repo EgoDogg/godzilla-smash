@@ -871,43 +871,48 @@ window.GAME = window.GAME || {};
 
     var dark = pal.skinDark, skin = pal.skin, light = pal.skinLight;
 
-    /* fan of tails (drawn behind everything) */
-    for (var ti = 0; ti < tails; ti++) {
-      var tFrac = tails > 1 ? (ti / (tails - 1) - 0.5) * 0.6 : 0;
-      ctx.save();
-      ctx.rotate(tFrac);
-      drawTail(ctx, BH, BW, fg, dark);
-      ctx.restore();
-    }
-
-    /* bat wings (Ghidorah forelimbs, drawn behind torso) — mechanical for mecha_ghidorah */
     var WH = BH * wingSpan;
-    drawBatWing(ctx, WH, BH, fg, pal, false, dark, { mech: isMech, spars: 4 });
 
-    /* legs */
-    ctx.fillStyle = dark;
-    drawLeg(ctx, fg.farLegX * BW * 0.9, BH, BW, -legSwing, fg);
-    ctx.fillStyle = skin;
-    drawLeg(ctx, fg.nearLegX * BW * 0.9, BH, BW, legSwing, fg);
+    /* void_ghidorah (§4.6) is a NO-BODY extra-dimensional being: ONLY the wormhole + the long
+       writhing necks descending from it. Every other form draws the full Ghidorah body. */
+    if (!s.voidPortal) {
+      /* fan of tails (drawn behind everything) */
+      for (var ti = 0; ti < tails; ti++) {
+        var tFrac = tails > 1 ? (ti / (tails - 1) - 0.5) * 0.6 : 0;
+        ctx.save();
+        ctx.rotate(tFrac);
+        drawTail(ctx, BH, BW, fg, dark);
+        ctx.restore();
+      }
 
-    /* torso */
-    drawTorso(ctx, BH, BW, fg, skin, dark, light);
+      /* bat wings (Ghidorah forelimbs, drawn behind torso) — mechanical for mecha_ghidorah */
+      drawBatWing(ctx, WH, BH, fg, pal, false, dark, { mech: isMech, spars: 4 });
 
-    /* belly highlight */
-    ctx.save(); ctx.globalAlpha = 0.32; ctx.fillStyle = light;
-    ctx.beginPath();
-    ctx.ellipse(fg.bellyX * BW, -BH * 0.34, BW * 0.20, BH * 0.14, 0.15 * fg.dir, 0, 6.2832);
-    ctx.fill(); ctx.restore();
+      /* legs */
+      ctx.fillStyle = dark;
+      drawLeg(ctx, fg.farLegX * BW * 0.9, BH, BW, -legSwing, fg);
+      ctx.fillStyle = skin;
+      drawLeg(ctx, fg.nearLegX * BW * 0.9, BH, BW, legSwing, fg);
 
-    /* mech-ghidorah steel panel overlay on torso */
-    if (isMech) {
-      drawMechPanels(ctx, BH, BW, fg, pal, 0.55);   /* partial opacity for gold-steel mix */
+      /* torso */
+      drawTorso(ctx, BH, BW, fg, skin, dark, light);
+
+      /* belly highlight */
+      ctx.save(); ctx.globalAlpha = 0.32; ctx.fillStyle = light;
+      ctx.beginPath();
+      ctx.ellipse(fg.bellyX * BW, -BH * 0.34, BW * 0.20, BH * 0.14, 0.15 * fg.dir, 0, 6.2832);
+      ctx.fill(); ctx.restore();
+
+      /* mech-ghidorah steel panel overlay on torso */
+      if (isMech) {
+        drawMechPanels(ctx, BH, BW, fg, pal, 0.55);   /* partial opacity for gold-steel mix */
+      }
+
+      /* front wings */
+      drawBatWing(ctx, WH, BH, fg, pal, true, skin, { mech: isMech, spars: 4 });
     }
 
-    /* front wings */
-    drawBatWing(ctx, WH, BH, fg, pal, true, skin, { mech: isMech, spars: 4 });
-
-    /* necks + heads fanned from torso top */
+    /* necks + heads fanned from the torso top (or descending from the void portal) */
     drawHydraHeads(ctx, BH, BW, fg, pal, s, atk, walkT);
 
     ctx.restore();
@@ -1018,13 +1023,13 @@ window.GAME = window.GAME || {};
     var side = front ? 1 : -1;
     var dir = fg.dir;
     var rootX = -BW_from_BH(BH) * 0.3 * 0, rootY = -BH * 0.55;
-    var wx = side * WH * 0.10, wy = -BH * 0.62;                 // wrist
+    var wx = side * WH * 0.22, wy = -BH * 0.70;                 // wrist — outward + UP so the wing droops as a leathery bat-wing, not a flat horizontal fan
     var spars = (opts.spars || 4);
     var tipsX = [], tipsY = [];
     for (var s = 0; s <= spars; s++) {
       var f = s / spars;
-      var ex = wx + side * WH * (0.18 + f * 0.34);
-      var ey = wy + (f - 0.5) * BH * 0.55 - (opts.mech ? 0 : Math.sin(f * Math.PI) * BH * 0.04);
+      var ex = wx + side * WH * (0.16 + f * 0.34);
+      var ey = wy + (f - 0.5) * BH * 0.90 - (opts.mech ? 0 : Math.sin(f * Math.PI) * BH * 0.05);   // taller spar arc (0.55->0.90) → drooping membrane
       tipsX.push(ex); tipsY.push(ey);
     }
     // membrane fill
@@ -1038,8 +1043,8 @@ window.GAME = window.GAME || {};
     for (var t2 = 1; t2 <= spars; t2++) {
       if (opts.mech) ctx.lineTo(tipsX[t2], tipsY[t2]);
       else {                                                    // scalloped concave trailing edge
-        var mxv = (tipsX[t2 - 1] + tipsX[t2]) / 2 - side * BH * 0.05;
-        var myv = (tipsY[t2 - 1] + tipsY[t2]) / 2 + BH * 0.04;
+        var mxv = (tipsX[t2 - 1] + tipsX[t2]) / 2 - side * BH * 0.06;
+        var myv = (tipsY[t2 - 1] + tipsY[t2]) / 2 + BH * 0.07;   // deeper concave scallop
         ctx.quadraticCurveTo(mxv, myv, tipsX[t2], tipsY[t2]);
       }
     }
@@ -1068,12 +1073,17 @@ window.GAME = window.GAME || {};
     var totalArc = 0.90 * neckSpread;
     var centerIdx = Math.floor(nHeads / 2);
     var goldPal = cyborg ? { skin: s.goldSkin, skinDark: s.goldDark, skinLight: s.goldLight, eye: pal.goldEye || '#ffd24a' } : null;
-    for (var n = 0; n < nHeads; n++) {
+    var order = [];                                          // paint OUTER necks first, CENTER LAST (on top) — the MV asymmetric-trident depth cue
+    for (var oi2 = 0; oi2 < nHeads; oi2++) if (oi2 !== centerIdx) order.push(oi2);
+    order.push(centerIdx);
+    for (var ord = 0; ord < order.length; ord++) {
+      var n = order[ord];
       var frac = nHeads > 1 ? (n / (nHeads - 1) - 0.5) : 0;
       var arc  = frac * totalArc;
       var neckBob = Math.sin(walkT * Math.PI * 2 + n * 0.55) * BH * 0.05;   // idle (frame0)=0
       var rootX = BW * (0.10 + lean * 0.12) + frac * BW * 0.40 * neckSpread;
-      var rootY = -BH * 0.82;
+      var rootY = -BH * (s.voidPortal ? 0.32 : 0.82);        // void necks descend from the portal, not a torso top
+      if (n === centerIdx && s.centerForward) { rootX += BW * 0.06 * (1 + lean); rootY += BH * 0.03; }  // Ichi (center) nudged forward
       var neckLen = BH * (0.32 + (1 - Math.abs(frac)) * 0.10) * neckLenMul;
       var sBend = thorns ? (hash(n + 1) - 0.5) * neckLen * 0.45 : 0;        // void: static S-curve
       var tipX = rootX + Math.sin(arc) * neckLen + sBend * 0.5;
