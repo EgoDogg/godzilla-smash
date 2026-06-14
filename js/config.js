@@ -4,7 +4,7 @@ window.GAME.Config = {
   saveKey: 'godzilla-save-v3',
   // In-page console probe of the live asset version. The AUTHORITY is sw.js `CACHE`;
   // bump BOTH together to ship (game.js warns at boot if they drift out of sync).
-  CACHE_VERSION: 'gz-v27',
+  CACHE_VERSION: 'gz-v28',
 
   // --- Isometric grid (world units = tiles). Wide, open, zoomed-out city:
   //     21 cols of 2×2 blocks split by wide streets; 58 rows. TILE_*/WZ_PX are
@@ -122,7 +122,7 @@ window.GAME.Config = {
     // ============ Godzilla (wyrm) — keep existing 5 palettes verbatim ============
     { id: 'gz2014', name: 'Godzilla', label: '2014', family: 'wyrm', archetype: 'wyrm', tier: 0, base: 6, cost: 0,
       palette: {
-        skin: '#3c3c3c', skinDark: '#1e1e1e', skinLight: '#646464',
+        skin: '#3c3c3c', skinDark: '#2b2b2b', skinLight: '#646464',
         plate: '#2b2b2b', plateEdge: '#8fc2ee', plateGlow: 'rgba(70,160,235,0.45)',
         breath: ['#9bdcff', '#ffffff'], breathGlow: 'rgba(70,170,255,0.9)', eye: '#e8e8e8', aura: null, fxMotes: null },
       shape: { archetype: 'wyrm', plates: 10, tail: 1.0, bulk: 1.05, plateJag: 0.35, plateHeightMul: 0.85, legMul: 1.4, armMul: 1.6 },
@@ -139,7 +139,7 @@ window.GAME.Config = {
       palette: {
         skin: '#3a3a3a', skinDark: '#222222', skinLight: '#646464',
         plate: '#33424c', plateEdge: '#cdecff', plateGlow: 'rgba(70,180,255,0.65)',
-        breath: ['#36c9ff', '#ffffff'], breathGlow: 'rgba(54,201,255,0.95)', eye: '#ffcf4a', aura: 'rgba(60,160,255,0.13)', fxMotes: null },
+        breath: ['#36c9ff', '#ffffff'], breathGlow: 'rgba(54,201,255,0.95)', eye: '#cfcfcf', aura: 'rgba(60,160,255,0.13)', fxMotes: null },
       shape: { archetype: 'wyrm', plates: 11, tail: 1.05, bulk: 1.0, plateJag: 0.68, plateHeightMul: 1.12, legMul: 1.4, armMul: 1.6, torsoWidth: 0.93, broken: 2 },
       attack: { kind: 'beam', cooldown: 0.30, color: 'breath', shake: 8 } },
     { id: 'gxk', name: 'Godzilla × Kong', label: '2024', family: 'wyrm', archetype: 'wyrm', tier: 3, base: 3000, cost: 10000,
@@ -152,9 +152,9 @@ window.GAME.Config = {
       attack: { kind: 'beam', cooldown: 0.30, color: 'breath', shake: 10 } },
     { id: 'supernova', name: 'Supernova Godzilla', label: '2027', family: 'wyrm', archetype: 'wyrm', tier: 4, base: 18000, cost: 80000,
       palette: {
-        skin: '#251440', skinDark: '#1a0d33', skinLight: '#522485',
+        skin: '#0d011a', skinDark: '#2a1448', skinLight: '#522485',
         plate: '#2a0a55', plateEdge: '#dcb0ff', plateGlow: 'rgba(165,90,230,0.98)',
-        rimGlow: '#dcb0ff', fissureCore: '#f0e0ff', fissureGlow: 'rgba(165,90,230,0.5)',
+        rimGlow: '#dcb0ff', fissureCore: '#f0e0ff', fissureGlow: 'rgba(165,90,230,0.5)', plateHot: ['#2a1448', '#dcb0ff'],
         breath: ['#ffffff', '#b07dff'], breathGlow: 'rgba(200,120,255,0.98)', eye: '#ffffff', aura: 'rgba(157,78,221,0.24)', fxMotes: 'cosmic' },
       shape: { archetype: 'wyrm', plates: 16, tail: 1.15, bulk: 1.13, plateJag: 1.0, plateHeightMul: 1.38, legMul: 1.4, armMul: 1.6, fissures: 1.0, selfIllum: true },
       attack: { kind: 'beam', cooldown: 0.30, color: 'breath', shake: 12 } },

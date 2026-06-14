@@ -1,0 +1,811 @@
+{
+  "families": [
+    {
+      "family": "wyrm \u2014 Godzilla (gz2014 \u00b7 burning \u00b7 gvk \u00b7 gxk \u00b7 supernova)",
+      "overallRead": "CRITICAL CONTEXT FIRST: the supplied critiques and the forms-current-composite.png baseline are STALE relative to the live js/config.js. The composite was rendered at commit 0e2df49; config.js was last edited at c5bb310 (gz-v26), and in between MOST of the critiques' major proposed fixes already shipped. I verified this by diffing config at the composite commit vs HEAD and re-reading the live draw code (buildWyrm/drawPlates/drawTorso/drawHead/drawRidgeElement). Already-landed since the baseline: gz2014 eye gold\u2192#e8e8e8; burning plateHeightMul:1.10 + plateJag 0.62 + leadPlate:0.5 (wired in drawPlates:269) + plateHot flipped to base-hot ['#ffd24a','#ff5a14']; gvk skin neutralized to #3a3a3a/#222222/#646464 + plateJag 0.68 + plateHeightMul:1.12; gxk torsoWidth:0.90 + bulk 0.95 (now leaner than gvk's 0.93 \u2014 ladder gz2014 wide \u2192 gvk 0.93 \u2192 gxk 0.90 is CORRECT in code); supernova bulk 1.13 + plateHeightMul 1.38. I bounds-checked supernova empirically: tallest plate apex sits at sprite-y 6.2px (clears the 168px top by 6.2px) \u2014 so the current 1.13/1.38 is at the safe maximum; do NOT push bulk/height higher or it clips. NET: the silhouette ladder, burning's ridge escalation, the lean-warrior ordering, and supernova's overgrown-spine height are ALL already delivered in config \u2014 those critique items are effectively CLOSED and re-applying them would be no-ops or regressions. Only THREE genuinely-open items remain, all small and high-leverage: (1) gvk eye is still warm gold #ffcf4a \u2014 a spec-forbidden warm pixel on a cool-blue-only form; (2) supernova body is still mid-violet (#251440/#1a0d33) not the spec's near-black #0d011a, so the rim/fissures have no dark mass to split \u2014 it reads 'flat purple lizard'; (3) supernova plates bake FLAT (no plateHot key) so the signature crystalline gradient is missing. Items 2+3 are supernova's whole disambiguator-vs-gxk and are the family's top priority. The render evidence is unreliable here (composite stale, forms-wyrm-after.png is an older near-identical copy, no node-canvas to re-bake), so adjudication leans on the verified config+draw-code, which is authoritative for what currently ships.",
+      "forms": [
+        {
+          "formId": "gz2014",
+          "blindIdVerdict": "reads-clearly",
+          "currentRead": "Heaviest bear-bulk grey anchor (bulk 1.05, legMul 1.4/armMul 1.6 elephantine pads) with the shortest/bluntest ridge of the row (plateHeightMul 0.85, plateJag 0.35) and no body self-glow. 4-of-5 must-haves fire. The one warm-pixel defect flagged in the critiques (gold eye #ffbe3a) is ALREADY FIXED in live config \u2014 eye is now #e8e8e8 pale grey-white, matching spec. So gz2014 is on-spec; nothing load-bearing remains.",
+          "topChanges": [
+            {
+              "change": "OPTIONAL polish only: raise skinDark '#1e1e1e'\u2192'#2b2b2b' so the AO gradient floor stays 'charcoal not black' per mustHaveForBlindID. Spec plate-core is #2b2b2b. Sub-threshold at 40px; skip unless doing a zero-risk palette sweep.",
+              "file": "js/config.js",
+              "target": "gz2014 palette.skinDark (line 125)",
+              "severity": "polish",
+              "expectedEffect": "Torso bottom reads charcoal rather than sinking near-black. Barely visible at 40px.",
+              "regressionRisk": "None \u2014 gz2014-local palette key, no other form reads it. gz2014 is intended as the darkest of the unlit trio so this is a judgment call, not a defect."
+            }
+          ]
+        },
+        {
+          "formId": "burning",
+          "blindIdVerdict": "reads-clearly",
+          "currentRead": "Charred near-black body (#2c2622) leaking orange via fissures (0.5 \u2192 5 seams), incandescent plate-face gradient, full-silhouette orange self-illum rim (#ff7a1a). The critiques' two MAJOR gaps \u2014 missing taller/sharper ridge and missing lead-plate, plus tip-hot gradient inversion \u2014 are ALL ALREADY FIXED in live config: plateHeightMul:1.10, plateJag:0.62, leadPlate:0.5 (drawPlates:269 spikes that index \u00d71.35), and plateHot is now base-hot ['#ffd24a','#ff5a14']. So burning's silhouette escalation over gz2014 now exists in code. Blind-ID safe and on-spec.",
+          "topChanges": [
+            {
+              "change": "NO CHANGE NEEDED for the baked sprite. (Out-of-scope live-FX note only: breath/breathGlow are still cool blue rgba(90,170,255) \u2014 a warm-only-palette mismatch when the in-game beam fires, but the beam is not baked into the idle sprite so it does not affect fidelity of the sprite itself. Flag for a future beam-color pass, do not touch in this art-fidelity bake.)",
+              "file": "js/config.js",
+              "target": "burning palette.breath/breathGlow (line 135) \u2014 DEFER",
+              "severity": "polish",
+              "expectedEffect": "None on the baked sprite. Would only align the in-game atomic beam color with burning's orange palette.",
+              "regressionRisk": "N/A for this pass \u2014 explicitly out of scope (live FX, not the bake)."
+            }
+          ]
+        },
+        {
+          "formId": "gvk",
+          "blindIdVerdict": "reads-clearly",
+          "currentRead": "Lean warrior: torsoWidth 0.93 narrows the body, broken:2 battle-scar half-plates fire, plateJag 0.68 + plateHeightMul 1.12 + 11 plates give a sharp tall razor ridge, blue fin keylines, no body self-glow. The critiques' body-tint-cool and modest-razor gaps are ALREADY FIXED (skin neutralized to #3a3a3a/#222222/#646464; plateJag bumped to 0.68; plateHeightMul:1.12 added). The ONE remaining open defect: the eye still bakes warm gold #ffcf4a \u2014 a spec-forbidden warm pixel on a cool-blue-only form (spec pins eye '#cfcfcf pale').",
+          "topChanges": [
+            {
+              "change": "Change eye:'#ffcf4a' \u2192 eye:'#cfcfcf'. drawHead (archetypes.js:358) fills the eye ellipse with pal.eye, so this is a pure one-key config edit. Removes gvk's only warm pixel; brings it in line with the cool-blue-ONLY contract and the spec palette ('eyes #cfcfcf pale').",
+              "file": "js/config.js",
+              "target": "gvk palette.eye (line 142)",
+              "severity": "minor",
+              "expectedEffect": "Eye goes from a warm gold dot to a neutral pale dot. Small at 40px but removes the only spec-forbidden warm accent on a blue-family form and tightens the cool-only read.",
+              "regressionRisk": "None \u2014 gvk-local palette key; drawHead reads pal.eye with no fallback shared across forms. Zero sibling impact."
+            }
+          ]
+        },
+        {
+          "formId": "gxk",
+          "blindIdVerdict": "reads-clearly",
+          "currentRead": "Pink Evolved form: dark-magenta body, full-silhouette pink self-illum rim (#ff6cc6), 13 plates at jag 0.8/heightMul 1.2 (tallest+sharpest of the practical tiers), pink keylines, no fissures. The critiques' MAJOR inverted-lean-ladder gap is ALREADY FIXED in live config: gxk now has torsoWidth:0.90 + bulk:0.95, making it effectively 0.855 wide \u2014 narrower than gvk's 0.93, so the gz2014(wide)\u2192gvk(0.93)\u2192gxk(0.90) lean progression now reads correctly in code. Color + glow + spike-density + lean all on-spec. Eye #ffd6f2 is on-palette (pink IS gxk's accent). Nothing load-bearing remains.",
+          "topChanges": [
+            {
+              "change": "NO CHANGE NEEDED. gxk is fully on-spec in the current config: the lean-ladder inversion the critiques flagged as MAJOR was already resolved (torsoWidth:0.90, bulk:0.95). Re-applying any of the critique's gxk fixes would be a no-op. Leave heightMul at 1.2 / plates 13 so supernova's 1.38 clearly out-towers it (gap already opened by supernova's raise).",
+              "file": "js/config.js",
+              "target": "gxk shape (line 151) \u2014 no edit",
+              "severity": "polish",
+              "expectedEffect": "None \u2014 confirming on-spec. Acts as the upper anchor of the lean ladder and the lower anchor of the ridge-height gap to supernova.",
+              "regressionRisk": "None."
+            }
+          ]
+        },
+        {
+          "formId": "supernova",
+          "blindIdVerdict": "reads-but-generic",
+          "currentRead": "Violet plated wyrm with white-violet fissures (1.0 \u2192 8 seams) and a violet self-illum rim. The critiques' silhouette gaps (bulk + ridge height) are ALREADY FIXED in live config: bulk 1.13 + plateHeightMul 1.38, which I bounds-checked \u2014 tallest plate apex clears the canvas top by exactly 6.2px, so 1.13/1.38 is the safe maximum and must NOT be pushed higher. BUT two MAJOR material gaps remain open and unfixed: (1) the body is still mid-violet (#251440 skin / #1a0d33 skinDark, baking ~lum 62) instead of the spec's near-black #0d011a with AO bottom raised to #2a1448 \u2014 so the rim and fissures have no dark over-charged mass to 'split', and it reads as a uniformly-lit purple lizard; (2) plates still bake FLAT pal.skinLight (no plateHot key) so the signature overgrown-CRYSTALLINE gradient is absent. These two are supernova's entire disambiguator vs gxk-recolored-violet, so blind-ID currently reads 'generic spiky violet Godzilla', not 'nova endpoint'.",
+          "topChanges": [
+            {
+              "change": "Darken the body to near-black with a RAISED (lighter) AO floor: skin '#251440'\u2192'#0d011a', and INVERT the AO by setting skinDark to the LIGHTER '#2a1448' (per spec the AO bottom is raised, never pure black, for night visibility). Keep skinLight ~'#522485' so the belly highlight (buildWyrm:427, uses skinLight at alpha 0.38) and the lit torso top retain a mid-violet value-break. drawTorso bakes a top\u2192skin\u2192bottom gradient (light\u2192skin\u2192dark), so this darkens the mass and lets the violet rim (drawTorso:220, alpha 0.5) and white-violet fissures pop.",
+              "file": "js/config.js",
+              "target": "supernova palette.skin + palette.skinDark (line 155)",
+              "severity": "major",
+              "expectedEffect": "The mass goes from flat mid-violet to a near-black over-charged body, so the self-illum rim and 8 white-violet fissures read as energy splitting a dark mass \u2014 the core 'walking supernova' material that separates it from gxk. Highest-leverage change in the family.",
+              "regressionRisk": "Low. Per-form palette-only edit, no helper touched. The skinDark inversion (lighter than skin) is intentional and supernova-exclusive \u2014 no other wyrm relies on supernova's keys. Verify the belly highlight (skinLight) still gives a visible value break against the darker skin; #522485 over #0d011a is a strong break, so fine."
+            },
+            {
+              "change": "Add a crystalline plate gradient: add plateHot:['#2a1448','#dcb0ff'] to supernova's palette. drawPlates already routes pal.plateHot into opts.faceGrad (buildWyrm:393) and bakes it as a 2-stop base\u2192tip linear gradient (drawPlates:280-282) over the dark pal.plate CORE \u2014 ZERO helper change, ZERO regression to other forms (faceGrad is null for every form except burning, which keeps its own plateHot). This gives the plates a dark-base\u2192bright-violet-tip crystal luminance instead of flat #522485.",
+              "file": "js/config.js",
+              "target": "supernova palette.plateHot (new key, line 156-157)",
+              "severity": "major",
+              "expectedEffect": "Plates gain base\u2192tip violet crystal gradient, delivering the 'overgrown crystalline / SpaceGodzilla-adjacent' read that distinguishes supernova from a plain spiky violet Godzilla. Pairs with the dark body so the bright plate tips glow against it.",
+              "regressionRisk": "Low. The 2-stop faceGrad path is identical to burning's proven path; only burning and (now) supernova set plateHot, so no other form is affected. The faithful 3-stop spec gradient (#2a1448\u2192#a55ae6\u2192#dcb0ff) would need extending drawPlates to detect a length-3 array \u2014 explicitly OUT OF SCOPE; the 2-stop reads near-identical at 40px and carries no burning-regression risk."
+            },
+            {
+              "change": "DO NOT raise bulk or plateHeightMul further. Current 1.13/1.38 already clears the 168px canvas top by only 6.2px (empirically bounds-checked). Any further increase clips the crystal spine. The critiques' 'raise to ~1.4\u00d7/~1.15' is already satisfied; treat the silhouette escalation as DONE.",
+              "file": "js/config.js",
+              "target": "supernova shape.bulk + shape.plateHeightMul (line 159) \u2014 HOLD",
+              "severity": "polish",
+              "expectedEffect": "None \u2014 guardrail against re-applying a stale critique fix that would now cause top-clipping.",
+              "regressionRisk": "Raising these WOULD regress (plate apex clips canvas top); holding them is the safe action."
+            }
+          ]
+        }
+      ],
+      "sharedHelperChanges": [
+        {
+          "helper": "drawPlates (archetypes.js:246-294)",
+          "change": "NO CHANGE. The faceGrad 2-stop path (lines 279-283) and the leadPlate spike (line 269) are already present and already wired through buildWyrm:393/392. Supernova's crystal-plate fix rides the EXISTING faceGrad path by adding a palette key only \u2014 no helper edit. Only extend drawPlates if a faithful 3-stop supernova gradient is later wanted (detect length-3 faceGrad array), which is explicitly out of scope for this pass.",
+          "rationale": "All proposed wyrm fixes are pure config/palette edits. Keeping drawPlates byte-identical guarantees zero regression to burning (the only other faceGrad consumer) and to the hydra/mecha/flyer families that call drawPlates with no opts.",
+          "regressionRisk": "None \u2014 by avoiding the helper entirely. If drawPlates were edited, burning (faceGrad), gvk (broken/leadPlate), and every plated form would be in the blast radius, so the no-touch approach is deliberate."
+        },
+        {
+          "helper": "drawTorso / drawHead (archetypes.js:196-234 / 296-367)",
+          "change": "NO CHANGE. gvk's eye fix and supernova's body-darken fix both flow through existing pal.eye / pal.skin/skinDark/skinLight reads with no new knobs. The per-form headScale-for-bulk idea from the critiques is correctly NOT pursued (no per-form headScale knob exists; the buildWyrm:444 head-lower translate already implies scale, and adding one risks all five wyrms sharing the facing-based headScale).",
+          "rationale": "Every open wyrm item is achievable with palette-only edits, so the shared draw fns stay untouched \u2014 the cheapest, lowest-risk path and consistent with the bake budget (no shadowBlur/filter/composite, deterministic jitter, idle frame=0).",
+          "regressionRisk": "None."
+        }
+      ],
+      "implementationOrder": [
+        "supernova: darken body \u2014 palette.skin '#251440'\u2192'#0d011a', palette.skinDark '#1a0d33'\u2192'#2a1448' (config.js:155). Highest recognizability leverage: turns 'flat purple lizard' into the near-black over-charged mass the rim+fissures need.",
+        "supernova: add palette.plateHot:['#2a1448','#dcb0ff'] (config.js:156-157) for the crystalline plate gradient via the existing faceGrad path. Pairs with the dark body to deliver the overgrown-crystal read that disambiguates supernova from gxk.",
+        "gvk: eye '#ffcf4a'\u2192'#cfcfcf' (config.js:142). Removes the last spec-forbidden warm pixel on a cool-blue-only form.",
+        "gz2014 (optional polish): skinDark '#1e1e1e'\u2192'#2b2b2b' (config.js:125) so the AO floor stays charcoal-not-black. Skip unless doing a zero-risk sweep.",
+        "HOLD/no-op (do NOT implement \u2014 already shipped or would regress): burning ridge/leadPlate/plateHot, gvk body-neutralize + ridge bumps, gxk torsoWidth/bulk lean-ladder, supernova bulk/plateHeightMul raise. All are already in the live config (verified by diff against the composite baseline commit); supernova bulk/height are at the bounds-checked maximum and raising them clips the canvas top."
+      ]
+    },
+    {
+      "family": "Mothra (flyer) \u2014 row 2: mothra_gvm, mothra_gxk, mothra_supernova",
+      "overallRead": "The Mothra row reads correctly as a four-wing bilateral moth family \u2014 the old cyan-glowing-lizard bug is genuinely gone, blue/gold sits as an accent over a furred body, and the per-forewing eyespots carry the brand. But within-row escalation has almost entirely collapsed: gxk and supernova render as plain recolors of gvm. The single root cause is a plumbing gap \u2014 drawMothThorax (archetypes.js L584) and drawFlyerHead (L606) are both called WITHOUT the shape arg, so every shape{} escalation knob that the data already declares (joints:true on gxk/supernova, godrays:true on supernova) is dead: grep confirms s.joints is consumed ONLY by buildMecha (L1105), and 'godray'/'wingLevel'/'eyespotIris' have zero consumers anywhere. Three cross-cutting render bugs compound it: (1) the two swept-back antennae \u2014 a named mustHaveForBlindID and the head-crown silhouette cue \u2014 are stroked in pal.skinDark (taupe/bronze/soft-gold) at lineWidth 1.8 over a paler head on ALL three forms, so they vanish; the palette already carries a white-ish skinLight for each form, so this is a one-line shared fix. (2) The forewing tipY is hard-coded -BH*0.92 in drawMothWing (L645) for all three, so supernova's 'level descending-angel' pose can't exist. (3) The WH span is capped at 50px (L577), and supernova's wingSpan 3.3 computes ~51.7 \u2192 clipped to 50, INVERTING the ladder so the form that should be widest gains the least. Highest-leverage path: thread shape into the two helpers, fix the shared antenna color, then layer the per-form escalations (gxk blue joint-spots + thicker body; supernova god-rays + level pose + gold eyespot iris + aura + uncapped span). One correction to the critiques: fxMotes:'pink' is NOT a wrong-hue leak \u2014 MOTE_FX.pink draws in pal.plateGlow, which is form-correct (cyan for gvm/gxk, gold for supernova), so leave fxMotes alone (drop that fix). Bake budget respected throughout: flat low-alpha triangles + one radial aura, deterministic, no shadowBlur/filter/composite.",
+      "forms": [
+        {
+          "formId": "mothra_gvm",
+          "blindIdVerdict": "reads-but-generic",
+          "currentRead": "A cream furred oval thorax crowned by two big blue-ringed eyespots \u2014 reads unmistakably as a four-wing bilateral moth and is the clearest silhouette of the three; blue correctly an accent over white fur. But the head is a bare round blob: the two white antennae (a named must-have + the feathery-crown silhouette cue) are stroked in taupe pal.skinDark and vanish, and the brown-orange forehead tuft has no draw code. The four-wing count is slightly soft because the hindwing tucks close under the forewing root.",
+          "topChanges": [
+            {
+              "change": "Recolor the moth antennae stroke from pal.skinDark to pal.skinLight (white #fffaf0) and raise lineWidth 1.8 \u2192 3 so the swept-back antennae register as the white feathery crown.",
+              "file": "js/archetypes.js",
+              "target": "drawFlyerHead moth branch antennae stroke (~L739)",
+              "severity": "major",
+              "expectedEffect": "Restores a named mustHaveForBlindID and the head-crown silhouette; gvm head stops reading as a bare blob. Single highest-leverage gvm fix.",
+              "regressionRisk": "Shared helper \u2014 affects gxk (skinLight #e6a04a warm tan, acceptable as pale) and supernova (skinLight #ffffff, ideal). Inside the wingStyle==='moth' branch so Rodan is untouched. No bounds change (antennae top already at -BH*1.04)."
+            },
+            {
+              "change": "Separate the four wings: push the hindwing tip further out/down \u2014 hTipX side*nearW*0.70 (from 0.58) and hTipY -BH*0.04 (from -BH*0.14) so the lower lobe clears the forewing silhouette and 'four' reads.",
+              "file": "js/archetypes.js",
+              "target": "drawMothWing hindwing tip (L650-651)",
+              "severity": "minor",
+              "expectedEffect": "The 4-wing count resolves distinctly instead of smearing to a 2-lobe blob at iso \u2014 strengthens the #1 species read across all three forms.",
+              "regressionRisk": "Shared by all three moths (intended \u2014 same escalation helps each). Verify the lowered/wider hindwing tip still clears the body and stays within x\u2208[0,150]/y bounds at wingSpan 3.3 (supernova, the widest)."
+            },
+            {
+              "change": "Add a small filled forehead tuft (~BW*0.06 ellipse/triangle at ~hx+BW*0.28, -BH*0.90) in drawFlyerHead's moth branch, filled from a new pal.tuft (#8a5a2c for gvm), gated on pal.tuft so only forms that define it draw one.",
+              "file": "js/archetypes.js + js/config.js",
+              "target": "drawFlyerHead moth branch + pal.tuft (config L164-167)",
+              "severity": "polish",
+              "expectedEffect": "Adds the named brown-orange forehead-tuft signatureCue; pairs with the antenna fix to complete the feathery head crown.",
+              "regressionRisk": "Low \u2014 gated on pal.tuft so gxk/supernova are unaffected unless given their own tuft color. Keep radius small so it doesn't read as a second eye. Sub-pixel-borderline at 40px; lowest priority."
+            }
+          ]
+        },
+        {
+          "formId": "mothra_gxk",
+          "blindIdVerdict": "misreadable",
+          "currentRead": "A warm orange-bronze recolor of gvm with the same blue eyespots and identical body/head. The TWO cues that make it the 2024 form \u2014 discrete blue bioluminescent joint/chest spots + a forehead third-eye spot \u2014 are 100% absent because shape.joints is never read in the flyer path (drawMothThorax/drawFlyerHead are called without shape). 'Thicker fur' only bumps one stroke 1.8\u21922.8, invisible at iso. Result: it collides with warm Rodan and is not blind-IDable vs gvm beyond hue.",
+          "topChanges": [
+            {
+              "change": "Thread shape into drawMothThorax and drawFlyerHead (buildFlyer L584/L606), then when shape.joints paint opaque pal.eye (#2ec8ff) pinpoints: two wing-root joints (~\u00b1BW*0.16, -BH*0.48) + two chest dots on the thorax (r\u2248BH*0.018), plus ONE larger forehead third-eye (r\u2248BH*0.03) in the head moth branch.",
+              "file": "js/archetypes.js",
+              "target": "buildFlyer call sites (L584/L606) + drawMothThorax/drawFlyerHead, gated on shape.joints",
+              "severity": "major",
+              "expectedEffect": "Restores THE signature 2024 feature and the only blue separator from warm Rodan; makes gxk blind-IDable vs gvm. Highest-leverage gxk fix and the keystone plumbing change for the whole row.",
+              "regressionRisk": "Plumbing touches the shared call sites \u2014 must pass shape and gate every new draw on shape.joints so gvm (no joints) stays byte-identical. Keep dots opaque + \u2265~2px baked so they survive at 40px; don't over-scatter (spec: only the highest-identity 5)."
+            },
+            {
+              "change": "When furThorax==='thick', draw a SECOND fuzzy-edge ellipse stroke offset ~+2px outward (rx*1.10, ry*1.10) at low alpha in pal.skinLight after the existing stroke, and enlarge the thorax rx/ry ~6%, so the body silhouette actually reads chunkier than gvm.",
+              "file": "js/archetypes.js",
+              "target": "drawMothThorax thick branch (L494-495 + ellipse L490)",
+              "severity": "minor",
+              "expectedEffect": "The 'thicker, denser fur' escalation finally reads in silhouette, lifting gxk's body proportion off gvm rather than relying on hue alone.",
+              "regressionRisk": "Gate strictly on thick \u2014 gvm uses furThorax:true (truthy but not 'thick'), so confirm the second-outline/enlarge branch checks ==='thick' not just truthiness, or gvm bulks up too. Re-check the enlarged thorax stays clear of the wings."
+            },
+            {
+              "change": "Mildly push the span escalation so the wider 'powerful spread' reads: add a per-form spreadMult (e.g. raise the forewing tip-x multiplier ~1.0\u21921.08 when shape.joints) in drawMothWing, keeping the tip within x\u2208[0,150].",
+              "file": "js/archetypes.js",
+              "target": "drawMothWing forewing tipX (L644), gated on shape.joints",
+              "severity": "polish",
+              "expectedEffect": "Separates gxk's spread from gvm beyond the ~6px the wingSpan bump alone gives; small but legible.",
+              "regressionRisk": "Bounds \u2014 verify the wider tip clears x\u2208[0,150] from anchor 75 on E/SE facings. Gated on joints so gvm is unchanged; supernova (also joints:true) gets it too, which is fine since it should be wider still."
+            }
+          ]
+        },
+        {
+          "formId": "mothra_supernova",
+          "blindIdVerdict": "misreadable",
+          "currentRead": "A flat gold recolor of the same t1/t2 moth \u2014 the exact 'plain yellow t1' failure the spec calls out. The three divine-peak escalations are all absent: god-ray spokes (shape.godrays has zero consumers), the 'level descending-angel' pose (forewing tipY hard-coded -BH*0.92 for all forms), and the gold eyespot middle ring (it's white). Worse, the span ladder inverts: WH=min(BH*3.3*0.125,50) computes ~51.7 \u2192 clipped to 50, so the form that should be widest gains the LEAST. The defined pal.aura is never drawn by buildFlyer.",
+          "topChanges": [
+            {
+              "change": "Add a drawGodRays helper called from buildFlyer after the front wing, gated on shape.godrays: 3-4 FLAT low-alpha (0.10-0.16) gold triangles (pal.plateGlow/pal.aura) radiating from each forewing eyespot anchor (ex,ey from drawMothWing), length < BH*0.4, fanned \u00b1~25\u00b0, clamped against fg.dir so the tip stays within x\u2208[0,150] from anchor 75.",
+              "file": "js/archetypes.js",
+              "target": "new drawGodRays + buildFlyer (gated on shape.godrays), anchor from drawMothWing ex,ey",
+              "severity": "major",
+              "expectedEffect": "Adds the single defining divine-peak silhouette delta; supernova stops reading as 'gold t1'. Highest-leverage supernova fix.",
+              "regressionRisk": "Bounds are the main risk \u2014 clamp spoke length/angle so wide+E/SE facings don't clip x\u2208[0,150] or y. Gated on godrays so only supernova draws them. Keep spokes flat low-alpha so they don't read as extra wings/appendages (commonMisread)."
+            },
+            {
+              "change": "Add a shape.wingLevel flag (or reuse godrays) read in drawMothWing: raise forewing fTipY toward body level (~-BH*0.78 from -BH*0.92) and reduce the lean-sweep term (lean*side*BH*0.10 at L644) so the wings sit flatter \u2014 the descending-angel pose.",
+              "file": "js/archetypes.js",
+              "target": "drawMothWing forewing fTipY (L645) + sweep term (L644), gated on the flag",
+              "severity": "major",
+              "expectedEffect": "Gives supernova a distinct widest/level silhouette instead of sharing t1/t2's forward-swept pose; the pose escalation the spec makes its identity.",
+              "regressionRisk": "Gate on the flag so t1/t2 keep -BH*0.92. shape is already passed to drawMothWing. Re-verify the raised/flattened tips + god-rays together still clear the canvas bounds at wingSpan 3.3."
+            },
+            {
+              "change": "Uncap the span for the godray form: WH = shape.godrays ? min(BH*wingSpan*0.125, 55) : min(...,50), so wingSpan 3.3 actually yields the widest span and the ladder stops inverting.",
+              "file": "js/archetypes.js",
+              "target": "buildFlyer WH cap (L577), per-form gate on shape.godrays",
+              "severity": "minor",
+              "expectedEffect": "Restores 'largest+widest of the three'; supernova reads biggest instead of clipped to gxk's width.",
+              "regressionRisk": "Per-form gate keeps Rodan and gvm/gxk spans untouched. After the bump, re-verify the widest+level tips + god-rays still clear x\u2208[0,150]/y within 168 on all facings \u2014 this is the tightest-bounds form."
+            },
+            {
+              "change": "Add a dedicated eyespot-iris color (pal.eyespotIris, default pal.eye) consumed at the iris arc in drawMothWing, set to #ffd700 gold for supernova only \u2014 yields dark-gold ring \u2192 gold ring \u2192 white center instead of the current low-contrast white dot. Do NOT recolor pal.eye (it drives the white head eye).",
+              "file": "js/archetypes.js + js/config.js",
+              "target": "drawMothWing iris arc (L658) + pal.eyespotIris (config L178-181)",
+              "severity": "minor",
+              "expectedEffect": "Restores eyespot contrast against the gold wing so the brand mark survives the radiance \u2014 keeps it Mothra, not a gold blob.",
+              "regressionRisk": "Default eyespotIris to pal.eye so gvm/gxk blue is unchanged. Low risk; purely additive palette field."
+            },
+            {
+              "change": "Draw the already-defined pal.aura as ONE soft createRadialGradient (pal.aura \u2192 transparent) behind the thorax in buildFlyer, gated on pal.aura.",
+              "file": "js/archetypes.js",
+              "target": "buildFlyer, before the back wing (~L579), gated on pal.aura",
+              "severity": "polish",
+              "expectedEffect": "Adds the lit-from-within divine halo so the gold mass lifts off the sky; pairs with god-rays for the apotheosis read.",
+              "regressionRisk": "Gated on pal.aura (only supernova sets it), so gvm/gxk unaffected. One radial gradient, not 10 objects \u2014 within bake budget. No bounds impact."
+            }
+          ]
+        }
+      ],
+      "sharedHelperChanges": [
+        {
+          "helper": "drawFlyerHead (moth branch antennae stroke, ~L739)",
+          "change": "strokeStyle pal.skinDark \u2192 pal.skinLight; lineWidth 1.8 \u2192 3",
+          "rationale": "The white swept-back antennae are a named mustHaveForBlindID + head-crown silhouette cue, currently invisible (taupe/bronze/soft-gold over a paler head) on ALL THREE forms. Each form's pal.skinLight is white-ish (gvm #fffaf0 white, gxk #e6a04a warm tan, supernova #ffffff white), so the single recolor fixes all three.",
+          "regressionRisk": "Inside the wingStyle==='moth' branch so Rodan/pteranodon heads are untouched. gxk reads as 'pale tan' not pure white \u2014 acceptable per critique. No bounds change."
+        },
+        {
+          "helper": "drawMothThorax + drawFlyerHead \u2014 thread the shape arg through buildFlyer (L584 drawMothThorax, L606 drawFlyerHead)",
+          "change": "Pass s into both calls; both helpers currently receive no shape, so every shape{} escalation knob is dead in the flyer path.",
+          "rationale": "Keystone plumbing: unblocks shape.joints (gxk/supernova blue spots + third-eye), the per-form forehead tuft, and any head/body escalation. Without it the gxk/supernova identity escalations cannot render at all.",
+          "regressionRisk": "All new draws inside these helpers MUST be gated on the specific flag (shape.joints, pal.tuft, ==='thick') so gvm (no joints, no tuft) stays byte-identical. Verify the added param doesn't shift existing positional args in the call signatures."
+        },
+        {
+          "helper": "drawMothWing (L631) \u2014 hindwing tip + forewing pose/iris",
+          "change": "Hindwing tip pushed out/down (all forms, intended); forewing fTipY/sweep gated on wingLevel (supernova); eyespot iris reads pal.eyespotIris with default pal.eye.",
+          "rationale": "drawMothWing is shared by all three moths; the hindwing-separation helps every form's 4-wing read, while pose/iris changes are flag/palette-gated to supernova only.",
+          "regressionRisk": "Pose + span changes are the tightest-bounds items \u2014 re-verify all facings (esp. E/SE at wingSpan 3.3) stay within x\u2208[0,150]/y\u2208[0,168] after the combined hindwing-spread + level-pose + uncapped-WH + god-ray changes. Iris default keeps gvm/gxk blue."
+        },
+        {
+          "helper": "buildFlyer (L577 WH cap, ~L579 aura, godrays call)",
+          "change": "WH cap raised to 55 only when shape.godrays; draw pal.aura radial when set; call drawGodRays when shape.godrays.",
+          "rationale": "Span/aura/god-rays are supernova-only escalations; per-form gates keep Rodan (also routed through buildFlyer) and gvm/gxk untouched.",
+          "regressionRisk": "buildFlyer serves Rodan too \u2014 every change must gate on shape.godrays or pal.aura (neither set on any Rodan form), so Rodan spans/auras are guaranteed unchanged. Do NOT bump the global WH cap."
+        }
+      ],
+      "implementationOrder": [
+        "Thread shape into drawMothThorax (L584) and drawFlyerHead (L606) \u2014 the keystone plumbing that unblocks every gxk/supernova escalation",
+        "Fix the shared antenna color: drawFlyerHead pal.skinDark \u2192 pal.skinLight, lineWidth 1.8 \u2192 3 (restores a must-have on all three forms, one line)",
+        "gxk blue joint/chest spots + forehead third-eye, gated on shape.joints (restores THE 2024 signature + Rodan separator \u2014 biggest single blind-ID gain in the row)",
+        "supernova god-ray spokes (drawGodRays gated on shape.godrays) \u2014 the divine-peak silhouette delta",
+        "supernova level 'descending-angel' pose (wingLevel-gated fTipY + sweep) \u2014 the pose escalation",
+        "supernova uncap span to 55 when shape.godrays \u2014 stop the ladder inverting so it reads widest",
+        "Separate the four wings: push the shared hindwing tip out/down so the 4-wing count resolves on all forms",
+        "gxk thicker-body second outline + ~6% enlarge, gated on ==='thick'",
+        "supernova gold eyespot iris (pal.eyespotIris #ffd700, default pal.eye) \u2014 restore eyespot contrast on gold",
+        "supernova pal.aura radial halo behind the thorax (one gradient)",
+        "gvm forehead tuft + pal.tuft (lowest-leverage polish; skip if bounds/time tight)"
+      ]
+    },
+    {
+      "family": "King Ghidorah (hydra, 3 heads) \u2014 row 3: ghidorah, king_ghidorah, mecha_ghidorah, grand_king, void_ghidorah",
+      "overallRead": "The family read (\"three necks + two wings\") survives on every form and the 5-form color ladder is legible (gold trio / silver-cyborg / dark-cyan void), but the family is bottlenecked by three SHARED-helper defects that flatten 4 of 5 forms into near-identical \"gold three-headed peacock\" silhouettes: (1) drawBatWing renders the wings as flat near-horizontal radiating fan-blades (wrist on the body, thin vertical sliver dominated by spar strokes) rather than drooping bat-membranes, so the upper silhouette reads as a peacock-tail spread on all forms; (2) drawHydraHeads draws the three necks coplanar with no z-reorder, so the #1 MonsterVerse cue (center neck thrust FORWARD and overlapping) is absent and all gold tiers look symmetric; (3) drawGhidorahHead's horn crown is a single swept-prong primitive shared by every form, so the load-bearing per-tier horn signatures (T1 soft-curved vs T2 rigid-straight rack vs T4 forked-antler) do not differentiate at 40px. On top of that, two per-form structural misses dominate: void_ghidorah is drawn ON a full winged/legged/tailed torso (its named FAILURE MODE \u2014 \"dark winged Ghidorah\") instead of bodiless necks from a portal, and mecha_ghidorah's silver plating is a translucent ~0.36-alpha grey wash instead of opaque armor. Highest-leverage path: fix the three shared helpers FIRST (they lift all five forms at once), then gate void's body off, then the per-form horn overrides. The gold/eye palette is on-spec with NO purple-beam regression \u2014 preserve it.",
+      "forms": [
+        {
+          "formId": "ghidorah",
+          "blindIdVerdict": "reads-but-generic",
+          "currentRead": "A fat upright golden egg-body with a single pair of flat radiating fan-blades sticking straight out sideways (reads as a peacock tail, not bat-wings), topped by three thin stalks each ending in a tiny bird head with a small crow-beak and an up-forward crest. Three-neck + two-wing family read holds and the gold/golden-eye palette is correct (no purple-beam bug), but it reads 'generic gold 3-head dragon / gold peacock,' not specifically MonsterVerse Ichi: the center neck is NOT thrust forward, the crown reads as a forward bird-crest not a back-swept dragon rake, and the 'wings' are flat spokes.",
+          "topChanges": [
+            {
+              "change": "Make the center head/neck draw LAST and sit IN FRONT: in drawHydraHeads iterate the two outer necks first then the center (or gate isCenter to paint on top), and when isCenter nudge it forward+up along the facing (tipX += lean*BH*0.06, tipY -= BH*0.04, rootX += lean*BW*0.10) so it overlaps both siblings and sits higher. Gate the nudge on a new shape flag centerForward:true set on ghidorah's shape{}.",
+              "file": "js/archetypes.js (drawHydraHeads ~1022-1066) + js/config.js L191 (add centerForward:true)",
+              "target": "drawHydraHeads loop z-order + new shape.centerForward knob",
+              "severity": "major",
+              "expectedEffect": "Delivers the #1 MV asymmetric-trident / center-forward depth cue that is currently entirely absent \u2014 the single highest-leverage MV silhouette fix; ghidorah stops reading symmetric.",
+              "regressionRisk": "Center-forward looks wrong for the canonically-symmetric Heisei T2/T4 and the cyborg center of mecha \u2014 gate STRICTLY on centerForward (set it only on ghidorah, and optionally king_ghidorah). Verify the nudged center tip still clears the canvas top at all facings."
+            },
+            {
+              "change": "Inherit the shared drawBatWing geometry rework (see sharedHelperChanges) so ghidorah's wings read as drooping leathery bat-membranes with deep scallops instead of flat horizontal spokes \u2014 this is the wing fix that carries the most silhouette weight for T1.",
+              "file": "js/archetypes.js (drawBatWing 969-1006)",
+              "target": "drawBatWing wrist/spar geometry + scallop depth",
+              "severity": "major",
+              "expectedEffect": "Upper silhouette stops reading as a feather fan; the bat-wing/scallop signature returns, separating the family from generic winged creatures.",
+              "regressionRisk": "Shared across all hydra forms + flag cross-form regression (see sharedHelperChanges) \u2014 taller drooping membrane could clip the torso/canvas; clamp the trailing-tip drop and re-bake the whole row to check mecha panels + void."
+            },
+            {
+              "change": "Rebuild the horn crown to read as a back-swept multi-prong rake, not a forward bird-crest: push prong roots further back over the skull (px = -hw*(0.5 + p*0.30)), raise their base above the crown (py = -hh*(0.7 + p*0.12)), lengthen plen ~BH*0.085 -> ~BH*0.12, make the rearmost prong tallest, and lengthen the snout (hw*1.7 -> hw*2.1, angled slightly down) so the head reads reptilian/dragon not bird.",
+              "file": "js/archetypes.js (drawGhidorahHead 932-958)",
+              "target": "drawGhidorahHead prong px/py/plen + snout length",
+              "severity": "major",
+              "expectedEffect": "Head reads as a horned dragon skull with a back-swept crown instead of a sparrow crest; restores the 'back-swept multi-prong horn crown' must-have and reptilian read.",
+              "regressionRisk": "drawGhidorahHead is shared by T1/T2/T4/void \u2014 base prong reposition must stay compatible with the per-tier crown overrides; longer prongs at tiny headScale could collide with the neighbor head \u2014 verify the fan stays readable as 3 distinct heads."
+            },
+            {
+              "change": "Narrow the hydra torso so the neck-fan dominates: pass a widthMul ~0.82 into drawTorso from buildHydra for hydra forms (drawTorso already accepts widthMul). Optionally add a small filled barb triangle at the tail tip in drawTail behind an opts.barb flag (passed from buildHydra for the hydra family) at (d*BW*1.25, -BH*0.06).",
+              "file": "js/archetypes.js (buildHydra L847 drawTorso call; drawTail 156-165)",
+              "target": "drawTorso widthMul arg + drawTail opts.barb",
+              "severity": "minor",
+              "expectedEffect": "Leaner body makes the three-neck fan the dominant mass as specced; barb restores the 'two tails ending in a sickle barb' signature for near-zero cost.",
+              "regressionRisk": "Narrowing the torso shifts where neck roots and legs meet the body \u2014 verify roots still emerge cleanly; the tail barb is additive (opts-gated) so it won't regress non-hydra callers of drawTail."
+            },
+            {
+              "change": "Push T1 to the WARMER/DARKER end of the gold band so the palette itself disambiguates it from T2 (the most dangerous misname pair): ghidorah skin #d4a000 -> ~#c8920c, skinDark #8b6914 -> ~#7a5a10, skinLight #f0d070 -> ~#e8c45c.",
+              "file": "js/config.js L188",
+              "target": "ghidorah palette skin/skinDark/skinLight",
+              "severity": "minor",
+              "expectedEffect": "Widens the T1-vs-T2 luminance gap so the two gold fans don't merge at 40px even on color alone; hue stays gold so no warm/cool contradiction.",
+              "regressionRisk": "Pushing T1 darker risks T1 sinking toward the night bg \u2014 keep skinLight bright enough for night visibility; verify T1 still reads clearly brighter than the dark forms."
+            }
+          ]
+        },
+        {
+          "formId": "king_ghidorah",
+          "blindIdVerdict": "misreadable",
+          "currentRead": "Essentially indistinguishable from T1 ghidorah: same gold egg-body, same flat fan-blade wings, same three bird-headed stalks. The only surviving deltas are a marginally taller/wider neck fan and a one-step-brighter gold (#f2c200 vs #d4a000). The load-bearing Heisei signature \u2014 a RIGID STRAIGHT near-vertical devil-horn rack with hooked wing-tips \u2014 does NOT read; the crown is the same swept fan as T1. Highest collapse risk in the family.",
+          "topChanges": [
+            {
+              "change": "Differentiate the crown_tall horn profile in drawGhidorahHead: for 'crown_tall' override prongLean to a low uniform near-vertical value (~-0.18 to -0.20 constant across prongs, not -0.5-p*0.12) and pass a narrow widthMul (~0.30) into drawRidgeElement so prongs read as sharp straight vertical spikes. Give 'crown' (T1) a wider widthMul (~0.6) and a fanned arc (prongLean = -0.35 - p*0.20 with a small outward x-drift). The straight-vs-swept contrast is the whole T1-vs-T2 separator.",
+              "file": "js/archetypes.js (drawGhidorahHead 946-958)",
+              "target": "drawGhidorahHead prongLean + drawRidgeElement widthMul per style",
+              "severity": "major",
+              "expectedEffect": "Creates a real silhouette difference between T1 (soft swept fan) and T2 (rigid straight rack) at 40px \u2014 the load-bearing separator that currently does not exist.",
+              "regressionRisk": "drawGhidorahHead serves all crown styles \u2014 branch cleanly on style so 'asymmetric' (T4) and 'thorns' (void) keep their own prong logic; verify the narrow widthMul spikes don't vanish (too thin) at tiny headScale."
+            },
+            {
+              "change": "Push the size/value escalation further apart so it co-signals with the crown: widen T1-vs-T2 neckSpread (e.g. T1 1.15 / T2 1.5) and raise T2 wingSpan slightly so the fan footprint is unmistakably wider; pair with a brighter near-white specular crest by passing a higher rim alpha (rimCol ~0.55) for king_ghidorah's neck crest, gated on a shape flag (e.g. s.metallicCrest), so T2 reads polished metal vs T1 matte.",
+              "file": "js/config.js L191/L198 (neckSpread/wingSpan) + js/archetypes.js drawHydraHeads L1044 (rim alpha gate)",
+              "target": "neckSpread/wingSpan knobs + drawHydraHeads crest rimCol",
+              "severity": "minor",
+              "expectedEffect": "Size + value + material escalate together so T2 reads as a clear level-up, not 'T1 slightly brighter'; backs up the crown fix with a second redundant cue.",
+              "regressionRisk": "Wider neckSpread + taller fan can clip the canvas top \u2014 verify tips stay inside 150x168; the metallicCrest flag must not brighten other tiers' crests."
+            },
+            {
+              "change": "Add a recurved hooked wing-tip only for king_ghidorah: opts.wingHook in drawBatWing extends the outermost spar tip into a small hook (extra lineTo doubling back) cut as a notch in the membrane outline; leave T1 un-hooked for contrast. Most effective once the wing geometry reads as a wing (depends on the shared drawBatWing rework).",
+              "file": "js/archetypes.js (drawBatWing 969-1006) + js/config.js L198 (wingHook:true)",
+              "target": "drawBatWing opts.wingHook + new shape.wingHook knob",
+              "severity": "minor",
+              "expectedEffect": "Restores the Heisei hooked-wing-tip signature as a T2-specific wing cue distinguishing it from T1.",
+              "regressionRisk": "Hook geometry only fires when opts.wingHook is set, so no sibling regression; a hook that's too large could read as a fifth spar \u2014 keep it small."
+            }
+          ]
+        },
+        {
+          "formId": "mecha_ghidorah",
+          "blindIdVerdict": "reads-clearly",
+          "currentRead": "The most distinct and best-delivered form: a silver-grey body with a hard angular machine center prong (segmented neck-brace stack + cyan-edged helmet head) flanked by two ORGANIC GOLD bird-headed necks; cyan accents pop against steel. The silver-vs-gold split and cyan accent clearly separate it from the gold tiers and the mecha-biped family. Weak spots: the center 'head' reads as a thin chimney/turret stack rather than a clear square skull with a bright cyan visor BAR, and the torso plating is a translucent grey wash rather than opaque armor.",
+          "topChanges": [
+            {
+              "change": "Make the steel plating opaque: raise the mecha torso panel alpha in buildHydra from 0.55 toward ~0.92, and/or raise drawMechPanels' internal alpha multiplier (currently *0.65 -> ~0.36 effective) toward full for the chest/belly fills so the torso bakes as solid silver. Keep the gold ONLY on the two outer necks (already handled by goldPal).",
+              "file": "js/archetypes.js (buildHydra L857 drawMechPanels call; drawMechPanels ~1211-1212 internal factor)",
+              "target": "drawMechPanels alpha (call-site 0.55 -> ~0.92 and/or internal *0.65)",
+              "severity": "major",
+              "expectedEffect": "Torso reads as hard silver plating instead of a grey haze over gold, sharpening the silver-machine vs gold-organic split that IS the mecha identity and disambiguating it from void.",
+              "regressionRisk": "drawMechPanels is shared with the mecha-biped family (mecha_1..super_mecha) \u2014 raise alpha ONLY at the buildHydra call-site (pass ~0.92), do NOT change the internal multiplier globally or it over-plates the biped mechas; re-bake row 5 if the internal factor is touched."
+            },
+            {
+              "change": "Add an explicit bright horizontal cyan visor BAR to the cyborg center head: in drawMechHead's helmet path fill a short rect in pal.eye (#00d6ff) across the skull front (~at hly+hh*0.4, width hw*0.7, height ~hh*0.18) at full opacity, replacing the too-thin vertical plate-seam stroke. Also widen the center toward a hard 'box' skull (drawMechHead box path or a widened helmet wedge) so the silhouette reads rounded-SQUARE-rounded, and cap the neck-brace stack so the head not the braces is the dominant center mass.",
+              "file": "js/archetypes.js (drawMechHead helmet path ~1425-1443; drawHydraHeads cyborg branch 1058-1061; neck braces 1047-1051)",
+              "target": "drawMechHead helmet visor rect + box headStyle; brace cap",
+              "severity": "minor",
+              "expectedEffect": "Center reads as a square machine skull with a legible glowing cyan eye/visor (the hardAt40px cue), not a featureless smokestack stub.",
+              "regressionRisk": "drawMechHead is shared with the mecha-biped family (helmet headStyle used by mecha_2) \u2014 gate the visor bar so it doesn't double-draw or mis-scale on the biped helmet; verify mecha_2's head in row 5 after the change."
+            },
+            {
+              "change": "Restrain cyan on the mech wing to an accent and give it real membrane area: inherit the shared drawBatWing rework (membrane below the wrist) and in the mech branch draw the spars in a steel mid/highlight (pal.skinLight ~#c0c0c0) reserving cyan (pal.plateEdge) for ONLY the single leading-edge rim or 1-2 seams, not all 5 spars.",
+              "file": "js/archetypes.js (drawBatWing mech branch 986-1005)",
+              "target": "drawBatWing mech spar color + membrane area",
+              "severity": "polish",
+              "expectedEffect": "Wing reads as silver plate with cyan trim (a winged limb), not an all-cyan horizontal blade, keeping mecha's material distinct from void's all-cyan dark form.",
+              "regressionRisk": "Only affects the mech wing branch; verify the cyan leading-edge rim still reads so the wing doesn't lose all machine accent."
+            }
+          ]
+        },
+        {
+          "formId": "grand_king",
+          "blindIdVerdict": "misreadable",
+          "currentRead": "Reads as 'T1/T2 again' \u2014 a gold egg-body with fan-blade wings and three bird-headed necks, only fractionally bulkier and palest-gold. The shorter necks are faintly perceptible but the FORKED-center-crown asymmetry (the #1 Grand King identifier) is invisible: the center crown is at most one extra tiny sub-prong reading as a denser tuft, not a Y/antler fork. The bulk delta is too small to separate it from the other gold egg-bodies.",
+          "topChanges": [
+            {
+              "change": "Rebuild the center crown as a TRUE filled Y-fork: in drawGhidorahHead's 'asymmetric' branch, for each center prong draw TWO sub-prongs sharing the base that split into a V near the tip (one drawRidgeElement at prongLean+0.3, one at prongLean-0.3 from the same base, both shorter) as a filled antler mass; keep SIDE heads at single straight prongs. The forked-center vs straight-sides contrast is the whole ID and must survive at 40px as an antler bulge.",
+              "file": "js/archetypes.js (drawGhidorahHead asymmetric branch 953-957)",
+              "target": "drawGhidorahHead asymmetric fork (two sub-prongs per center prong)",
+              "severity": "major",
+              "expectedEffect": "Center head silhouettes as a branching antler distinct from the straight side horns \u2014 the load-bearing Grand King separator that currently does not read.",
+              "regressionRisk": "Only the asymmetric+isCenter branch changes, so siblings are safe; at tiny headScale the fork could merge into a blob \u2014 verify the V splits visibly and the antler clears the neighbor heads."
+            },
+            {
+              "change": "Add stocky necks + more bulk: add neckWidthMul ~1.25 to grand_king's shape{} (drawHydraHeads already multiplies nwBase/nwTip by widthMul -> ~BH*0.137 base) and bump bodyBulk 1.12 -> 1.18.",
+              "file": "js/config.js L212",
+              "target": "grand_king shape.neckWidthMul (new) + shape.bodyBulk",
+              "severity": "minor",
+              "expectedEffect": "Delivers the 'short THICK stocky necks' and 'beefiest organic tier' cues that are currently half-missing (necks were shorter but not thicker; bulk delta too small).",
+              "regressionRisk": "Thicker necks + more bulk + the taller fan could clip the canvas top \u2014 verify tips stay inside 150x168 at this bulk (the shorter neckLenMul helps offset)."
+            },
+            {
+              "change": "Keep the deep-gold shadow contrast (skinDark #d4a000 already set) so the pale #ffee77 body doesn't wash into lit T2 at iso; optionally bump the gold aura alpha (config.js L211) from 0.18 to ~0.24 so the radiant-peak material reads as the brightest tier.",
+              "file": "js/config.js L209/L211",
+              "target": "grand_king palette skinDark (keep) + aura alpha",
+              "severity": "polish",
+              "expectedEffect": "Reinforces palette separation as the lightest/warmest gold tier without changing the load-bearing shape cues.",
+              "regressionRisk": "Aura is form-local; minimal risk. Do not lighten skinDark or the pale body loses its shadow anchor."
+            }
+          ]
+        },
+        {
+          "formId": "void_ghidorah",
+          "blindIdVerdict": "wrong",
+          "currentRead": "A dark-indigo version of the SAME winged egg-body as the gold tiers \u2014 full torso, two flat fan-blade wings, legs, and two tails all faintly visible \u2014 with three thin cyan-rimmed thorny necks rising from a cyan portal glow. The necks (S-curve, thorns, cyan rim, gold mid-vein) are the best-delivered cue in the family, but they sit on a normal dragon body that should not exist. This is the spec's explicitly-named FAILURE MODE: it reads as 'dark winged Ghidorah,' not 'cosmic-horror thorny necks from a portal.' The dark body also sinks into the night sky (luminance delta ~2-3) with no cyan rim on torso/wings.",
+          "topChanges": [
+            {
+              "change": "Gate the body parts on s.voidPortal in buildHydra: when set, SKIP wings (both calls), legs, torso, belly highlight, and tails entirely, and re-root the three thorny necks at the portal center (rootY \u2248 pcy = -BH*0.28 instead of -BH*0.82) so they descend straight from the wormhole. The necks become the entire silhouette and the portal disc (drawn first) is no longer occluded.",
+              "file": "js/archetypes.js (buildHydra 828-861 body parts; drawHydraHeads rootY 1029)",
+              "target": "buildHydra voidPortal gate (skip tails/wings/legs/torso) + neck rootY",
+              "severity": "major",
+              "expectedEffect": "The single largest void fidelity win \u2014 stops it reading as a dark winged dragon, makes the wormhole disc visible, and delivers the 'thorny necks from a portal' core silhouette.",
+              "regressionRisk": "Re-rooting necks at the portal changes the whole layout \u2014 verify neck tips stay within 150x168 at all facings and that the portal radial (BW*0.85) isn't clipped; ensure no other code path assumes a torso exists for void (eye/attack anchors)."
+            },
+            {
+              "change": "After de-bodying, push neckLenMul ~1.25 -> ~1.4 so the long thin necks fill the frame as the dominant mass, and brighten the thorns: stroke thorn tips with the cyan crestRim (rgba(0,224,255,...)) in drawHydraNeck's thorn loop and lengthen thorns (m[4]*1.7 -> ~m[4]*2.0) so they read as bright silhouette spikes, not faint bumps.",
+              "file": "js/config.js L219 (neckLenMul) + js/archetypes.js (drawHydraNeck thorns 899-912)",
+              "target": "void neckLenMul + drawHydraNeck thorn length/cyan-tip",
+              "severity": "minor",
+              "expectedEffect": "Necks dominate the frame and the thorn-crown bristle reads, making void alien and distinct from the gold tiers' smooth crowns.",
+              "regressionRisk": "drawHydraNeck thorns only fire when opts.thorns is set (void-only) \u2014 safe; longer necks must still fit the canvas after re-rooting."
+            },
+            {
+              "change": "Apply a cyan self-illumination rim so the dark form survives the night bg (only needed for whatever body remains \u2014 if fully de-bodied, ensure the necks' crestRim carries it and raise the AO dark stop): config.js L217 skinDark #0d0d1a -> ~#22224a so the neck base is never sky-luminance, and demote the gold mid-vein (lineWidth 1.6 -> ~1.0) so cyan clearly dominates over the one warm note.",
+              "file": "js/config.js L216-217 (skinDark) + js/archetypes.js (drawHydraNeck midVein 921-924)",
+              "target": "void palette skinDark + drawHydraNeck midVein width",
+              "severity": "minor",
+              "expectedEffect": "Keeps the dark indigo necks visible against #05070f and ensures cyan is the loudest accent so void never misnames as a warm gold tier; preserves the spec'd thin gold vein as a whisper.",
+              "regressionRisk": "Lightening skinDark slightly could wash the AO \u2014 keep it dark enough to read as indigo not grey; midVein change is void-local."
+            }
+          ]
+        }
+      ],
+      "sharedHelperChanges": [
+        {
+          "helper": "drawBatWing (js/archetypes.js 969-1006)",
+          "change": "Rework membrane geometry so it reads as a drooping leathery bat-wing, not a flat horizontal fan-blade: move the wrist outward and up (wx \u2248 side*WH*0.22, wy \u2248 -BH*0.70), spread the spar tips over a taller arc (\u00b1BH*0.9) with the trailing tips dropping BELOW the wrist (positive y) so the membrane is a broad sheet, deepen the scallop control offset from ~BH*0.05 to ~BH*0.085-0.09, and thin the spar strokes so the FILL not the strokes carries the shape.",
+          "rationale": "This single helper drives the wings on ALL five hydra forms (and the mech panel-wing branch); the current flat-spoke geometry is the #1 reason the whole family reads as a 'gold peacock' rather than space-dragons. Fixing it lifts every form's upper silhouette at once.",
+          "regressionRisk": "HIGH cross-form blast radius \u2014 affects ghidorah/king/mecha/grand_king/void wings simultaneously. The taller drooping membrane can clip the torso or canvas top and changes where the front/back wings overlap the body and neck roots. Must re-bake the ENTIRE row 3 composite and check: (a) wings don't occlude the necks/heads, (b) the mech (opts.mech) branch still reads as flat cyan-edged panels with the new area, (c) void's wing is gated OFF by the buildHydra voidPortal change so it isn't affected. Clamp the trailing-tip drop to keep wings inside 150x168."
+        },
+        {
+          "helper": "drawGhidorahHead (js/archetypes.js 932-958)",
+          "change": "Branch the horn-crown profile by style so each tier reads distinctly: 'crown' (T1) = wide blunt softly-fanned prongs (widthMul ~0.6, prongLean -0.35-p*0.20 with outward x-drift); 'crown_tall' (T2) = narrow rigid near-vertical rack (widthMul ~0.30, prongLean ~-0.18 constant); 'asymmetric' (T4) = forked Y center + straight sides; 'thorns' (void) = longer splayed cyan-tipped bristles. Also reposition base prongs further back/higher over the skull and lengthen the snout (shared across styles) so all heads read reptilian not bird.",
+          "rationale": "The crown is the load-bearing per-tier identifier and currently a single shared swept-prong primitive collapses T1/T2/T4 into the same crest. Branching here is what makes the gold trio individually blind-ID-able.",
+          "regressionRisk": "MEDIUM \u2014 shared by four forms (T1/T2/T4/void) and called per-head inside drawHydraHeads. A clean switch on `style` keeps branches independent, but the shared base-prong reposition + snout change touches all four; verify each tier's crown still fits at the tiny headScale (BH*0.62*headScale) and the narrow T2 spikes don't disappear. Mecha's center uses drawMechHead (not this) so it's unaffected; the two mecha OUTER gold heads DO use this with style 'crown' \u2014 confirm they still read."
+        },
+        {
+          "helper": "drawHydraHeads z-order (js/archetypes.js 1024-1066)",
+          "change": "Reorder the neck/head paint so the center is drawn LAST (paint outers first, center on top), and apply a center-forward nudge gated on shape.centerForward. Also the per-tier rim-alpha gate (s.metallicCrest) and neck rootY (void re-root) live here.",
+          "rationale": "Z-order is the only way to deliver the MV center-forward depth cue; it's a structural change to the loop that affects how all three necks composite for every form.",
+          "regressionRisk": "MEDIUM \u2014 changing draw order affects every hydra form's neck overlap. For symmetric tiers (T2/T4) and mecha (cyborg center should stay centered), gate the forward NUDGE on centerForward but the center-on-top reorder is safe/beneficial for all (the center head should always be frontmost). Verify the cyborg center still composites correctly over the two gold necks after reordering."
+        },
+        {
+          "helper": "drawTail (js/archetypes.js 156-165)",
+          "change": "Add an optional filled barb triangle at the tail tip behind an opts.barb flag (3 vertices at the existing tip point), passed from buildHydra only for the hydra family.",
+          "rationale": "Restores the 'two tails ending in a sickle barb' family signature at near-zero cost.",
+          "regressionRisk": "LOW \u2014 drawTail is shared with the wyrm family; the barb is opts-gated so wyrm callers (which pass no opts) are byte-identical. Only fires when buildHydra passes opts.barb. Note: void's tails are removed by the voidPortal gate, so this only affects the four bodied tiers."
+        }
+      ],
+      "implementationOrder": [
+        "SHARED drawBatWing geometry rework (wrist outward/up, drooping membrane, deeper scallops) \u2014 lifts the upper silhouette of all 5 forms from 'peacock fan' to 'bat-winged dragon' in one change; highest recognizability leverage for the whole family.",
+        "void_ghidorah body-gate in buildHydra (skip tails/wings/legs/torso, re-root necks at portal) \u2014 fixes the family's only WRONG form and its named failure mode; turns 'dark winged Ghidorah' into 'thorny necks from a portal.'",
+        "SHARED drawGhidorahHead crown branching by style (T1 soft-fan vs T2 rigid-rack vs T4 Y-fork) + back-swept reposition + longer snout \u2014 breaks the T1/T2/T4 crown collapse and makes the gold trio individually blind-ID-able.",
+        "drawHydraHeads center-last z-order + center-forward nudge (gated centerForward on ghidorah) \u2014 delivers the #1 MV asymmetric-trident depth cue.",
+        "mecha_ghidorah opaque silver plating (raise drawMechPanels alpha at the buildHydra call-site) + cyan visor BAR + box center skull \u2014 sharpens the silver/gold split and the cyan eye.",
+        "grand_king forked center antler + neckWidthMul 1.25 + bodyBulk 1.18 \u2014 completes the T4 separators once the shared crown branch exists.",
+        "king_ghidorah hooked wing-tip + size/value/metallic-crest escalation; ghidorah torso-narrow + tail barb + warmer-gold palette shift; void neck-length/thorn-cyan/skinDark night-visibility polish \u2014 redundant cues layered on the structural fixes above."
+      ]
+    },
+    {
+      "family": "Rodan (flyer / pteranodon) \u2014 row 4: rodan (Showa t1), rodan_mv (MonsterVerse Fire Demon t2), rodan_fire (Heisei Fire Rodan t3)",
+      "overallRead": "Adjudicating row 4 of the live composite against the spec confirms the headline finding from all three lenses AND surfaces two render-level problems the per-lens critiques under-weighted. The entire pteranodon HEAD path is byte-identical across all three forms: drawCrestHorns (archetypes.js:530) is defined but NEVER called, and drawChestSpikes / goldCrest / a black-beak override simply do not exist. So the spec's load-bearing differentiators \u2014 straight vs V-split crest (t1-vs-t2), the spiky sternum (all three), Fire Rodan's gold crest + gold chest spines + BLACK beak (t3-vs-t2, the single most distinctive Fire-Rodan cue) \u2014 are ALL unrendered. The three forms separate ONLY by body hue + scallop count + fissures + fireRim.\n\nTwo things the live render makes obvious that the lens critiques softened: (1) THE DOMINANT VISUAL on t2/t3 is not a wing \u2014 it is a vertical TREE of magma cracks running straight down past the bottom of the canvas, with the wings hanging below the body as droopy lobes that read as roots. The cause is that drawFissures (archetypes.js:96) was authored for the wyrm's tall vertical torso (angle ~vertical, sy spanning -0.74..-0.22 BH, len up to 0.34 BH) and is reused verbatim on the flyer's slim horizontal lozenge (cy=-0.55 BH, half-height only 0.15 BH) \u2014 so the cracks spill far below the body and stack into a magma trunk. This single artifact does more damage to the 'flat fire-glider' read than the missing crest does, and no lens named it as the primary fix. (2) At front-facing (base 0, lean=0) the wing has no horizontal lean to flatten it, so drawPteranoWing's trailing-edge drop (+BH*0.10) makes both wings hang as a hunched bat/owl skirt rather than a near-horizontal blade \u2014 the body half-width (BW*0.72) roughly equals the wing half-span (capped at 50px), so the wings do NOT dwarf the body as the family spec demands.\n\nThe fix set is therefore: (A) constrain drawFissures to the flyer body band so the magma stays ON the body (kills the trunk) \u2014 highest single-edit leverage for t2/t3; (B) one shared wiring of drawCrestHorns into drawFlyerHead with per-form color (straight bone-tan t1 / vsplit rock t2 / vsplit gold t3) \u2014 restores the top vertex of the WING+CREST+BEAK triangle and the t1/t2/t3 crest divergence in one edit; (C) lengthen+droop the beak and add a beakColor override so Fire Rodan gets its black beak; (D) narrow the body lozenge + flatten the wing trailing edge so the wings dominate; (E) add drawChestSpikes (bone-tan t1 / rock t2 / gold t3). I dropped the buildFlyer self-illum rim port (low blind-ID leverage vs cost; t2/t3 bodies don't sink once the fissure-trunk is fixed and the body palette already reads hot), the serrated-beak notches and comet-trail (sub-pixel/optional at 40px), and the WH-cap raise is downgraded to a guarded tweak because the widest tip + drips must stay inside x\u2208[0,150] from anchor 75.",
+      "forms": [
+        {
+          "formId": "rodan",
+          "blindIdVerdict": "reads-but-generic",
+          "currentRead": "A rounded, hunched brown owl/bat blob: a broad mahogany lozenge body roughly as wide as the wing half-span, with wings sweeping DOWN into droopy lobes that hang below the body (cloaked/skirted read, not a flat glider). The head is a small fused lump with NO crest point and NO horns breaking the skyline; the beak is a tiny near-horizontal nub. Amber eye, flameless brown palette correct. Reads as 'a generic small brown winged critter,' not specifically Showa rock-pteranodon \u2014 the WING+CREST+BEAK identity triangle has only the wing; CREST and BEAK apexes are absent.",
+          "topChanges": [
+            {
+              "change": "Wire drawCrestHorns into drawFlyerHead's pteranodon branch. Thread `shape` into drawFlyerHead's signature (buildFlyer:606 currently passes only wingStyle \u2014 add a crestStyle/goldCrest pass-through from s) and REPLACE the inline single-color crest blob (archetypes.js:750-756) with drawCrestHorns(ctx,BH,BW,hx+BW*0.14,-BH*0.86, shape.crest||'straight', '#d8b070'). For 'straight' make the two prongs nearly parallel/raked-back as filled bone-tan triangles (lengths ~BH*0.18 and ~BH*0.14), not strokes.",
+              "file": "js/archetypes.js (+ buildFlyer call site 606; config.js:228 crest:'straight' already set)",
+              "target": "drawFlyerHead pteranodon branch + drawCrestHorns (the dead helper) + buildFlyer:606 signature",
+              "severity": "major",
+              "expectedEffect": "Two bone-tan straight horns break the skull skyline \u2192 restores the top vertex of the WING+CREST+BEAK triangle and introduces the only warm-bone material on the sprite. This is also the edit that makes t2's vsplit crest diverge from t1.",
+              "regressionRisk": "Shared draw path \u2014 must not break moth head (gate the call to the pteranodon/else branch only). Verify horns clear the 150px canvas top at all 5 facings (hy=-BH*0.86 + len ~BH*0.18 at bulk 1.2 is the worst case; t1 bulk 0.95 is safe but check t3)."
+            },
+            {
+              "change": "Lengthen + droop the beak so it leads and down-hooks: in drawFlyerHead beak path (archetypes.js:763-767) extend the tip to ~hx+BW*0.66 and drop tip y to ~-BH*0.76 (below the head-blob center -BH*0.84), curving the lower edge downward.",
+              "file": "js/archetypes.js",
+              "target": "drawFlyerHead pteranodon beak path (763-767)",
+              "severity": "major",
+              "expectedEffect": "A long down-curved raptor beak leads the body \u2192 restores the front apex of the identity triangle and disambiguates from Mothra's rounded head. Benefits all three tiers (shared path).",
+              "regressionRisk": "Low. Keep tip x within canvas; verify the beak still attaches to the head blob and doesn't detach as a floating wedge at the back-34 facing."
+            },
+            {
+              "change": "Narrow the body lozenge so the wings dwarf it: in drawPteranoBody (archetypes.js:501) drop hw from BW*0.72 to ~BW*0.55 and hh from BH*0.15 to ~BH*0.12.",
+              "file": "js/archetypes.js",
+              "target": "drawPteranoBody hw/hh (501)",
+              "severity": "minor",
+              "expectedEffect": "Body half-width falls clearly below wing half-span \u2192 restores the family's 'slim body radically out-sized by wings' silhouette instead of the current ~1:1 balanced-animal read.",
+              "regressionRisk": "Shared across all three tiers (intended). A narrower body gives the fissures/talons/belly-sheen less room \u2014 re-check that drawTuckedTalons and the belly highlight still sit on the body, and that the fissure-band fix (shared helper) is tuned to the new hh."
+            },
+            {
+              "change": "Add drawChestSpikes(ctx,BH,BW,fg,col): 3 filled triangles ~BH*0.06 stepping down the leading underside (cy\u2248-BH*0.50, beak side), called in buildFlyer right after drawPteranoBody, gated on wingStyle==='pteranodon'. col='#d8b070' for t1.",
+              "file": "js/archetypes.js (new helper + buildFlyer call ~585); col chosen per-form",
+              "target": "new drawChestSpikes helper + buildFlyer call site",
+              "severity": "minor",
+              "expectedEffect": "A craggy bone-tan sternum row breaks the flat brown underside \u2192 adds the canonical 'spiky chest' mustHave and a second warm-bone accent. Same helper serves t2 (rock) and t3 (gold).",
+              "regressionRisk": "Low/contained (pteranodon-only). Keep spikes small and on the leading underside so they don't collide with the talons or read as a second head at 40px."
+            }
+          ]
+        },
+        {
+          "formId": "rodan_mv",
+          "blindIdVerdict": "misreadable",
+          "currentRead": "The same droopy down-swept wing mass + crestless head as t1, recolored dark burgundy. BUT the dominant element is a bright-orange magma 'tree' of cracks running straight DOWN the center past the canvas bottom (the wyrm-tuned drawFissures spilling off the slim horizontal body), with a glowing orange trailing rim on the wings. The heat palette correctly escalates it off t1, but the silhouette is t1's exact shape with fire painted on PLUS a vertical magma trunk \u2014 the spec's load-bearing t1-vs-t2 differentiator (the V-split forked crest) is entirely absent from the outline.",
+          "topChanges": [
+            {
+              "change": "Constrain drawFissures to the flyer body band so the magma stays ON the body and stops forming a vertical trunk. Add a horizontal/flyer mode (e.g. pass an opts flag from buildFlyer): clamp start-y to the body lozenge (sy \u2208 ~[-BH*0.66,-BH*0.46] instead of [-BH*0.74,-BH*0.22]), cut len to ~0.06\u20130.10*BH (from 0.16\u20130.34), and reduce the vertical bias in `ang` toward horizontal so cracks fan across the lozenge rather than hang below it.",
+              "file": "js/archetypes.js (drawFissures:96-116; call gated/parameterized from buildFlyer:594)",
+              "target": "drawFissures geometry (sy range, len, ang bias) via a new flyer/horizontal mode flag",
+              "severity": "major",
+              "expectedEffect": "Kills the magma-trunk artifact that currently dominates t2/t3 and reinforces the 'droopy roots' misread \u2192 the cracks become Smaug-style seams confined to the upper body, exactly the spec's brand-heat read, and the wing silhouette is no longer visually swallowed.",
+              "regressionRisk": "drawFissures is SHARED with the wyrm family (burning/gxk/supernova use it on a tall vertical torso). MUST branch on a flag and leave the wyrm path's existing sy/len/ang untouched \u2014 verify wyrm rows 1 still render their vertical body cracks unchanged."
+            },
+            {
+              "change": "Wire drawCrestHorns with crest:'vsplit' (config.js:235, already set) and crest color = pal.skinLight (#8a2e1c rock-tone, NOT gold per spec 't2 keeps a rock-colored crest'). Same single wiring edit as rodan; the vsplit branch (archetypes.js:535-538) already fans wider and hooks tips inward.",
+              "file": "js/archetypes.js (shared wiring) + config.js:235 (data already correct)",
+              "target": "drawFlyerHead crest call \u2192 drawCrestHorns 'vsplit' branch",
+              "severity": "major",
+              "expectedEffect": "Two forked, inward-hooked rock-colored prongs \u2192 the ONE edit that makes t2's head silhouette diverge from t1's, delivering the load-bearing t1-vs-t2 differentiator.",
+              "regressionRisk": "Same shared-path risk as rodan. Keep the crest rock-colored (skinLight), NOT gold, so t2 stays distinct from t3's gold crest."
+            },
+            {
+              "change": "Inherit the shared drawPteranoWing trailing-edge flattening (reduce drop +BH*0.10 \u2192 ~+BH*0.04 at archetypes.js:688,700) and the body-narrow + beak-lengthen fixes from rodan.",
+              "file": "js/archetypes.js",
+              "target": "drawPteranoWing trailing-edge ay/drip math (688,700); drawPteranoBody; drawFlyerHead beak",
+              "severity": "minor",
+              "expectedEffect": "Once the fissure-trunk is gone and the wing flattens, the fireRim reads as a hot blade edge rather than a drooping curtain \u2192 'flat fire-glider' instead of 'hanging skirt'.",
+              "regressionRisk": "Shared trailing-edge change affects all three tiers (intended); re-verify the fireRim stroke still traces the flattened trailing edge cleanly."
+            }
+          ]
+        },
+        {
+          "formId": "rodan_fire",
+          "blindIdVerdict": "wrong",
+          "currentRead": "The brightest/biggest-feeling of the three by palette (vermilion body + white-hot cracks + strong orange rim), but the silhouette is the same crestless rounded head + down-swept droopy wings as t1/t2, dominated by the same vertical white-hot magma trunk dripping past the canvas bottom, and the wing footprint is identical to t2 (both capped WH=50). CRUCIALLY the Heisei color contract that DEFINES the form is absent as SHAPE+VALUE: goldCrest:true (config.js:242) is dead data so the crest fills body-color; there are no gold chest spines; and the beak fills pal.skinDark (#c23008 rust), NOT the canonical charcoal-black #1a0e08. The spec's own disambiguator resolves WRONG ('if the crest is bone-rock and the beak isn't black, it's t2') \u2192 reads as 'a brighter rodan_mv,' not Fire Rodan.",
+          "topChanges": [
+            {
+              "change": "Honor goldCrest in the shared drawCrestHorns wiring: crest color = shape.goldCrest ? '#ffd24a' : (t2 rock / t1 bone). With crest:'vsplit' + goldCrest:true (config.js:242) this renders the V-split crest in bright gold. Per hardAt40px keep a pal.skinDark sliver behind the gold prongs for value separation (gold-on-vermilion is low-contrast).",
+              "file": "js/archetypes.js (shared wiring reads shape.goldCrest) + config.js:242 (goldCrest:true already set)",
+              "target": "drawFlyerHead crest call \u2192 drawCrestHorns color arg keyed on goldCrest",
+              "severity": "major",
+              "expectedEffect": "A bright forked-gold crown breaks the skull line \u2192 restores half of the load-bearing t3-vs-t2 gold-and-black contract; the single highest-leverage t3 differentiator after the beak.",
+              "regressionRisk": "Gold-on-vermilion can muddy \u2014 keep the dark backing sliver. Don't let goldCrest leak to t1/t2 (it is only set on rodan_fire)."
+            },
+            {
+              "change": "Add a black-beak override: in drawFlyerHead beak fill (archetypes.js:763) use shape.beakColor || pal.skinDark; set beakColor:'#1a0e08' on rodan_fire (config.js:242). Combined with the shared beak-lengthen fix this yields the long black down-curved beak.",
+              "file": "js/archetypes.js (beak fill 763) + config.js:242 (add beakColor)",
+              "target": "drawFlyerHead beak fill color + new shape.beakColor knob",
+              "severity": "major",
+              "expectedEffect": "The long charcoal-black beak \u2014 'the single most distinctive Fire-Rodan-only cue' \u2014 anchors the front apex as a hard dark value against the vermilion body. The #1 blind-ID fix for t3.",
+              "regressionRisk": "On a bright body a black beak can read as a hole \u2014 keep it a solid CUT with a crisp edge (per hardAt40px). beakColor defaults to pal.skinDark so t1/t2 are unaffected."
+            },
+            {
+              "change": "Use drawChestSpikes with col='#ffd24a' (gold) for rodan_fire, keeping pal.skinDark behind the gold triangles for separation.",
+              "file": "js/archetypes.js (shared helper) + per-form col",
+              "target": "drawChestSpikes call, gold color for t3",
+              "severity": "major",
+              "expectedEffect": "Bright gold spikes stepping down the leading chest are a real silhouette/value break, not just a color \u2192 the contract's third gold read.",
+              "regressionRisk": "Low/contained. Same backing-sliver note for gold-on-vermilion legibility."
+            },
+            {
+              "change": "Inherit the drawFissures body-band constraint (kills the white-hot magma trunk) and the wing-flatten / body-narrow fixes.",
+              "file": "js/archetypes.js",
+              "target": "drawFissures flyer mode; drawPteranoWing; drawPteranoBody",
+              "severity": "minor",
+              "expectedEffect": "The white-hot cracks become incandescent body seams instead of a dripping trunk \u2192 the body reads as a glowing ember and the gold/black head cues become the focal contrast.",
+              "regressionRisk": "Shared (see rodan_mv). The WH-cap raise for a 'widest span' escalation is intentionally NOT included here \u2014 at wingSpan 3.4 + bulk 1.2 the widest tip + any drip risks clipping x\u2208[0,150] from anchor 75; only raise the cap with explicit bounds verification."
+            }
+          ]
+        }
+      ],
+      "sharedHelperChanges": [
+        {
+          "helper": "drawFissures (archetypes.js:96) \u2014 SHARED with the wyrm family (burning, gxk, supernova) AND the flyer family (rodan_mv, rodan_fire)",
+          "change": "Add a flyer/horizontal mode (new opts flag passed from buildFlyer:594). In that mode clamp start-y to the slim body lozenge band (sy \u2208 ~[-BH*0.66,-BH*0.46] vs the current [-BH*0.74,-BH*0.22]), shorten len to ~0.06\u20130.10*BH (vs 0.16\u20130.34), and bias `ang` toward horizontal so cracks fan ACROSS the lozenge. Leave the wyrm code path's sy/len/ang exactly as-is.",
+          "rationale": "On the flyer's short horizontal body the wyrm-tuned vertical cracks spill far below the body and stack into a vertical magma 'tree' that dominates the t2/t3 render and reinforces the droopy-wing misread \u2014 the biggest single thing breaking the 'flat fire-glider' read, larger than the missing crest.",
+          "regressionRisk": "HIGH if done without a flag \u2014 the wyrm forms (row 1) rely on the current vertical-trunk behavior on their tall torso. MUST branch on the flag; explicitly re-screenshot row 1 (burning/gxk/supernova) to confirm their body cracks are byte-unchanged."
+        },
+        {
+          "helper": "drawFlyerHead (archetypes.js:710) \u2014 SHARED by Mothra (moth) and Rodan (pteranodon) branches",
+          "change": "Extend the signature to receive `shape` (or crestStyle/goldCrest/beakColor) from buildFlyer:606. In the pteranodon branch: replace the inline crest blob with drawCrestHorns(...,shape.crest, shape.goldCrest?'#ffd24a':bone/rock), use shape.beakColor||pal.skinDark for the beak fill, and lengthen/droop the beak.",
+          "rationale": "One wiring edit lights up the crest for ALL THREE pteranodon tiers (straight/vsplit), the gold-crest for t3, and the black-beak override for t3 \u2014 the highest-leverage shared change in the family.",
+          "regressionRisk": "Moderate \u2014 must gate every new call to the pteranodon/else branch so the moth head (Mothra row 2) is untouched. Re-screenshot row 2 to confirm Mothra heads/antennae/eyespots are unchanged. Verify horns clear the canvas top at bulk 1.2 (t3) across all 5 facings."
+        },
+        {
+          "helper": "drawCrestHorns (archetypes.js:530) \u2014 DEFINED, currently NEVER called (dead code)",
+          "change": "No internal change needed beyond color arg \u2014 it already implements both 'straight' (parallel raked-back) and 'vsplit' (forked, inward-hooked) styles. Just call it (see drawFlyerHead change) with the per-form color.",
+          "rationale": "The straight-vs-vsplit logic the spec needs already exists; it is purely unwired. Activating it delivers the t1-vs-t2 differentiator with zero new geometry.",
+          "regressionRisk": "None on activation itself. Confirm the 'straight' prongs read as a hard notch (filled triangles) not thin strokes at 40px; widen if they vanish."
+        },
+        {
+          "helper": "drawPteranoWing (archetypes.js:667) \u2014 SHARED by all three Rodan tiers",
+          "change": "Reduce the trailing-edge drop from +BH*0.10 to ~+BH*0.04 (lines 688 and 700) so the wing reads as a near-horizontal blade instead of a hanging skirt \u2014 especially at front-facing where lean=0 provides no flattening.",
+          "rationale": "The droopy lower edge is what makes the front silhouette read as a hunched bat/owl rather than the spec's flat angular glider.",
+          "regressionRisk": "Affects all three tiers (intended) and the fireRim stroke (it follows the same trailing points) \u2014 verify the molten rim still traces cleanly along the flattened edge for t2/t3."
+        },
+        {
+          "helper": "drawPteranoBody (archetypes.js:500) \u2014 SHARED by all three Rodan tiers",
+          "change": "Narrow the lozenge: hw BW*0.72\u2192~BW*0.55, hh BH*0.15\u2192~BH*0.12.",
+          "rationale": "Current body half-width ~equals wing half-span, so the wings don't dwarf the body as the family spec demands.",
+          "regressionRisk": "Affects all three tiers (intended). Re-check that the belly highlight, tucked talons, body-band fissures, and chest spikes still sit correctly on the smaller body."
+        },
+        {
+          "helper": "drawChestSpikes \u2014 NEW helper",
+          "change": "Add drawChestSpikes(ctx,BH,BW,fg,col): 3 filled triangles ~BH*0.06 stepping down the leading underside (cy\u2248-BH*0.50). Call in buildFlyer after drawPteranoBody, gated on wingStyle==='pteranodon'. Color per form: #d8b070 (t1) / pal.skinLight rock (t2) / #ffd24a (t3).",
+          "rationale": "The canonical 'spiky chest' mustHave for all three tiers, and the contract's third gold read for t3.",
+          "regressionRisk": "New + pteranodon-gated, so contained. Keep spikes small/leading so they don't read as a second head or collide with talons at 40px."
+        }
+      ],
+      "implementationOrder": [
+        "1. drawFissures flyer/horizontal mode (flag-gated) \u2014 kills the vertical magma-trunk artifact dominating t2/t3; highest single-edit blind-ID leverage and the lens-missed primary problem. Re-screenshot wyrm row 1 to confirm no regression.",
+        "2. Wire drawCrestHorns into drawFlyerHead (thread shape through buildFlyer:606) with per-form color: straight bone-tan #d8b070 (t1), vsplit rock pal.skinLight (t2), vsplit gold #ffd24a via goldCrest (t3) \u2014 one edit restores the crest apex + the t1/t2/t3 crest divergence + Fire Rodan's gold crown.",
+        "3. Black-beak override (shape.beakColor||pal.skinDark; beakColor:'#1a0e08' on rodan_fire) + the shared beak lengthen/droop \u2014 delivers Fire Rodan's #1 cue and the leading down-curved beak for all tiers.",
+        "4. drawPteranoWing trailing-edge flatten (+BH*0.10\u2192+BH*0.04) + drawPteranoBody narrow (hw\u2192BW*0.55, hh\u2192BH*0.12) \u2014 restore the flat glider + wings-dwarf-body silhouette.",
+        "5. Add drawChestSpikes (bone-tan t1 / rock t2 / gold t3) \u2014 the spiky-sternum mustHave + t3's third gold read.",
+        "6. (Deferred / guarded) WH-cap raise for a monotonic t1<t2<t3 wingspan escalation \u2014 only with explicit verification that the widest tip + drips stay within x\u2208[0,150] from anchor 75 at wingSpan 3.4 + bulk 1.2."
+      ]
+    },
+    {
+      "family": "Mechagodzilla (hard-block robot) \u2014 row 5: mecha_1, mecha_2, mecha_3, super_mecha",
+      "overallRead": "The row's core problem is that all four forms ride the SAME drawMechTorso trapezoid and the SAME shared helpers (drawMechPanels/drawMechSpines/drawMechHead), so silhouette differentiation is currently carried almost entirely by ONE outline-breaking feature per form (mecha_2's shoulder pod, super_mecha's backpack) plus surface color. In the live composite (row 5) only mecha_2 blind-IDs cleanly: blue body + an outward shoulder-pod break = 'angular blue robot with a shoulder cannon.' The other three under-deliver their #1 must-haves. mecha_1 reads as a small grey wyrm with a single red BAR across the skull \u2014 the visor red and the Cybanek-orb red have merged into one mass (the spec's explicit 'orbs must NOT be overdrawn by the visor' failure), and bulk:0.95 makes it the runt instead of the bulbous crudest-robot. mecha_3 is the worst: near-black body with NO red self-illumination rim, so the lower torso/legs sink into the #05070f sky and you read a floating red diagonal spine-sash, not a robot; its red is also a full-body wash rather than concentrated hot seams, and leanPose is sub-pixel so it isn't 'the lean murder-robot.' super_mecha is a bulky gold robot with a backpack but a generic helmet head \u2014 its #1 Kiryu tell (forehead-to-nape skull blade) and its organic muscle-line seams + black wiring are entirely absent, so at iso it collapses toward 'bulky gold mecha_2.' Highest-leverage program: (1) give mecha_3 the mandatory red self-illum rim + concentrated gap-glow (fixes the single biggest failure in the family); (2) separate mecha_1's orb-red from visor-red and add bulbous shoulder caps + bulk bump; (3) give super_mecha a headBlade + black wiring (the two cheapest, highest-identity adds). Curved organic seams for super_mecha and a second far shoulder-pod for mecha_2 are lower-leverage polish. Every change MUST be flag-gated: drawMechHead is ALSO called by the mecha_ghidorah cyborg center head (headStyle:'helmet', no extra opts), and drawMechTorso/Panels/Spines are shared by all four mecha \u2014 defaults-off keeps siblings and the hydra byte-identical.",
+      "forms": [
+        {
+          "formId": "mecha_1",
+          "blindIdVerdict": "reads-but-generic",
+          "currentRead": "A small medium-grey biped on the shared trapezoid with a red BAR across the skull (the two Cybanek temple orbs have merged with the full-width red visor into one connected red mass) and a diagonal white spine-sash. Chrome is correctly untinted and the red temple feature is the instant tell, but at iso it reads 'grey wyrm with a red headband,' not 'bulbous bolted-together first robot' \u2014 it is the SMALLEST of the four (bulk 0.95) and its outline is byte-identical to the angular tiers minus their pods.",
+          "topChanges": [
+            {
+              "change": "Separate orb-red from visor-red so the two Cybanek temple domes read as DISCRETE features, not one bar. In drawMechHead's non-ghidorah eye branch (lines 1462-1466), gate a narrowed visor on opts.cybanek: cut the eye rect width from hw*0.74/0.80 to ~hw*0.40 and center it so a chrome gap exists on each side between the visor and the two orbs at hlx+hw*0.04 / hw*0.96.",
+              "file": "js/archetypes.js",
+              "target": "drawMechHead (eye/visor branch, gated on opts.cybanek)",
+              "severity": "major",
+              "expectedEffect": "The #1 Showa identifier (paired discrete red temple domes outside/above the eyes) finally reads as TWO orbs instead of a single red headband \u2014 fixes the spec's explicit 'orbs must NOT be overdrawn by the visor' failure.",
+              "regressionRisk": "Low \u2014 gated on opts.cybanek which only mecha_1 sets; mecha_2/super helmet visors and the ghidorah cyborg head are untouched."
+            },
+            {
+              "change": "Add bulbous semicircle shoulder caps + small bulk bump so the silhouette pushes OUTWARD into the crude-robot read. New shape flag roundShoulders:true on mecha_1 (config.js line 251); in buildMecha after drawMechTorso draw two filled arc caps r\u2248BW*0.16 proud of the torso top-left/top-right at y\u2248topY, fill pal.skin with a rimCol(0.5) top arc (mirror how drawShoulderCannon breaks the outline). Pair with bulk 0.95 \u2192 ~1.0.",
+              "file": "js/config.js + js/archetypes.js",
+              "target": "shape.roundShoulders + shape.bulk; new arc-cap block in buildMecha",
+              "severity": "major",
+              "expectedEffect": "Delivers the 'rounded/bulbous crudest-robot' silhouette must-have that joints:'round' alone never provided (it only quad-curves two top corners, invisible at 40px), and stops mecha_1 being the runt.",
+              "regressionRisk": "Low \u2014 new flag drawn in buildMecha only when set; bulk change is mecha_1-local. Verify the caps don't collide with the spine-sash front fin."
+            },
+            {
+              "change": "Protect orb legibility + warm the orb hue. Bump cybanek radius floor max(2.2,hw*0.13) \u2192 max(2.6,hw*0.15) (line 1472) so the orbs never drop below ~3px; optionally pass a dedicated orbCol '#e0202a' to the cybanek block (lines 1471-1478) instead of reusing pal.eye '#ff0000' for the glossy-dome read.",
+              "file": "js/archetypes.js",
+              "target": "drawMechHead cybanek block (radius floor + orb color)",
+              "severity": "polish",
+              "expectedEffect": "Keeps the sole non-negotiable separator-from-organic-Godzilla above the visibility floor and shifts pure-arcade-red toward the lacquered control-dome hue.",
+              "regressionRisk": "None \u2014 cybanek-gated; size-only + an optional local color."
+            }
+          ]
+        },
+        {
+          "formId": "mecha_2",
+          "blindIdVerdict": "reads-clearly",
+          "currentRead": "An angular steel-blue biped with a helmet head + blue visor slit, paired antennae, a tall fin sash, and a boxy shoulder-cannon pod with two muzzle bores that cleanly breaks the outline outward on the near shoulder. The strongest blind-ID of the four \u2014 all three must-haves (oversized shoulder pod, unambiguous BLUE, angular helmet head) land. Only finish-nuance issues remain: the palette is a bright cyan-toy blue rather than brushed gunmetal, and only one pod is drawn.",
+          "topChanges": [
+            {
+              "change": "Desaturate the palette toward spec gunmetal (palette-only, no draw change). config.js line 255: skin '#4a86bd'\u2192'#5c6e84', skinDark '#1c3858'\u2192'#33404f', skinLight '#86bade'\u2192'#aebccc', plateEdge '#bfe3ff'\u2192'#9fb3c8' (mute the icy near-white edge that reads as chrome). Keep eye/visor '#0080ff' vivid as the one self-lit accent.",
+              "file": "js/config.js",
+              "target": "mecha_2 palette",
+              "severity": "minor",
+              "expectedEffect": "Shifts the finish from 'glossy blue toy robot' to 'cool semi-matte aircraft-fuselage alloy' while keeping the BLUE must-have firmly cool (B channel stays above R), and stops the icy edge making mecha_2 look MORE reflective than the chrome mecha_1.",
+              "regressionRisk": "None \u2014 palette-only, mecha_2-local. Keep #5c6e84 from drifting to neutral-gray (it preserves the blue bias, good)."
+            },
+            {
+              "change": "Push the existing pod further outward so it clears the torso line as a true silhouette notch. In drawShoulderCannon (lines 1156-1157) raise px from BW*(0.40+lean*0.08) toward BW*(0.50+lean*0.10) and widen pw BW*0.30\u2192BW*0.34 so its outer face sits visibly proud of the chest-side line (torso shoulder reaches ~BW*0.50).",
+              "file": "js/archetypes.js",
+              "target": "drawShoulderCannon px/pw",
+              "severity": "minor",
+              "expectedEffect": "Strengthens the single load-bearing Heisei cue from 'pod atop the shoulder' to a clear outward outline break, the spec's 'SILHOUETTE break, not a decal.'",
+              "regressionRisk": "Low \u2014 drawShoulderCannon is mecha_2-only (gated by s.shoulderCannon). Verify the pod doesn't overrun the near arm at side facings."
+            },
+            {
+              "change": "Optional: add a small partly-occluded FAR pod for the 'paired rack' read. In buildMecha draw a mirrored drawShoulderCannon at the -BW side at ~0.7 scale BEFORE drawMechTorso (line 1125) so the torso overlaps its inner edge.",
+              "file": "js/archetypes.js",
+              "target": "buildMecha (second pre-torso pod call)",
+              "severity": "polish",
+              "expectedEffect": "Completes the 'doubled cannon rack' so the left-shoulder outline isn't the bare torso slope on front-ish facings.",
+              "regressionRisk": "Medium-low \u2014 watch 40px clutter; the near pod already carries the ID, so this is the first thing to drop if it muddies the iso read."
+            }
+          ]
+        },
+        {
+          "formId": "mecha_3",
+          "blindIdVerdict": "misreadable",
+          "currentRead": "A near-black biped that SINKS into the #05070f sky \u2014 the lower torso/legs are barely separable from the background because there is NO red self-illumination rim. The dominant on-screen feature is the bright red diagonal spine-sash; the red plateEdge seams + red eyes + red glow wash the whole small dark mass to a muddy red-brown, so you read a floating red sash, not a robot outline. The Ghidorah wedge head + backswept horns + twin red eyes are the one good differentiator. leanPose is sub-pixel so it does NOT read as 'the leanest murder-robot' \u2014 its outline is the family-standard trapezoid, dark.",
+          "topChanges": [
+            {
+              "change": "Add the MANDATORY red self-illumination rim (the single biggest failure in the family). (1) config.js: add rimGlow:'rgba(255,32,32,0.7)' to the mecha_3 palette and selfIllum:true to its shape (line 264-265). (2) Thread opts.selfIllum + pal into torsoOpts in buildMecha (line 1105/1125) and, in drawMechTorso after the fill (~line 1200), when opts.selfIllum && pal.rimGlow, re-stroke the torso path with pal.rimGlow lineWidth 2.5 alpha 0.5 (mirror buildWyrm's drawTorso rim). NOTE rimGlow is a NEW red token \u2014 it cannot reuse rimCol() which is the warm-white RIM_RGB.",
+              "file": "js/config.js + js/archetypes.js",
+              "target": "palette.rimGlow + shape.selfIllum; new rim re-stroke in drawMechTorso",
+              "severity": "major",
+              "expectedEffect": "Lifts the near-black silhouette off the night sky so the lean-robot OUTLINE actually exists at iso \u2014 converts mecha_3 from 'unreadable red blob' to a legible dark machine with a red edge.",
+              "regressionRisk": "Low \u2014 gated on opts.selfIllum which ONLY mecha_3 sets; mecha_1/2/super and the mecha_ghidorah cyborg head (no selfIllum in its torsoless path) render unchanged. Must pass pal through torsoOpts which currently carries only joints/leanPose."
+            },
+            {
+              "change": "Concentrate the red into hot seam CHANNELS instead of a full-body wash. New shape flag gapGlow:true (config.js 265). In drawMechPanels, when set: bump seam lineWidth 1.5\u2192\u22652.2, draw only 2-3 SHORT bright segments on the chest-center + back panel edges (#ff2020 full alpha + a 1px #ff6a4a hot-core line on top), and DROP the per-panel seam spread/rivets elsewhere so the rest of the body stays neutral black.",
+              "file": "js/config.js + js/archetypes.js",
+              "target": "shape.gapGlow; gated branch in drawMechPanels",
+              "severity": "major",
+              "expectedEffect": "Delivers 'hot red bleeding through a cold black machine' (the defining MV cue) and is ALSO the disambiguator vs a burning red wyrm \u2014 confining red to \u22652.2px straight mechanical seams returns the 'machine, not organic skin-cracks' read; torso-core sample should drop back toward neutral (R-B small).",
+              "regressionRisk": "Medium \u2014 drawMechPanels is shared by all four mecha; STRICTLY gate on gapGlow so mecha_1 chrome / mecha_2 gunmetal box panels keep their 1.5px rivet seams. This is the highest cross-form regression surface in the plan."
+            },
+            {
+              "change": "Make the lean actually read: drop bulk 1.0\u2192~0.9 (narrower than every other mecha) and strengthen leanPose in drawMechTorso (lines 1185-1200) by shearing the top edge forward +BW*0.10 over the waist when leanPose is set, not just the BH*0.05 waist nudge.",
+              "file": "js/config.js + js/archetypes.js",
+              "target": "shape.bulk + drawMechTorso leanPose shear",
+              "severity": "minor",
+              "expectedEffect": "Separates mecha_3's outline from 'a dark mecha_2' \u2014 narrow + forward-sheared = the un-bulky forward-crouched endoskeleton must-have.",
+              "regressionRisk": "Low-medium \u2014 leanPose is mecha_3-only today, but the shear edits the shared drawMechTorso top-edge path; gate the shear strictly on opts.leanPose so mecha_1/2/super are byte-identical. Re-verify spine-sash anchor still lands on the sheared back."
+            }
+          ]
+        },
+        {
+          "formId": "super_mecha",
+          "blindIdVerdict": "reads-but-generic",
+          "currentRead": "The bulkiest silhouette (bulk 1.12, correct for 'heaviest over-built mecha'), gold-tan, with a distinct backpack mass behind the upper back (the 'Super' add \u2014 delivered) and a giant oversized front lead dorsal fin. Reads as 'big gold robot with a backpack and one huge front fin.' BUT the head is the plain helmet wedge \u2014 IDENTICAL to mecha_2's recolored gold \u2014 so the #1 Kiryu tell is missing; box panels + no skull blade + no wiring mean at iso it collapses toward 'a bulky gold mecha_2,' separated only by backpack-vs-pod. The all-warm gold with no cool/black contrast also drifts toward 'golden organic kaiju.'",
+          "topChanges": [
+            {
+              "change": "Add the forehead-to-nape SKULL BLADE (Kiryu's instant head identifier). New shape flag headBlade:true (config.js 272); in drawMechHead after the skull fill (~line 1437) draw a raised ridge along the skull top \u2014 a thin filled triangle/quad from hlx (forehead) to hlx+hw*0.9 (nape), height \u2248BH*0.03 (\u22652px), fill pal.skinLight with a rimCol(0.6) top edge. Also set antennae:0 on super_mecha (the non-canonical antennae compete with the blade for the head skyline).",
+              "file": "js/config.js + js/archetypes.js",
+              "target": "shape.headBlade + shape.antennae:0; new ridge in drawMechHead",
+              "severity": "major",
+              "expectedEffect": "Biases the head silhouette to read 'bladed Kiryu' not 'helmet mecha_2' \u2014 restores the #1 must-have and makes the head (not antennae) the differentiator from the blue tier.",
+              "regressionRisk": "Low \u2014 gated on headBlade which only super_mecha sets; the mecha_ghidorah cyborg head (helmet, no headBlade) and mecha_2 are unchanged."
+            },
+            {
+              "change": "Add exposed THICK BLACK WIRING to anchor the gold as METAL. New shape flag wiring:true (config.js 272); in buildMecha/drawMechHead draw 2-3 thick dark strokes (lineWidth \u2248 BH*0.02, color '#1a1a1a') at the neck-to-shoulder and hip joints.",
+              "file": "js/config.js + js/archetypes.js",
+              "target": "shape.wiring; dark-cable strokes in buildMecha",
+              "severity": "minor",
+              "expectedEffect": "The cheapest, highest-identity way to break the 'golden organic kaiju' misread \u2014 black-cable-vs-gold contrast forces the cyborg-on-a-skeleton read the spec flags as the live failure mode.",
+              "regressionRisk": "Low \u2014 wiring-gated, super_mecha-only. Keep strokes at the joints, not a full cable field (noise at iso)."
+            },
+            {
+              "change": "Optional: curved organic muscle-line seams. New shape flag organicSeams:true (config.js 272); in drawMechPanels, when set, replace the straight chest/belly seams with 2-3 quadraticCurveTo seams following the torso taper and soften the rect fills. Also trim the lead fin (drawMechSpines size*=1.7 \u2192 ~1.5 when backpack present) so the backpack owns the rear-upper skyline.",
+              "file": "js/config.js + js/archetypes.js",
+              "target": "shape.organicSeams; curved-seam branch in drawMechPanels + leadFin trim in drawMechSpines",
+              "severity": "polish",
+              "expectedEffect": "Shifts the body read from 'hard-box tank' toward 'armored anatomy' (the Kiryu must-have) and stops the backpack and giant lead fin fighting for the upper-back mass.",
+              "regressionRisk": "Medium \u2014 drawMechPanels is shared by all four; STRICTLY gate on organicSeams so mecha_1/2/3 keep box panels. Lower priority than headBlade+wiring, which do more for the ID; drop first if it threatens a sibling."
+            }
+          ]
+        }
+      ],
+      "sharedHelperChanges": [
+        {
+          "helper": "drawMechTorso (js/archetypes.js ~1185)",
+          "change": "Add an opts.selfIllum && pal.rimGlow path: after the torso fill, re-stroke the torso path with pal.rimGlow (lineWidth 2.5, alpha 0.5). Requires threading pal + selfIllum through torsoOpts in buildMecha (currently torsoOpts carries only {joints, leanPose}). Separately, gate a leanPose forward-shear on the top edge (+BW*0.10 over the waist) behind the existing opts.leanPose.",
+          "rationale": "The red self-illum rim is mecha_3's mandatory night-visibility fix and the family's single biggest failure; the shear makes mecha_3's lean actually read.",
+          "regressionRisk": "Shared by all four mecha. Both additions are flag-gated (selfIllum / leanPose) and only mecha_3 sets them today, so mecha_1/2/super stay byte-identical. The mecha_ghidorah cyborg path does NOT call drawMechTorso, so the hydra is untouched. rimGlow is a NEW red token \u2014 do not route it through rimCol() (warm-white)."
+        },
+        {
+          "helper": "drawMechPanels (js/archetypes.js ~1211)",
+          "change": "Two gated branches: (a) gapGlow:true \u2192 seam lineWidth \u22652.2 + 2-3 short hot #ff2020/#ff6a4a chest/back segments, drop the per-panel spread elsewhere (mecha_3); (b) organicSeams:true \u2192 curved quadratic chest/belly seams replacing the straight ones (super_mecha).",
+          "rationale": "gapGlow delivers mecha_3's 'red bleeding through black' must-have AND its anti-organic-misread disambiguator; organicSeams delivers super_mecha's muscle-line armor must-have.",
+          "regressionRisk": "HIGHEST cross-form surface in the plan \u2014 drawMechPanels fills the box panels/seams/rivets for ALL four mecha. Both branches MUST be strictly flag-gated so mecha_1 chrome and mecha_2 gunmetal box panels render unchanged. drawMechPanels is NOT used by the hydra cyborg, so no ghidorah regression."
+        },
+        {
+          "helper": "drawMechHead (js/archetypes.js ~1391)",
+          "change": "Gate three opt-in adds: (1) opts.cybanek \u2192 narrow the visor rect to ~hw*0.40 centered so it stops bridging the two temple orbs, + bump orb radius floor to max(2.6,hw*0.15), + optional orbCol '#e0202a'; (2) opts.headBlade \u2192 raised forehead-to-nape ridge after the skull fill; (3) opts.missilePods is NOT added here (handled in buildMecha if pursued).",
+          "rationale": "Fixes mecha_1's merged orb/visor red (its #1 identifier) and adds super_mecha's skull blade (its #1 identifier).",
+          "regressionRisk": "CRITICAL caller note \u2014 drawMechHead is also called by the mecha_ghidorah cyborg CENTER head (buildHydra line 1061, headStyle:'helmet', no cybanek/headBlade opts) with a cyberPal that has no rimGlow. All three adds default off, so the hydra cyborg, mecha_2 helmet, and mecha_3 ghidorah head are byte-identical. Verify nothing reads opts.cybanek/headBlade unconditionally."
+        }
+      ],
+      "implementationOrder": [
+        "mecha_3 red self-illumination rim (config rimGlow + selfIllum, thread pal through torsoOpts, re-stroke in drawMechTorso) \u2014 fixes the single biggest blind-ID failure: the near-black body sinking into the night sky",
+        "mecha_3 concentrated gap-glow (gapGlow flag + gated drawMechPanels branch: \u22652.2px hot chest/back seams, drop the body-wide red wash) \u2014 delivers 'red through black' and kills the burning-wyrm misread",
+        "mecha_1 separate orb-red from visor-red (narrow cybanek visor to hw*0.40) + radius floor bump \u2014 makes the two Cybanek temple domes read as the #1 Showa identifier instead of one red bar",
+        "super_mecha skull blade (headBlade flag + ridge in drawMechHead) + antennae:0 \u2014 restores Kiryu's instant head tell so it stops reading as a gold mecha_2",
+        "mecha_1 bulbous shoulder caps (roundShoulders flag in buildMecha) + bulk 0.95\u2192~1.0 \u2014 delivers the crudest-bulbous-robot silhouette must-have",
+        "super_mecha black wiring (wiring flag, dark joint strokes) \u2014 cheap high-identity break of the golden-organic-kaiju misread",
+        "mecha_2 palette desaturation to gunmetal + push the shoulder pod further outward \u2014 finish-nuance + strengthen the one Heisei silhouette cue",
+        "mecha_3 lean (bulk\u21920.9 + leanPose forward-shear in drawMechTorso) \u2014 separates its outline from 'dark mecha_2'",
+        "super_mecha organic curved seams (organicSeams flag in drawMechPanels) + lead-fin trim \u2014 armored-anatomy read; lowest leverage, highest shared-helper risk, drop first if it threatens a sibling",
+        "mecha_2 optional far shoulder pod / mecha_3 optional missile pods \u2014 secondary silhouette adds, only if iso clutter stays acceptable"
+      ]
+    }
+  ]
+}
