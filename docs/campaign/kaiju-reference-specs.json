@@ -1,0 +1,1408 @@
+{
+  "families": [
+    {
+      "family": "wyrm — Godzilla (MonsterVerse evolutionary ladder, 5 forms: gz2014 baseline → burning → gvk → gxk evolved-pink → supernova speculative endpoint). ONE animal escalating; distinctness rides on plate jaggedness/height/count, body bulk/lean, and palette + self-illumination — NOT a different silhouette. Shared brand: hunched mountain of mass topped by a sawtooth dorsal ridge of broken-slate \"maple-leaf\" plates, small low-slung head on a thick neck, vestigial T-rex arms, elephantine legs, thick low tail. Reconciled against canonical refs: GareGoji (Edwards 2014), DougheGoji burning (KotM 2019), DougheGoji-revised (GvK 2021), Evolved/pink (GxK New Empire 2024), and the speculative GxK: Supernova 2027 endpoint (note: Supernova 2027 is a confirmed real film with SpaceGodzilla as villain — reinforces the cosmic-crystal endpoint read).",
+      "forms": [
+        {
+          "formId": "gz2014",
+          "character": "Godzilla (2014) — GareGoji, the MonsterVerse baseline (Gareth Edwards)",
+          "era": "MonsterVerse / Legendary 2014 (Tier 0 anchor)",
+          "oneLineIdentity": "The naturalistic charcoal volcanic-rock bear-Godzilla: heaviest bulk, smallest noble head, short angular broken-slate fins, blue atomic glow only on the fins/breath.",
+          "silhouette": "Hunched mountain of mass — deep barrel chest, wide shoulders, thick elephantine legs, a deliberately SMALL low-slung head on a thick gilled neck, tiny T-rex arms, a thick low tail. Crowned by a row of SHORT, blunt, jagged dorsal fins. Reads as a heavy bear/sauropod, not a sleek raptor. This is the reference mass every other wyrm escalates from.",
+          "signatureCues": [
+            "Short, blunt, ANGULAR broken-slate dorsal fins (canon ~89 fins, 'brittle and break' look — at iso: ~10 stubby jagged plates, the lowest/shortest of the whole ladder)",
+            "Charcoal volcanic-rock body — matte, dull, near-black grey with NO self-illumination (the only glow is the blue fin-edge/breath)",
+            "Heaviest, most bear-like bulk of the five (bulk ~1.05); deep torso, thick elephantine/sauropod feet",
+            "Small noble head set LOW on a thick neck — sells gigantic scale",
+            "Blue accent ONLY (cool blue plateGlow/breath) — no orange, no pink, no violet",
+            "Pale/white eyes ringed by grey veins (malevolent-mystical read) — portrait-only at iso"
+          ],
+          "palette": [
+            {
+              "part": "skin (body)",
+              "color": "#3c3c3c charcoal grey"
+            },
+            {
+              "part": "skin highlight / AO break",
+              "color": "#646464 (bumped from #565656 for a stronger value-break on rocky torso)"
+            },
+            {
+              "part": "plate dark CORE (figure-ground)",
+              "color": "#2b2b2b"
+            },
+            {
+              "part": "fin glow / atomic breath accent",
+              "color": "blue ~#3aa0ff / #4cc4ff family"
+            },
+            {
+              "part": "eyes",
+              "color": "#e8e8e8 pale white (grey-veined)"
+            },
+            {
+              "part": "claws",
+              "color": "#1a1a1a near-black"
+            }
+          ],
+          "materialFinish": "Dull matte volcanic-rock / charcoal hide — porous, brittle, NON-reflective. The only luminance lift is the cool-blue fin edge. No rim self-illumination (house rim only).",
+          "mustHaveForBlindID": [
+            "Charcoal/grey (NOT black, NOT brown, NOT tinted) matte rock skin",
+            "SHORT blunt jagged fins — visibly the shortest/stubbiest plates on the ladder",
+            "Heaviest bear-bulk + tiny low head proportion",
+            "Blue (cool) as the ONLY glow color — zero warm or pink/violet anywhere",
+            "NO body self-glow — body is fully unlit dull rock"
+          ],
+          "commonMisreads": [
+            "vs burning Godzilla — DISAMBIGUATE by surface: gz2014 is dull unlit grey rock; burning has glowing-orange lava cracks + incandescent fins. If you see ANY warm crack glow it's burning, not 2014.",
+            "vs gvk — DISAMBIGUATE by plate shape + bulk: gz2014 fins are SHORT/blunt and the body is heaviest; gvk fins are tall/sharp/slim (razor) and the torso is leaner. Blue glow appears on BOTH, so don't lean on color — lean on plate height and torso width.",
+            "vs a generic dragon/dinosaur — the broken-slate maple-leaf fin row + tiny-head/huge-body proportion is the tell."
+          ],
+          "hardAt40px": [
+            "The 89-fin density and 'brittle broken-slate' texture collapse — imply with ~10 deterministically jittered plates (±25% width/height/lean) reading as irregular sawtooth rather than uniform triangles; keep them SHORT (height scalar ~0.85) so the silhouette is unmistakably the bluntest tier.",
+            "Grey-veined white eyes and chest scale-patterns are sub-pixel — drop them; carry identity on plate-shape + bulk + the dark plate-core figure-ground separation (lit skinLight face over #2b2b2b core).",
+            "The naturalistic gill-neck and elephant-foot detail don't survive — imply scale only via the small-head/thick-neck/wide-foot proportion."
+          ]
+        },
+        {
+          "formId": "burning",
+          "character": "Burning Godzilla (Godzilla: King of the Monsters, 2019) — DougheGoji, super-charged molten form",
+          "era": "MonsterVerse / Legendary 2019 (Tier 1 — molten overlay). Lineage homage to Heisei Burning/Meltdown Godzilla (1995).",
+          "oneLineIdentity": "The same animal mid-meltdown: scorched near-black body LEAKING orange lava through cracked-skin fissures, with incandescent orange dorsal fins and a self-lit orange aura.",
+          "silhouette": "Identical heavy wyrm mass to gz2014, but the dorsal ridge is a notch TALLER and SHARPER (one visibly taller hot lead-plate breaks the skyline) and the whole figure is haloed by a soft heat aura/smoke. Same bulk (~1.05).",
+          "signatureCues": [
+            "Glowing-orange LAVA FISSURE 'rashes' cracking across chest, belly and thighs — the #1 brand cue ('leaking active fire from every inch'); opaque hot cores so they read on a baked sprite",
+            "INCANDESCENT orange dorsal fins (re-sharpened toward 1954 jaggedness) — fins glow as if molten, hottest at the base, with one taller hot lead-plate",
+            "Scorched near-black/charred-brown body value (darker than gz2014's grey) — the cracks read because the skin between them is almost black",
+            "Full-silhouette ORANGE self-illumination rim (granted — canonically self-lit) + soft heat aura/smoke + heat motes",
+            "Red-gold glowing eyes (#ff8a2a)",
+            "Warm orange is the ONLY accent — no blue, no pink"
+          ],
+          "palette": [
+            {
+              "part": "skin (charred body)",
+              "color": "#2c2622 scorched near-black brown"
+            },
+            {
+              "part": "fissure crack core (hot-spot)",
+              "color": "#ffd24a gold-white hot core"
+            },
+            {
+              "part": "fissure crack vein",
+              "color": "#ff7a1a orange, fading to rgba(255,40,0,0)"
+            },
+            {
+              "part": "fin face gradient",
+              "color": "#ff5a14 base → #ffd24a tip (incandescent)"
+            },
+            {
+              "part": "self-illum rim / aura",
+              "color": "orange rgba(255,150,40,~0.5) derived from pal.aura"
+            },
+            {
+              "part": "eyes",
+              "color": "#ff8a2a red-gold"
+            }
+          ],
+          "materialFinish": "Charred volcanic crust over a molten interior — matte black-brown rock cracked open to expose glowing magma; fins read as cooling/heating molten metal. Emissive (self-lit), unlike gz2014.",
+          "mustHaveForBlindID": [
+            "Glowing orange lava CRACKS across the torso (chest/belly/thigh) — without these it is NOT burning",
+            "Incandescent orange fins (molten, hottest at base)",
+            "Charred near-black body (darker than 2014 grey) so cracks pop",
+            "Orange self-glow / heat aura — body emits light"
+          ],
+          "commonMisreads": [
+            "vs gz2014 — DISAMBIGUATE by the lava cracks + orange glow: 2014 is dull unlit grey rock with cool-blue fins; any orange crack glow = burning.",
+            "vs supernova — BOTH have fissure cracks + self-illum rim + escalation feel. DISAMBIGUATE by HUE and PLATE SIZE: burning is ORANGE with normal-height (slightly tall) fins; supernova is WHITE-VIOLET with hugely overgrown crystalline plates + bigger bulk. Orange = burning, violet = supernova.",
+            "vs Rodan/magma forms — Rodan is an airborne pteranodon triangle; burning is the grounded plated wyrm. Silhouette resolves it instantly despite shared magma-crack palette."
+          ],
+          "hardAt40px": [
+            "Fine smoke/steam plumes vanish — imply with a soft aura halo + a couple of opaque heat motes rather than wispy smoke.",
+            "The lava-crack network must NOT rely on additive blending (it's baked) — use 4–5 THICK (≥2.2px) opaque branching seams with bright cores, not many thin hairlines.",
+            "Per-fin molten gradient is the cheapest way to read 'incandescent' at iso — flat hot-orange fins + the orange rim also read; avoid 10+ separate glow halos."
+          ]
+        },
+        {
+          "formId": "gvk",
+          "character": "Godzilla (Godzilla vs. Kong, 2021) — DougheGoji-revised, the lean battle-hardened warrior",
+          "era": "MonsterVerse / Legendary 2021 (Tier 2 — the lean warrior)",
+          "oneLineIdentity": "The seasoned-fighter Godzilla: leaner athletic torso, sharper/slimmer razor-maple-leaf fins (some chipped/broken from battle), charcoal-grey skin, cool atomic-blue fins — and NO body self-glow.",
+          "silhouette": "Same wyrm family read but the torso is visibly NARROWER (~6–8% leaner — the athletic-warrior cut) and the dorsal ridge is TALLER, SLIMMER and SHARPER (razor maple-leaf, echoing G2000), with MORE plates (~11) and 2 plates rendered BROKEN/chipped (battle-scar asymmetry). Head slightly smaller. Reads as the sleek weaponized version of the same bear.",
+          "signatureCues": [
+            "Sharper, slimmer, taller RAZOR maple-leaf fins (1954/G2000-style) — ~25% narrower base, ~15% taller than 2014's stubs",
+            "Leaner, more athletic torso (the warrior cut) — visibly narrower than gz2014/burning bulk",
+            "2 BROKEN/chipped plates (~50% height, flat chipped top + notch) — 'spikes constantly growing and breaking' battle-scar asymmetry",
+            "Charcoal / brown-grey hide (still rock, like 2014 — NOT scorched, NOT tinted)",
+            "Cool atomic-BLUE fin glow/breath — same blue family as 2014 but on sharper fins; NO self-illum body rim (house rim only — gvk is NOT canonically self-lit)",
+            "More plates than any earlier tier (11) but irregular/scarred"
+          ],
+          "palette": [
+            {
+              "part": "skin (body)",
+              "color": "#3a3a3a charcoal / brown-grey"
+            },
+            {
+              "part": "skin highlight",
+              "color": "#646464"
+            },
+            {
+              "part": "plate dark CORE",
+              "color": "#2b2b2b"
+            },
+            {
+              "part": "fin glow / breath accent",
+              "color": "atomic blue ~#37c4ff / #4ad6ff (live FX glow, NOT a baked rim)"
+            },
+            {
+              "part": "eyes",
+              "color": "#cfcfcf pale"
+            }
+          ],
+          "materialFinish": "Same dull charcoal volcanic-rock hide as gz2014 — matte, non-emissive body. The ONLY luminance is the cool-blue fin edge (live glow). Crucially NO self-illumination rim — its escalation is shape (lean + sharper/broken fins), not light.",
+          "mustHaveForBlindID": [
+            "Leaner torso than gz2014/burning — the warrior silhouette",
+            "SHARP, slim, tall razor fins (clearly sharper than 2014's blunt stubs)",
+            "At least 1–2 visibly broken/chipped plates (battle scars)",
+            "Cool-blue fins on an UNLIT charcoal body (no orange, no pink, no body self-glow)"
+          ],
+          "commonMisreads": [
+            "vs gz2014 — same blue palette, so DO NOT use color. DISAMBIGUATE by plate sharpness/height + torso width: gvk = tall sharp slim fins + lean torso + broken plates; 2014 = short blunt fins + heaviest bulk. The broken/chipped plates are gvk-exclusive.",
+            "vs gxk pink — DISAMBIGUATE by color + glow: gvk is charcoal+blue with no body rim; gxk is magenta/pink with a full-silhouette pink self-illum rim. If the body glows pink it's gxk.",
+            "vs burning — gvk has NO lava cracks and NO body glow; burning has both."
+          ],
+          "hardAt40px": [
+            "The 'razor maple-leaf' fin profile vs 2014's 'blunt slate' is a subtle shape delta — exaggerate it: noticeably narrower fin bases + taller tips so the sharpening reads at iso.",
+            "Battle-scar broken plates are a cheap 2-extra-vertex change (chipped flat top + notch) — keep 2 specific indices broken so the asymmetry is deterministic and visible.",
+            "The 6–8% torso narrowing is small — pair it with the taller/sharper ridge so the combined read is unmistakably 'leaner warrior' and not just 'same body, blue.' Resist adding a baked cyan rim — that would wrongly read as self-lit and blur gvk toward the gxk/supernova self-lit tiers."
+          ]
+        },
+        {
+          "formId": "gxk",
+          "character": "Godzilla Evolved / Pink Form (Godzilla x Kong: The New Empire, 2024) — post-Tiamat magenta power-up",
+          "era": "MonsterVerse / Legendary 2024 (Tier 3 — peak-power pink). Kaio-Ken + Showa-pink nostalgia.",
+          "oneLineIdentity": "The Evolved magenta Godzilla: leanest/fastest body, tall translucent PINK crystalline fins, vibrant magenta colorway, and a full-silhouette pink self-illumination glow — the powered-up form.",
+          "silhouette": "Leanest of the practical forms (lost bulk for agility) with the TALLEST, SHARPEST fins of the 'real' tiers and the MOST plates (~13). Slightly more upright/forward lean (agile read). The whole figure glows pink. Same wyrm family outline but visibly the sleekest + spikiest before the supernova endpoint.",
+          "signatureCues": [
+            "Vibrant MAGENTA/PINK colorway across the whole body — the instant tell (no other wyrm tier is pink)",
+            "Tall, sharp, translucent PINK dorsal fins/spikes (canon: pink translucent spikes from back, arms, tail; diamond-like scales) — most + sharpest plates of the real forms",
+            "Full-silhouette PINK self-illumination rim/glow (granted — Godzilla's powering-up glow turned from blue to vibrant pink) + pink whole-body aura + pink motes",
+            "Leaner, more agile build than gvk (lost bulk, gained agility — leanest practical form)",
+            "PINK heat ray / glow accents (strongest form of his heat ray)",
+            "Elbow/arm spikes (canon add) — secondary, mostly portrait-scale"
+          ],
+          "palette": [
+            {
+              "part": "skin (body)",
+              "color": "#2c2731 dark magenta-charcoal base"
+            },
+            {
+              "part": "fin / spike edge",
+              "color": "#ff6cc6 hot magenta-pink"
+            },
+            {
+              "part": "self-illum rim / aura / glow",
+              "color": "pink rgba(255,108,198,~0.5) derived from pal.aura"
+            },
+            {
+              "part": "heat-ray / energy accent",
+              "color": "vibrant pink #ff5ac0 family"
+            },
+            {
+              "part": "eyes",
+              "color": "#ffd0ee pale pink-white"
+            }
+          ],
+          "materialFinish": "Dark base hide energized to a glowing magenta — translucent/crystalline pink spikes (diamond-like scales) lit from within; emissive full-body pink. Reads as a creature charged with pink radiant energy, not dull rock.",
+          "mustHaveForBlindID": [
+            "PINK / magenta — the colorway alone IDs it; no other Godzilla tier is pink",
+            "Tall sharp PINK translucent fins (most + sharpest of the practical forms)",
+            "Full-body pink self-glow / aura",
+            "Leaner agile build (sleeker than gvk)",
+            "DO NOT add the icy-blue frostbitten arm — that frostbite belongs to KONG (Shimo's beam), not Godzilla"
+          ],
+          "commonMisreads": [
+            "vs supernova — BOTH glow and are spiky; DISAMBIGUATE by hue + scale: gxk is hot PINK/MAGENTA on a leaner body with sharp-but-normal fins; supernova is WHITE-VIOLET on the BIGGEST/bulkiest body with hugely overgrown crystalline plates + fissure cracks. Pink = gxk, violet-white = supernova; gxk has NO fissure cracks.",
+            "vs gvk — same animal but gxk is pink+self-lit while gvk is charcoal+blue with no body glow. The pink color settles it instantly.",
+            "vs a generic 'glowing pink monster' — the broken-slate fin ridge + wyrm proportions keep it Godzilla."
+          ],
+          "hardAt40px": [
+            "The translucent/crystalline quality of the spikes is hard to bake — imply it with the bright pink self-illum rim carrying the 'energized' read rather than per-fin inner-glow gradients (cheaper, reads the same). Flat hot-pink fin faces + one full-silhouette rim suffice.",
+            "Diamond-scale texture and elbow spikes are sub-pixel — drop them; the magenta colorway + glow + leaner build carry the ID.",
+            "Keep it clearly distinct from supernova by NOT over-bulking it and NOT adding fissures — gxk's identity is lean + pink, supernova's is huge + violet-cracked."
+          ]
+        },
+        {
+          "formId": "supernova",
+          "character": "Godzilla — Supernova / radiant-overload endpoint (SPECULATIVE; no released film design)",
+          "era": "Speculative Tier 4 endpoint. Lineage anchors: Heisei Burning/Meltdown Godzilla (1995, critical-mass red glow) + the confirmed GxK: Supernova 2027 title (which canonically features the crystal-covered SpaceGodzilla as villain — reinforcing a cosmic-crystalline read). LABEL: speculative, not film-accurate.",
+          "oneLineIdentity": "SPECULATIVE peak: a walking supernova — the biggest, bulkiest body crowned by hugely overgrown white-violet crystalline plates, skin splitting open with white-violet energy fissures, self-illuminated so it dominates the night sky.",
+          "silhouette": "The BIGGEST and tallest wyrm — heaviest bulk (~1.15) with a radically OVERGROWN crystalline dorsal ridge (~16 plates, ~1.4× height) that pushes toward the top of the frame, plus a long thick tail. The overgrown crystal spine is the new silhouette delta (cap to canvas). A violet self-glow lifts the whole near-black mass off the night sky.",
+          "signatureCues": [
+            "Hugely OVERGROWN crystalline dorsal plates — tallest + most jagged + most numerous (~16), violet-white, reading as crystal overgrowth beyond gxk's fins (the SpaceGodzilla-adjacent cosmic-crystal read)",
+            "WHITE-VIOLET energy FISSURES splitting the skin — brighter/denser than burning (8–10 seams), reading as energy bursting out (critical-mass meltdown lineage)",
+            "Biggest, bulkiest body of the whole ladder (bulk ~1.15) — the over-charged endpoint mass",
+            "Full-silhouette VIOLET self-illumination rim (mandatory night-visibility fix — body base #0d011a is near-sky-black, must be lifted by the rim) + strong violet aura + cosmic motes",
+            "White-hot eyes (#ffffff) — the hottest, fully-overloaded read",
+            "Violet/white-violet is the locked hue — deliberately NOT pink (separates from gxk) and NOT orange (separates from burning)"
+          ],
+          "palette": [
+            {
+              "part": "skin dark (body)",
+              "color": "#0d011a near-black violet (AO gradient bottom raised to ~#2a1448, never pure black, for night visibility)"
+            },
+            {
+              "part": "crystal plate gradient",
+              "color": "#2a1448 base → #a55ae6 mid → #dcb0ff tip (front-facing plates; back-row flat violet)"
+            },
+            {
+              "part": "fissure energy core",
+              "color": "white-violet #dcb0ff / #ffffff hot core over violet veins"
+            },
+            {
+              "part": "self-illum rim",
+              "color": "violet rgba(220,176,255,~0.5)"
+            },
+            {
+              "part": "aura",
+              "color": "violet wash via single createRadialGradient behind the ridge"
+            },
+            {
+              "part": "eyes",
+              "color": "#ffffff white-hot"
+            }
+          ],
+          "materialFinish": "Near-black violet hide overgrown with translucent crystalline plates and splitting open with white-violet radiant energy — heavily EMISSIVE (self-lit). The body itself is dark but every seam, plate and the silhouette rim glow violet-white, like a creature at critical mass about to detonate.",
+          "mustHaveForBlindID": [
+            "WHITE-VIOLET hue (NOT pink, NOT orange) — the locked endpoint color",
+            "Overgrown crystalline plates — visibly the tallest + most numerous ridge on the ladder",
+            "White-violet skin fissures (energy splitting the body, denser than burning's)",
+            "Biggest/bulkiest body + violet self-glow that lifts it off the night sky",
+            "LABEL as speculative — there is no released film design; it's the lineage-implied peak"
+          ],
+          "commonMisreads": [
+            "vs gxk pink — closest sibling. DISAMBIGUATE by HUE + bulk + cracks: gxk is hot PINK, leaner, no fissures; supernova is WHITE-VIOLET, biggest/bulkiest, WITH energy fissures + overgrown crystal plates. Pink+lean = gxk, violet+huge+cracked = supernova.",
+            "vs burning — both have fissures + self-glow. DISAMBIGUATE by hue: burning ORANGE, supernova WHITE-VIOLET; supernova's plates are far taller/more crystalline and its bulk is larger.",
+            "vs void_ghidorah (the roster's other near-black self-lit form) — supernova rim is VIOLET, void rim is CYAN, and the archetype silhouette is a single hunched plated wyrm vs a three-neck fan. Do NOT harmonize the two rim hues — the violet/cyan difference is load-bearing."
+          ],
+          "hardAt40px": [
+            "Heaviest sprite in the roster — the per-plate glow halos can't all be drawn; imply the glowing crystal spine with ONE wide violet radial wash behind the ridge + the self-illum rim (not 16 individual halos), and cap the 3-stop crystal gradient to front-facing plates only.",
+            "Near-black body vs night sky (#05070f) is the critical failure mode — the violet self-illum rim around the torso path + raising the AO dark stop to ~#2a1448 is MANDATORY so it doesn't sink into the sky.",
+            "The ×1.4-height ×16 plates on a bulk-1.15 body risk clipping the 150×168 canvas top — verify bounds; the overgrown ridge is the identity, so cap height to fit rather than reducing count.",
+            "As a speculative form, prioritize the lineage-legible cues (overgrown crystal + violet energy cracks + huge bulk + self-glow) over any invented specifics — keep it readable as 'gxk pushed to nova,' not a new creature."
+          ]
+        }
+      ]
+    },
+    {
+      "family": "Mothra (flyer family) — divine four-winged moth goddess; identity carried 100% by the four-wing bilateral airborne silhouette + per-forewing-tip eyespot (ocellus), with a tiny furred thorax centered between the wings. Within-game escalation: t1 cool white+blue (2019) → t2 warm orange-bronze + blue joint bioluminescence (2024) → t3 speculative golden god-ray apotheosis. Cross-family confusion risk is with Rodan (also airborne, warm-brown at higher tiers) — disambiguated ENTIRELY by wing shape: Mothra = rounded 4-lobe wings with round eyespots; Rodan = angular single-spar scalloped triangle wings, no eyespots. Reconciled against GKotM (2019) and GxK (2024) film/CG-data references; the redesign plan §3 is accurate and these specs confirm + sharpen it.",
+      "forms": [
+        {
+          "formId": "mothra_gvm",
+          "character": "Mothra (imago / adult form), Godzilla: King of the Monsters (2019)",
+          "era": "MonsterVerse 2019 — first live-action MonsterVerse Mothra; the canonical 'cool white+blue' baseline imago",
+          "oneLineIdentity": "A divine white-furred moth goddess with four orange-patterned wings, blue eyes, and a glowing-blue under-skin, descending with wings spread.",
+          "silhouette": "Bilateral four-wing AIRBORNE moth: a small compact furred thorax/head centered between two large pointed FOREwings (high/forward) and two smaller scalloped HINDwings (lower/back); two thick swept-back white antennae top the head; short tapering abdomen below. The combined four-wing span is the dominant mass — far wider than tall. Must read as a hovering/descending moth, NEVER a hunched lizard or biped.",
+          "signatureCues": [
+            "FOUR wings in a near-symmetric bilateral spread (big pointed forewings + smaller scalloped hindwings) — the #1 species read; two-wing or single-blob is an instant fail",
+            "ONE round EYESPOT (ocellus) per forewing tip — concentric black ring / blue iris / pale center — the non-negotiable brand mark",
+            "WHITE/cream furred thorax with a small brown-orange forehead tuft (body is fur, NOT a glowing cyan surface)",
+            "Two thick swept-back WHITE feathery antennae",
+            "Orange/amber/yellow wing pattern field with dark (near-black) wingtip borders — stained-glass translucent membranes",
+            "BLUE accent only: large oval blue eyes + blue under-skin bioluminescent glow (the glow is an ACCENT over white fur, not the body color)"
+          ],
+          "palette": [
+            {
+              "part": "Body fur (main)",
+              "color": "#f3ede0 warm white / cream"
+            },
+            {
+              "part": "Fur shadow",
+              "color": "#b8aa92 taupe-brown"
+            },
+            {
+              "part": "Fur highlight",
+              "color": "#fffaf0 near-white"
+            },
+            {
+              "part": "Forehead tuft",
+              "color": "#8a5a2c brown-orange"
+            },
+            {
+              "part": "Wing field (amber)",
+              "color": "#e88a2c amber-orange"
+            },
+            {
+              "part": "Wing root (yellow)",
+              "color": "#f0c050 warm yellow"
+            },
+            {
+              "part": "Wingtip border",
+              "color": "#1a1a22 near-black"
+            },
+            {
+              "part": "Eyespot iris / eyes / glow accent",
+              "color": "#2ec8ff bioluminescent blue"
+            },
+            {
+              "part": "Eyespot pale center",
+              "color": "#fffaf0 off-white"
+            }
+          ],
+          "materialFinish": "Soft white-brown fur on the thorax/head (fuzzy stroked edge); stained-glass TRANSLUCENT chitinous wing membranes backlit, with a cool blue bioluminescent under-glow. Matte, not metallic; the only 'shine' is the blue glow accent and a small belly/underside sheen.",
+          "mustHaveForBlindID": [
+            "Four wings in a bilateral moth spread (2 large forewings + 2 smaller hindwings)",
+            "A round eyespot at EACH forewing tip (black ring → blue iris → pale center)",
+            "White/cream FURRED thorax body (not a cyan-glowing body) with white swept-back antennae",
+            "Orange-amber wing pattern with dark wingtip borders + a BLUE glow accent (eyes/under-skin), not a blue body"
+          ],
+          "commonMisreads": [
+            "Cyan-glowing biped/lizard — the original game bug; fix by making the BODY white fur and moving blue to glow accent only, and by using the airborne four-wing pose not a grounded walk",
+            "Rodan (warm airborne flyer) — disambiguate by ROUND eyespots + rounded 4-lobe wing shape (Rodan has angular scalloped single-spar triangles and no eyespots)",
+            "A single translucent blob when near/far wings smear together — disambiguate by raising far-wing alpha (~0.82) and offsetting the far forewing tip outward so all four wings read distinct",
+            "mothra_gxk (its own t2) — disambiguate by COOL white+blue body here vs warm orange-bronze body + blue joint dots there"
+          ],
+          "hardAt40px": [
+            "Concentric eyespot rings collapse — imply with just 2 nested ellipses (black ring + blue dot center), iris kept ≥ BH*0.09 even on the FAR wing",
+            "Thin antennae clip/vanish — thicken to ~3px white strokes, top at ~-BH*0.98 (pulled in from the canvas edge so they don't clip)",
+            "Fine wing banding is invisible — reduce to flat banded LAYERS (border / amber field / yellow root), no fine veins",
+            "Fur texture is lost — imply with one fuzzy stroked outline on the thorax oval rather than per-hair detail",
+            "Blue 'glow' read as a glowing body — keep blue as small bright accents (eyes, eyespot iris, faint under-sheen) so the body still reads as white fur"
+          ]
+        },
+        {
+          "formId": "mothra_gxk",
+          "character": "Mothra (imago / adult form), Godzilla x Kong: The New Empire (2024)",
+          "era": "MonsterVerse 2024 — 'Queen of the Monsters' redesign; same imago anatomy, warmer + powered-up",
+          "oneLineIdentity": "The same moth goddess, now richly orange-bronze and thicker-furred, studded with discrete BLUE bioluminescent spots at her joints, mouth, chest, brows, and a forehead 'third eye'.",
+          "silhouette": "Identical four-wing bilateral airborne moth silhouette to the 2019 form (big pointed forewings + smaller scalloped hindwings, white swept-back antennae, furred thorax), with a slightly WIDER, more powerful wing spread and a visibly THICKER/fuzzier body. Same 'goddess descending' read.",
+          "signatureCues": [
+            "Discrete BLUE bioluminescent SPOTS scattered on the body — at each joint/wing-root, the chest, the brows, around the mouth, plus ONE larger round forehead 'third-eye' spot — THE signature 2024 feature",
+            "Much brighter ORANGE-BRONZE furred body (warm, not white) — the at-a-glance color shift from the 2019 white form",
+            "Thicker, denser fur (chunkier forehead tuft, fuzzier outline) than 2019",
+            "Four-wing bilateral spread with round eyespots at the forewing tips (same brand mark, slightly LARGER/brighter, intended to mimic Godzilla's eyes as a defensive display)",
+            "Richer multi-layered orange/yellow/black wing pattern (4 banded layers vs 3)",
+            "Same blue accent token as t1 (the eyespot iris + spots are the same bioluminescent blue) — locks 'blue is the accent' across t1→t2"
+          ],
+          "palette": [
+            {
+              "part": "Body fur (main)",
+              "color": "#c8772a orange-bronze"
+            },
+            {
+              "part": "Fur shadow",
+              "color": "#8a4d18 deep bronze-brown"
+            },
+            {
+              "part": "Fur highlight",
+              "color": "#e6a04a warm tan"
+            },
+            {
+              "part": "Wing field deep",
+              "color": "#c8772a deep orange"
+            },
+            {
+              "part": "Wing field amber",
+              "color": "#e88a2c amber"
+            },
+            {
+              "part": "Wing root yellow",
+              "color": "#f0c050 warm yellow"
+            },
+            {
+              "part": "Wingtip border",
+              "color": "#1a1410 warm near-black"
+            },
+            {
+              "part": "Bioluminescent spots / eyespot iris",
+              "color": "#2ec8ff bioluminescent blue (same token as t1)"
+            },
+            {
+              "part": "Revival/glow accent (background, not body)",
+              "color": "#ffb84a golden-yellow"
+            }
+          ],
+          "materialFinish": "Thick, dense orange-bronze fur (denser fuzzy outline than 2019); stained-glass translucent wing membranes in warm orange/amber. Body bioluminescence reads as discrete bright BLUE pinpoints (calm-state color), not an all-over glow. The film's golden 'revival glow' is an environmental/aura light, not the body's surface color.",
+          "mustHaveForBlindID": [
+            "Warm ORANGE-BRONZE furred body (the immediate distinction from the 2019 white form)",
+            "Discrete BLUE bioluminescent spots, especially at the joints and a forehead third-eye spot",
+            "Four-wing bilateral spread with eyespots at the forewing tips",
+            "White swept-back antennae + thicker fur than 2019"
+          ],
+          "commonMisreads": [
+            "mothra_gvm (2019, t1) — disambiguate by warm orange-bronze body + blue joint SPOTS (t1 is white-bodied with no body spots)",
+            "Rodan tiers (warm-brown airborne) — Mothra's orange-bronze body sits visually near Rodan; disambiguate ENTIRELY by wing shape (rounded 4-lobe + round eyespots) vs Rodan's angular scalloped triangle, and by the blue body spots Rodan lacks",
+            "A plain recolor of t1 — avoid by actually adding the thicker fur + blue joint/forehead spots, not just tinting the wings",
+            "The golden revival glow being painted onto the body — keep the body orange-bronze; gold belongs to the t3 supernova, not here"
+          ],
+          "hardAt40px": [
+            "The many small body spots merge or vanish — keep only the highest-identity ones (two wing-root joints, two chest, plus ONE larger forehead third-eye r≈BH*0.03) as opaque bright-blue pinpoints (r≈BH*0.018)",
+            "Orange-bronze body risks reading the same as warm Rodan — lean on wing shape + the blue spots as the separators",
+            "Thicker fur is hard to show — imply with a second offset stroked outline (~+2px) and a chunkier forehead tuft",
+            "Eyespot-mimics-Godzilla-eye nuance is lost at iso — just keep the eyespot present and slightly larger/brighter than t1; the 'mimic' meaning is portrait-only"
+          ]
+        },
+        {
+          "formId": "mothra_supernova",
+          "character": "Mothra — SPECULATIVE golden apotheosis (no film source; anchored to canon)",
+          "era": "Speculative final-tier form (GxK: Supernova, 2027 — no Mothra design revealed). Extrapolated from Mothra's canonical divine PEAK: her golden 'God Rays', the GxK golden-light resurrection, and the divine-goddess lineage.",
+          "oneLineIdentity": "Mothra at her divine peak — a radiant golden-white goddess wreathed in 'god ray' light, wings held level like a descending angel. [SPECULATIVE — extrapolated, not from any released film design.]",
+          "silhouette": "The LARGEST and most symmetric four-wing spread of the three, with wings held nearly LEVEL (reduced forward sweep) for a 'descending angel' read — distinct from the more forward-swept t1/t2 poses. Same furred thorax + white antennae + four-wing bilateral layout, scaled to the widest span, with short radiant god-ray spokes fanning off the forewing tips.",
+          "signatureCues": [
+            "All-over GOLDEN-WHITE radiance with short 'GOD RAY' light spokes fanning off the forewing tips — the canonical divine-peak motif (God Rays are canonically yellowish-white)",
+            "Widest, most SYMMETRIC four-wing spread held LEVEL ('descending angel' pose) — the silhouette escalation",
+            "Radiant cream/gold furred body with a soft gold aura/halo behind the thorax",
+            "GOLDEN eyespots — dark-gold ring → gold ring → white-hot center (the brand eyespot, recolored gold and largest of the three)",
+            "Gold-leaf / amber wing pattern (warm gold replacing the t1/t2 orange field), stained-glass lit from behind",
+            "Gold accent token replacing blue — the deliberate t1/t2-blue → t3-GOLD transition (eyes white, glow gold), plus the most prominent forehead glow-spot of the three"
+          ],
+          "palette": [
+            {
+              "part": "Body fur (main)",
+              "color": "#fff6d8 radiant cream"
+            },
+            {
+              "part": "Fur shadow",
+              "color": "#e8cf88 soft gold"
+            },
+            {
+              "part": "Fur highlight",
+              "color": "#ffffff white"
+            },
+            {
+              "part": "Wing field",
+              "color": "#f5d878 pale gold"
+            },
+            {
+              "part": "Wing pattern (amber-gold)",
+              "color": "#e8b020 amber-gold"
+            },
+            {
+              "part": "Wingtip border",
+              "color": "#5a4416 dark gold (warmer than black)"
+            },
+            {
+              "part": "Radiance / god-ray / glow accent",
+              "color": "#ffd700 gold"
+            },
+            {
+              "part": "Eyespot center / eyes",
+              "color": "#ffffff white-hot"
+            },
+            {
+              "part": "Aura halo",
+              "color": "rgba(255,215,0,0.24) soft gold"
+            }
+          ],
+          "materialFinish": "Radiant golden-white fur that reads as lit-from-within; wing membranes are gold-leaf stained-glass backlit. Finish is luminous/divine, NOT metallic — the gold is light and radiance, not chrome. Surrounded by soft gold god-ray light and a halo aura.",
+          "mustHaveForBlindID": [
+            "Unmistakable Mothra four-wing bilateral silhouette with eyespots at the forewing tips (so it still reads as Mothra, not a generic gold blob)",
+            "GOLDEN-WHITE radiance + short god-ray spokes off the forewing tips (the divine-peak signature)",
+            "Widest, level, symmetric 'descending angel' wing pose (the silhouette escalation over t1/t2)",
+            "Cream/gold body with white antennae and a prominent golden forehead glow-spot"
+          ],
+          "commonMisreads": [
+            "A plain yellow recolor of t1 — avoid by escalating the SILHOUETTE (widest/level spread + god-ray spokes + radial aura), not just the hue; the original game bug was a flat yellow t1",
+            "supernova Godzilla (the wyrm's gold final form) — disambiguate by the FOUR-WING moth silhouette + eyespots (Godzilla is a winged-less radiant biped); they share the gold palette but not the silhouette",
+            "Losing Mothra identity to the gold glow — keep the eyespots and four-wing layout dominant so the gold reads as Mothra-ascended, not an abstract sun",
+            "god rays read as wings/extra appendages — keep spokes SHORT, low-alpha, and clearly radial off the wingtips"
+          ],
+          "hardAt40px": [
+            "God rays clip the 150x168 canvas at the widest span — keep spokes SHORT (< BH*0.4), low-alpha (0.10–0.16) FLAT triangles, and verify tip+ray stays within x∈[0,150] from anchor 75 on E/SE facings",
+            "Gold body + gold glow flatten into one mass — keep the dark-gold wingtip borders + eyespot rings as contrast so the wings stay legible against the radiance",
+            "Many individual god-ray gradient objects are invisible at iso AND a bake-cost item — bake as a few flat low-alpha spokes + ONE soft radial gradient behind the thorax, not 10 gradient objects",
+            "Golden eyespot vs gold field low-contrast — keep the dark-gold ring + white-hot center so the eyespot still reads as a distinct eye against the gold wing"
+          ]
+        }
+      ]
+    },
+    {
+      "family": "King Ghidorah (hydra — three-headed serpentine neck-fan)",
+      "forms": [
+        {
+          "formId": "ghidorah",
+          "character": "King Ghidorah (MonsterVerse / Titanus Ghidorah / Monster Zero), Godzilla: King of the Monsters 2019",
+          "era": "MonsterVerse 2019 (Legendary)",
+          "oneLineIdentity": "A muscular three-headed golden space-dragon: a fan of three long ridged necks (center neck thrust FORWARD of the outer two), each head crowned with a back-swept Western horn-cluster, twin scalloped golden bat-wings behind, two forked-sickle tails, NO arms.",
+          "silhouette": "An upright wide three-prong neck-FAN dwarfing a small body, with twin bat-wings spread behind and two tails below. The defining read: the CENTER neck/head sits forward and higher than the two outer necks (asymmetric trident, not a symmetric three-prong). No arms — the wings are the only upper limbs. At 40px it must read as 'three snake necks + two wings,' never as a single-headed lizard.",
+          "signatureCues": [
+            "Three serpentine necks splaying into a fan, center neck pushed FORWARD and ~1.1x larger / higher than the outer two (MV Ichi-dominant layout)",
+            "Golden coloration — warm metallic gold body, the brand color of the whole family",
+            "Back-swept HORN CLUSTER on each head (multiple thin curved prongs raked rearward, MV-style emotive crown), NOT a single pair",
+            "Twin golden bat-wings with a SCALLOPED trailing edge spread behind the necks (finger-spar membrane, distinct from Rodan's single-point wing)",
+            "Two tails each ending in a spiky SICKLE barb",
+            "Zero arms — wings are the forelimbs; never the wyrm arm-nubs"
+          ],
+          "palette": [
+            {
+              "part": "body / neck scales (mid)",
+              "color": "#d4a000"
+            },
+            {
+              "part": "neck underside / shadow",
+              "color": "#8b6914"
+            },
+            {
+              "part": "crest / lit scale highlight",
+              "color": "#f0d070"
+            },
+            {
+              "part": "eye (golden)",
+              "color": "#ffd24a"
+            },
+            {
+              "part": "horn / gravity-beam glow + charge",
+              "color": "#ffcf3a"
+            },
+            {
+              "part": "neck-underside beam-charge glow (canon yellow)",
+              "color": "rgba(255,200,60,0.95)"
+            }
+          ],
+          "materialFinish": "Warm pebbled golden reptile scale with a soft metallic sheen — organic, not chromed. Necks ridged/skin-textured; wing membrane smooth gold leather. Lit by the one neutral warm-white key (RIM), house rim only — NOT self-lit.",
+          "mustHaveForBlindID": [
+            "Three distinct serpentine necks in a fan (the single non-negotiable family read)",
+            "Center neck/head forward and dominant over the two outer ones (this is what marks it MonsterVerse specifically vs the symmetric Toho fan)",
+            "Gold body + GOLDEN (not purple) eye/beam/glow — the long-standing purple beam is a bug; brand is golden gravity lightning",
+            "Back-swept multi-prong horn crown on the heads",
+            "Twin bat-wings + two tails, no arms"
+          ],
+          "commonMisreads": [
+            "Heisei king_ghidorah (T2): same gold three-head fan — disambiguate by SCALE and HORN STYLE. MV is muscular with a soft emotive curved crown and forward center neck; Heisei is leaner/sharper with rigid straight devil-horns and prominent wing-tip hooks. Keep MV's center-forward asymmetry and softer crown to separate them.",
+            "Rodan (gold-adjacent airborne): disambiguate by HEAD COUNT (3 vs 1) and the neck-fan vs single horizontal wing-glider silhouette.",
+            "A generic two-winged dragon: the THREE necks are the only guarantee — if a viewer can't count three neck-prongs it fails."
+          ],
+          "hardAt40px": [
+            "Per-head horn-cluster detail blurs — imply with a back-swept dark-core + RIM-lit triangular prong fan (drawRidgeElement) reading as a spiky silhouette notch, not individual horns.",
+            "Center-neck-forward depth cue is subtle at iso — sell it by drawing the center head HIGHER and slightly LARGER (1.1–1.12x) and overlapping it in FRONT of the outer two, plus one chipped horn on a side head for free asymmetry.",
+            "Wing scallops vanish as strokes — cut them as hard concave notches in the membrane fill so 'bat-wing' survives.",
+            "Sickle tail-barbs are sub-pixel — render as a small filled barb triangle at each tail tip rather than a thin hook."
+          ]
+        },
+        {
+          "formId": "king_ghidorah",
+          "character": "King Ghidorah (Heisei), Godzilla vs. King Ghidorah 1991",
+          "era": "Heisei 1991 (Toho)",
+          "oneLineIdentity": "The fully-organic apex Ghidorah: a brighter, more METALLIC gold three-head dragon with RIGID STRAIGHT devil-horns bristling down each head, a wider sharper-scaled neck fan, and pronounced HOOKED wing-tips — a Western-dragon redesign, leaner and meaner than MV.",
+          "silhouette": "Taller, wider three-neck fan than MV on a still-small upright body, twin large fin-like bat-wings with hooked tips, two tails. Necks read more muscular and serpentine; the crown is a rigid spiky devil-horn rack rather than a soft curved crown. Same family skeleton, visibly LEVELED-UP: taller fan, denser/longer horns, brighter gold.",
+          "signatureCues": [
+            "Brighter, more METALLIC gold than MV — a clear value step up (lighter, cooler-specular gold)",
+            "RIGID STRAIGHT devil-horns running down the SIDES of each head (multiple straight prongs, Western-dragon style — not curved/emotive)",
+            "Wider + TALLER three-neck fan (bigger fan footprint than T1)",
+            "Pronounced HOOKED wing-tip on each fin-like bat-wing (the Heisei wing signature)",
+            "Sharper, more angular neck scale detail / defined neck musculature",
+            "No mane of hair (Heisei dropped the Showa neck manes); red reptilian eyes in film, gold in-game per family gold token"
+          ],
+          "palette": [
+            {
+              "part": "body / neck scales (mid, brighter)",
+              "color": "#f2c200"
+            },
+            {
+              "part": "neck underside / shadow",
+              "color": "#a07000"
+            },
+            {
+              "part": "crest / lit scale highlight",
+              "color": "#fff0a0"
+            },
+            {
+              "part": "metallic specular crest (shared RIM token)",
+              "color": "rgba(255,250,235,0.22)"
+            },
+            {
+              "part": "eye (gold token, family-locked)",
+              "color": "#ffd24a"
+            },
+            {
+              "part": "horn / beam glow",
+              "color": "#ffcf3a"
+            }
+          ],
+          "materialFinish": "Polished metallic golden scale — noticeably brighter and more reflective than MV's matte warm gold, with a thin near-white specular crest highlight (RIM) selling the 'more metallic' read. Sharper angular scale ticks along the neck crest. House rim only (not self-lit).",
+          "mustHaveForBlindID": [
+            "Three-head gold fan that is VISIBLY brighter/taller/wider than the MV tier (the value+size gap is the whole differentiator)",
+            "STRAIGHT rigid horn rack (vs MV's curved crown) — the Heisei silhouette signature",
+            "Hooked wing-tips on fin-like bat-wings",
+            "Gold body, golden eye/beam (family gold token — NOT purple)"
+          ],
+          "commonMisreads": [
+            "MV ghidorah (T1): the dangerous twin. Disambiguate ENTIRELY by (a) brighter metallic gold value, (b) straight vs curved horns, (c) taller/wider fan, (d) symmetric fan (no center-forward dominance). If T1 and T2 share gold value they collapse — push T2's #f2c200 clearly lighter than T1's #d4a000.",
+            "grand_king (T4): also organic gold with antler horns — disambiguate by horn TYPE (Heisei = straight devil-horns on ALL heads; Grand King = FORKED center + straight sides) and bulk (Grand King is beefier/shorter-necked).",
+            "A generic gold dragon: again the three necks carry it."
+          ],
+          "hardAt40px": [
+            "The brighter-vs-MV value gap is the primary cue and can wash out — bake a real luminance step (#f2c200 vs #d4a000) and a brighter specular crest so it survives.",
+            "Straight-vs-curved horn distinction is fine detail — sell straightness with a denser, longer, more vertical/rigid prong fan (4-per-side, +30% length, one hooked tall crown tip) so the rack reads 'spiky-rigid' at iso.",
+            "Wing-tip hooks are sub-pixel as strokes — cut the hook as a notch in the wing outline.",
+            "Neck scale-ticks won't read at iso — they are portrait-only; do not rely on them as the differentiator."
+          ]
+        },
+        {
+          "formId": "mecha_ghidorah",
+          "character": "Mecha-King Ghidorah, Godzilla vs. King Ghidorah 1991",
+          "era": "Heisei 1991 (Toho) — cyborg, built around King Ghidorah's body in 2204",
+          "oneLineIdentity": "A CYBORG Ghidorah: the two OUTER heads/necks stay organic GOLD, but the CENTER head is a boxy SILVER machine with a glowing cyan eye/visor, and the wings + chest + torso are cold silver-grey armored plating — the gold-organic vs silver-machine CONTRAST is the entire identity.",
+          "silhouette": "Same three-neck Ghidorah fan and two tails, but visibly HALF-MACHINE: the center prong of the fan is a hard angular mechanical head with neck-braces, flanked by two smooth organic gold heads; the body/wings are plated. The asymmetry between a blocky metal center and two organic gold sides is the silhouette hook.",
+          "signatureCues": [
+            "Two OUTER necks/heads remain ORGANIC GOLD (gold horn-crowns, gold scale) — center is MACHINE",
+            "CENTER head is a boxy angular SILVER skull with a glowing CYAN eye/visor slit (not an organic eye) + segmented neck braces/cables on the cyber neck",
+            "SILVER-GREY armored plating on wings, chest, torso (hard-edged panels, full opacity — not a grey wash over a gold dragon)",
+            "Cyan machine glow accent (eye, beam, edge-stroke) against gold organics — the cold-metal vs warm-gold color contrast",
+            "Mechanical details: machine hand / electrical capture cables hint, metal wing panels with seams, mechanical tail tips",
+            "Triple-beam gravity laser charge from the center cyber head"
+          ],
+          "palette": [
+            {
+              "part": "machine plating (steel mid)",
+              "color": "#808080"
+            },
+            {
+              "part": "machine plating shadow",
+              "color": "#4a4a4a"
+            },
+            {
+              "part": "machine plating highlight",
+              "color": "#c0c0c0"
+            },
+            {
+              "part": "organic outer necks (gold)",
+              "color": "#e6b800"
+            },
+            {
+              "part": "organic gold shadow / highlight",
+              "color": "#996600"
+            },
+            {
+              "part": "cyan eye / visor / beam / edge glow",
+              "color": "#00d6ff"
+            }
+          ],
+          "materialFinish": "Split material: cold hard-edged brushed SILVER-GREY metal plating (machine center head, wings, chest, torso) with crisp panel seams and specular edges, set against warm organic GOLD scale on the two outer necks/heads. Cyan electronic glow on the machine parts. The two finishes must not blend — the contrast IS the character.",
+          "mustHaveForBlindID": [
+            "The CENTER head is mechanical/silver while the TWO OUTER heads are organic gold — if all three heads match (all gold OR all grey) it fails and regresses to 'grey-painted dragon' or 'plain Ghidorah'",
+            "Cyan glow (eye/beam) on the machine center vs gold organic sides",
+            "Hard silver plating on wings/chest/torso at full opacity, with seams — not a translucent wash",
+            "Still unmistakably a three-neck Ghidorah fan (so it's not confused with the blocky single-head Mechagodzilla bipeds)"
+          ],
+          "commonMisreads": [
+            "Mechagodzilla / mecha bipeds: shares the silver+cyan machine look — disambiguate by the THREE-NECK HYDRA FAN silhouette (Mechagodzilla is a single-head blocky biped). The hydra outline is the separator.",
+            "void_ghidorah (T5, also cyan): both use cyan accents — disambiguate by material (Mecha = bright silver plating + gold organics; Void = dark indigo + thorns + wormhole, no plating).",
+            "Plain king_ghidorah greyed-out: the failure mode if the whole body greys uniformly. Must keep the two outer necks visibly GOLD."
+          ],
+          "hardAt40px": [
+            "Per-head material split is the load-bearing cue and the hardest to convey small — exaggerate it: make the center head a distinctly BLOCKY/angular silhouette (vs the two smooth rounded gold heads) so the fan reads 'rounded-square-rounded' even before color resolves.",
+            "Cyan visor slit is tiny — render it as a bright horizontal cyan bar that pops against the silver skull.",
+            "Panel seams/rivets are sub-pixel — keep big plate FACETS (large flat silver panels with a value break) rather than fine seams; seams are portrait-only.",
+            "Neck-brace cable detail blurs — imply with 3–4 chunky horizontal dark bands across the center neck."
+          ]
+        },
+        {
+          "formId": "grand_king",
+          "character": "Grand King Ghidorah (Super-Dragon), Rebirth of Mothra III 1998",
+          "era": "Heisei/Millennium-adjacent 1998 (Toho, Rebirth of Mothra trilogy)",
+          "oneLineIdentity": "The beefiest organic Ghidorah: a more MUSCULAR three-head gold dragon with shorter/thicker necks and a unique HORN ASYMMETRY — the CENTER head has FORKED, branching antler horns while the two SIDE heads have STRAIGHT antlers — radiant rich gold.",
+          "silhouette": "A heavier, thicker-built three-neck fan — necks slightly SHORTER and stockier than the other gold tiers, body bulkier, wings more intricate. The instantly-distinguishing silhouette is the CENTER head's branching/forked antler crown reading as a Y/antler mass, flanked by two straight-horned heads.",
+          "signatureCues": [
+            "FORKED / branching antler horns on the CENTER head (each prong splits near the tip — the #1 Grand King identifier) vs STRAIGHT antlers on the two SIDE heads",
+            "More MUSCULAR, beefier body than other organic Ghidorahs",
+            "Shorter, THICKER necks (stocky, not the long thin fan)",
+            "Radiant rich/pale gold — the brightest, warmest gold of the organic tiers",
+            "More intricate wings (extra finger-spar, deeper trailing scallops)",
+            "Two tails, no arms — same family skeleton, scaled heavier"
+          ],
+          "palette": [
+            {
+              "part": "body / scales (pale radiant gold)",
+              "color": "#ffee77"
+            },
+            {
+              "part": "scale shadow / contrast (deeper gold)",
+              "color": "#d4a000"
+            },
+            {
+              "part": "lit highlight (near-white gold)",
+              "color": "#ffffbb"
+            },
+            {
+              "part": "eye (gold)",
+              "color": "#ffe680"
+            },
+            {
+              "part": "horn / beam glow",
+              "color": "#ffd24a"
+            },
+            {
+              "part": "gold aura (recolored from purple)",
+              "color": "rgba(255,200,60,0.18)"
+            }
+          ],
+          "materialFinish": "Rich, bright, almost luminous pale-gold scale — the most saturated/radiant gold of the family with a warm gold aura. Thick muscular hide reading. House/gold-aura lit. The forked center crown is built as filled antler mass, not thin strokes.",
+          "mustHaveForBlindID": [
+            "FORKED center-head horns + STRAIGHT side-head horns (the canonical asymmetry — without it this is just 'another gold Ghidorah')",
+            "Visibly BEEFIER/bulkier body + shorter, thicker necks than the other gold tiers",
+            "Brightest, richest pale gold + gold aura",
+            "Three-head fan, two tails, no arms"
+          ],
+          "commonMisreads": [
+            "king_ghidorah / ghidorah (other gold tiers): all organic gold three-heads — disambiguate by (a) the forked-center vs straight-all horns, (b) bulkier body + shorter thicker necks, (c) brightest pale-gold value. The forked center crown is the load-bearing separator.",
+            "A symmetric three-head dragon: the whole point is the horn ASYMMETRY between center and sides — keep them clearly different shapes.",
+            "Mothra/gold flyers: head count (3 vs 1) and the upright neck-fan separate it."
+          ],
+          "hardAt40px": [
+            "Branching antler detail collapses — build the forked center crown as a Y-shaped FILLED triangular mass (two sub-prongs sharing a base) reading as antler bulk, so the fork survives as silhouette where straight side-horns read as single prongs.",
+            "Shorter-thicker-neck cue is subtle — exaggerate neck base width (~BH*0.135) and shorten length (neckLenMul ~0.92) so the fan reads stocky vs the lean tiers.",
+            "Bulk delta is small at iso — push bodyBulk ~1.18 and let the heavier outline carry it.",
+            "Brightest-gold value can wash against other gold tiers at night — pair the pale body with deeper-gold (#d4a000) shadow contrast so it doesn't flatten."
+          ]
+        },
+        {
+          "formId": "void_ghidorah",
+          "character": "Void Ghidorah / God of the Void / King of the Void, Godzilla: The Planet Eater 2018 (anime trilogy)",
+          "era": "AniGoji 2018 (Polygon/Toho anime)",
+          "oneLineIdentity": "An extra-dimensional ENERGY being with NO solid body: three impossibly long, thin, WRITHING golden necks bristling with rose-like THORNS, descending from a glowing WORMHOLE/singularity overhead — cosmic horror, the only Ghidorah that breaks the dragon mold.",
+          "silhouette": "Three extremely long, thin, sinuous S-curving necks emerging from a glowing portal disc, studded with outward thorns, ending in bristly spike-crowned heads. NO body, NO wings, NO legs, NO tails in the normal sense — just necks + portal. The writhing-rose-stem read is the entire silhouette; it must look alien, not like a standard winged dragon.",
+          "signatureCues": [
+            "THREE extremely long, thin, WRITHING necks (longest/thinnest of all tiers) emerging from a glowing wormhole — no normal body",
+            "Rose-THORN studding: numerous outward-pointing spikes/thorns along the necks and bristly spike-crowns on the heads (patterned after thorned roses)",
+            "Glowing WORMHOLE / singularity DISC at the neck-root origin (cyan core radial gradient) the necks descend from",
+            "Dark indigo body LIFTED by a luminous CYAN crest rim (+ thin gold center vein) so it reads as a golden void-entity edge-lit against the night, never sinking into the sky",
+            "Cyan void-flame eyes/beam (not gold, not purple)",
+            "Fixed sinuous S-curve baked into each neck (deterministic writhe present in every frame)"
+          ],
+          "palette": [
+            {
+              "part": "body / neck (dark indigo)",
+              "color": "#1a1a2e"
+            },
+            {
+              "part": "internal contrast highlight",
+              "color": "#5a5a82"
+            },
+            {
+              "part": "cyan crest rim (night-visibility self-illum)",
+              "color": "rgba(0,224,255,0.7)"
+            },
+            {
+              "part": "thin gold center vein",
+              "color": "#ffcf3a"
+            },
+            {
+              "part": "cyan eye / void-flame beam",
+              "color": "#00e0ff"
+            },
+            {
+              "part": "cosmic aura (live FX)",
+              "color": "rgba(0,204,255,0.20)"
+            }
+          ],
+          "materialFinish": "Not solid scale — a dark cosmic energy-being: near-black indigo necks that would vanish into the night sky except for a self-illuminating CYAN rim along every crest (thorn tips catch the cyan), with a thin gold center vein. Granted the full self-illumination rim (§1.2/§1.5). The wormhole disc is a cyan-core radial-gradient glow.",
+          "mustHaveForBlindID": [
+            "Three impossibly long, thin, writhing thorny necks coming out of a glowing PORTAL — no body, no wings (the form that breaks the dragon mold)",
+            "Rose-THORN spikes all along the necks and heads (the canonical design DNA)",
+            "Cyan self-illumination rim that keeps the dark body visible against night sky (mandatory — it vanishes without it)",
+            "Cyan void-flame (not the gold of organic tiers)"
+          ],
+          "commonMisreads": [
+            "Other Ghidorah tiers (winged gold dragons): Void has NO wings, NO solid body, NO tails — just thorny necks + portal. If it grows wings or a normal torso it reads as 'dark Ghidorah' and fails.",
+            "mecha_ghidorah (also cyan): Mecha is bright silver plating + gold organics + wings; Void is dark indigo, thorny, no plating, wormhole origin. Material and the portal separate them.",
+            "supernova (Godzilla, dark body + self-lit rim twin): safely separated by silhouette (single hunched plated wyrm vs three writhing necks) AND rim hue (violet vs cyan) — do NOT harmonize the two rim colors.",
+            "Sinking into the #05070f night sky: the failure mode if the cyan rim is dropped — the dark indigo body is near-sky luminance."
+          ],
+          "hardAt40px": [
+            "Thin writhing necks risk reading as noise — keep them as a clear deterministic S-curve and ensure the cyan rim outlines them so the writhe is legible.",
+            "Many small thorns blur — render 5–7 per neck as small FILLED triangles (length ~BH*0.03) alternating sides; ensure at least the larger ones survive as silhouette bumps; thorn tips catch the cyan rim.",
+            "The wormhole disc can clip the canvas bottom (sits near anchor Y) — nudge it up so the ~BW*0.9 radial doesn't get cut.",
+            "Dark body invisibility is the chronic risk — the cyan rim is mandatory and the AO dark-stop must stay above pure black; verify the silhouette lifts off the sky in a night-render test."
+          ]
+        }
+      ]
+    },
+    {
+      "family": "Rodan (flyer / pteranodon family) — 3 canonical forms (rodan = Showa 1956/64, rodan_mv = MonsterVerse Titanus Rodan 2019, rodan_fire = Heisei Fire Rodan 1993). Shared family silhouette (plan §5.1, §7): a 3/4-front airborne PTERANODON — ONE dominant horizontal WING SPAN as the dominant mass, a NARROW horizontal body slung between the wings (never the hunched upright wyrm torso), a backswept pointed HEAD-CREST, a long DOWN-ANGLED BEAK leading the body, two small TUCKED talons under the chest, near-absent tail. The non-negotiable silhouette triangle is WING + CREST + BEAK, angular/raptor — it must NEVER smear into Mothra's rounded two-lobe blob, which is enforced by a SCALLOPED (finger-notch) trailing edge cut as a hard shape on every wing. Across the 3-tier arc the constant is that triangle; what escalates is HEAT: cold brown rock-pteranodon (no glow) -> dark volcanic-rock fire-demon with magma-crack seams + glowing/dripping wing underside -> incandescent vermilion magma-comet with gold crest/spikes + black beak + white-hot cracks. Both rodan & mothra are AIRBORNE: same drawAltitudeShadow recipe, same idle-flap cadence (plan §1.3, §7). Rendered procedural Canvas2D at ~40px iso, baked to a 150x168 sprite, anchor (75,144.5). Shared helpers: drawPteranoBody, drawCrestHorns, drawChestSpikes, drawTuckedTalons, reworked drawPteranoWing, drawMagmaCracks (= shared drawFissures). NOTE: this family has NO speculative member of its own — there is no rodan_supernova. The two speculative forms named in the brief (supernova, mothra_supernova) belong to the WYRM and MOTHRA families respectively; they are included below, clearly labeled, for cross-family disambiguation reference since both are airborne/radiant and could be confused at the palette level.",
+      "forms": [
+        {
+          "formId": "rodan",
+          "character": "Showa Rodan (Toho, 1956 Rodan / 1964 Ghidorah the Three-Headed Monster onward)",
+          "era": "Showa (1956–1968 suits; debuts in Godzilla series 1964)",
+          "oneLineIdentity": "A cold, craggy rock-pteranodon — slim mahogany/brown body dwarfed by enormous wings, jagged head with two backswept horns, spiky sternum, long pointed down-curved beak; NO heat, NO glow.",
+          "silhouette": "At 40px: a single dominant near-horizontal wing span (wider than the body is long), a slim horizontal body slung between the wings, a jagged skull leading with a long down-angled pointed beak, two short straight backswept horns off the skull rear, tiny tucked talons under the chest, no real tail. Reads as a flat angular glider, not an upright biped.",
+          "signatureCues": [
+            "TWO STRAIGHT backswept horns off the rear of the skull (this is the #1 t1-vs-t2 differentiator — straight, NOT the V-split inward-curl of MV/Fire Rodan)",
+            "Enormous wings disproportionately larger than the slim body — the body looks small/under-slung between them",
+            "Long pointed DOWN-CURVED beak leading the body (jagged raptor head)",
+            "A short row of SHARP bone chest/sternum spikes (the canonical 'spiky chest')",
+            "Scalloped (finger-notch) wing trailing edge cut as a hard shape — instantly not-Mothra",
+            "COLD palette: dull craggy brown/mahogany hide with NO magma, NO glow, no aura (the only flameless Rodan tier)"
+          ],
+          "palette": [
+            {
+              "part": "body skin (canonical 1956)",
+              "color": "mahogany / reddish-brown ~#7a3b22 (1956); later Showa films shift to plain brown/burgundy ~#8b4a28"
+            },
+            {
+              "part": "body skin (plan token, value-spread brown)",
+              "color": "skin #8a5a30"
+            },
+            {
+              "part": "skin dark / under-shadow",
+              "color": "#5a3818"
+            },
+            {
+              "part": "skin light / lit upper surface",
+              "color": "#b07a45"
+            },
+            {
+              "part": "horns + chest spikes (bone-tan)",
+              "color": "#d8b070"
+            },
+            {
+              "part": "dorsal ridge accent (1956 only — dull yellow/gold spine row, optional period nod)",
+              "color": "~#c9a14a"
+            },
+            {
+              "part": "eye (warm amber)",
+              "color": "#ffaa00"
+            },
+            {
+              "part": "aura / heat motes",
+              "color": "null — this tier is COLD, no aura, no fxMotes"
+            }
+          ],
+          "materialFinish": "Dull craggy/leathery dry rock-hide — matte, weathered brown pteranodon skin. House rim only (no self-illumination). Belly-highlight kept as a small underside sheen on the body lozenge.",
+          "mustHaveForBlindID": [
+            "Two STRAIGHT backswept skull horns (not curled, not forked)",
+            "Slim body radically out-sized by the wing span",
+            "Long down-curved pointed beak leading the silhouette",
+            "Spiky chest/sternum row",
+            "Flameless brown/mahogany rock palette with zero glow"
+          ],
+          "commonMisreads": [
+            "vs Mothra (the other airborne form): Mothra is a rounded 4-lobe wing blob with eyespots and white antennae; Rodan is an angular WING+CREST+BEAK triangle with a scalloped (hard-cut) trailing edge and NO eyespots — the scallop + beak disambiguate",
+            "vs rodan_mv / rodan_fire (its own evolutions): t1 is the ONLY flameless tier — no magma cracks, no glowing wing edge, no aura; and its horns are STRAIGHT, not the V-split inward-curl of t2/t3",
+            "vs a generic brown lizard/wyrm: Rodan is horizontal/airborne with a dominant wing span and NO hunched upright torso, plates, or thick legs"
+          ],
+          "hardAt40px": [
+            "Two-horn vs jagged-skull distinction blurs — imply with two bold bone-tan filled triangles raked back hard off the skull rear (lengths ~BH*0.18 and BH*0.14), not thin strokes",
+            "Chest spikes vanish if drawn small/thin — cut as 3 bone-tan filled triangles (~BH*0.06) stepping down the leading underside",
+            "1956 dorsal ridge / blue-black body stripes are sub-pixel — drop at iso, reserve for portrait; carry t1 on silhouette + flameless brown alone",
+            "Weak brown value-spread muddies the body — use the widened skin/skinDark/skinLight token spread (#8a5a30 / #5a3818 / #b07a45) so the body reads as form, not a flat blob"
+          ]
+        },
+        {
+          "formId": "rodan_mv",
+          "character": "MonsterVerse Titanus Rodan, the 'Fire Demon' (Godzilla: King of the Monsters, 2019)",
+          "era": "MonsterVerse (2019; reused in GxK 2024 / Supernova 2027 marketing)",
+          "oneLineIdentity": "A living-volcano fire-demon pteranodon — burgundy molten-rock-textured body with red-glowing magma crack seams, wing undersides lined with smoldering lava that drips, and a V-split backswept head crest.",
+          "silhouette": "Same airborne pteranodon triangle as t1 but heavier/broader — larger wing span, the bird-of-prey physique, a more charred/jagged scalloped trailing edge, and a distinctive forked V-SPLIT head crest whose tips hook back toward each other. The glowing/dripping lower wing edge adds a hot under-lit band to the silhouette.",
+          "signatureCues": [
+            "RED-GLOWING MAGMA CRACK SEAMS across the upper body (Smaug-style fissures over a rock crust) — the brand heat read",
+            "Wing UNDERSIDE / lower trailing edge glows fiery orange and DRIPS magma (cooled-magma 'phoenix' wings, lava oozing off the edges)",
+            "V-SPLIT backswept head crest — two bony horns fork from a common base and curl/hook back (the load-bearing t1-vs-t2 differentiator; canon: two horns growing backward, curling down from the skull rear)",
+            "Burgundy / dark volcanic-rock skin with a molten-rock crust texture (geothermal armor)",
+            "Massive serrated beak lined with tooth-like spikes leading the body",
+            "Full-silhouette orange self-illumination rim (granted — canonically self-lit) + heat aura + heat motes"
+          ],
+          "palette": [
+            {
+              "part": "canonical body",
+              "color": "burgundy molten-rock ~#6e2a20 with charcoal crust patches and red-orange glow in the cracks"
+            },
+            {
+              "part": "body skin (plan token — darkened for night-sky contrast)",
+              "color": "skin #5c1e14"
+            },
+            {
+              "part": "skin dark / rock crust",
+              "color": "#2e0f0a"
+            },
+            {
+              "part": "skin light / lit crust",
+              "color": "#8a2e1c"
+            },
+            {
+              "part": "magma crack core (opaque ≥2.2px)",
+              "color": "plateEdge #ff6a1e"
+            },
+            {
+              "part": "magma glow / wing-edge rim",
+              "color": "plateGlow rgba(255,90,20,0.85)"
+            },
+            {
+              "part": "eye",
+              "color": "#ff9933"
+            },
+            {
+              "part": "aura (heat)",
+              "color": "rgba(255,90,20,0.12)"
+            },
+            {
+              "part": "fxMotes",
+              "color": "'heat' (live FX)"
+            }
+          ],
+          "materialFinish": "Cooled volcanic rock / charcoal crust as geothermal armor with incandescent magma bleeding through the cracks and pooling/dripping at the wing's lower edge. Self-illuminating (full-silhouette aura-derived orange rim). Small underside belly sheen kept.",
+          "mustHaveForBlindID": [
+            "Red-glowing magma crack seams over a dark rock-crust body",
+            "Glowing/dripping lava along the lower wing trailing edge",
+            "V-split backswept crest with inward-hooking tips (NOT t1's straight horns)",
+            "Burgundy/charcoal volcanic body, not a flat brown",
+            "Massive serrated beak"
+          ],
+          "commonMisreads": [
+            "vs rodan (t1): t1 is flameless brown with STRAIGHT horns; t2 adds the magma cracks, glowing wing underside, V-split crest, and self-illum rim — heat + crest shape disambiguate",
+            "vs rodan_fire (t3): t2 is a DARK rock body with glowing cracks (rock-with-magma-inside); t3 is a fully INCANDESCENT vermilion body lit from within with GOLD crest/spikes and a BLACK beak — t2 keeps a rock-colored crest & beak, t3 flips them to the gold/black contract",
+            "vs Burning Godzilla (wyrm, also orange-cracked & self-lit): Burning is a hunched upright plated lizard with a sawtooth dorsal ridge and thick legs; Rodan_mv is a horizontal airborne wing-triangle with a beak — archetype silhouette resolves it",
+            "vs Mothra (airborne): rounded 4-lobe + eyespots vs angular scalloped pteranodon triangle"
+          ],
+          "hardAt40px": [
+            "Magma cracks blur to noise if thin — confine to 3–4 THICK branching seams with an OPAQUE bright core ≥2.2px on the lit upper body (the glow read comes from the opaque hot core, not blur — no shadowBlur in bake)",
+            "V-split inward-curl crest is the key cue but is fiddly — draw it as a bold CUT shape (two filled prongs forking from a common base, tips hooked back), never a stroke; this is what separates t1 from t2",
+            "Dripping wing-edge lava is sub-pixel as drips — imply with 2–3 short magma DRIP triangles hanging off the lowest scallop points plus a plateGlow rim (~BH*0.03) along the scalloped trailing edge",
+            "Canon body is burgundy but the plan token is darkened to #5c1e14 for night-sky visibility — keep the self-illum rim + glowing cracks so it doesn't read as a black blob (the rim is what lifts it off the #05070f sky)"
+          ]
+        },
+        {
+          "formId": "rodan_fire",
+          "character": "Heisei Fire Rodan (Godzilla vs. Mechagodzilla II, 1993)",
+          "era": "Heisei (1993)",
+          "oneLineIdentity": "The radiation-supercharged peak — a vermilion body glowing from inside out, BRIGHT GOLD horns/crest and chest spines, a BLACK beak, white-hot crack seams and a molten wing edge; the self-igniting magma comet.",
+          "silhouette": "The largest/heaviest of the three: widest wing span, fullest bulk, most/most-numerous scallops, brightest molten trailing rim and biggest magma drips. Same pteranodon WING+CREST+BEAK triangle, now fully incandescent. Same V-split crest as t2 but recolored gold; an optional short comet/flame trail off the back (−X).",
+          "signatureCues": [
+            "THE HEISEI COLOR CONTRACT (3 hard reads): VERMILION-RED body + BRIGHT GOLD horns/crest + BRIGHT GOLD chest spines + BLACK beak — this triple-accent contract is the load-bearing t3-vs-t2 differentiator",
+            "Whole body incandescent / lit from within (a hot ember, not dark rock with cracks like t2)",
+            "WHITE-HOT crack seams (near-white core over the orange crack) — hotter/brighter than t2's orange cracks",
+            "Gold crest that GLOWS (canon: horns glow & discharge energy before the uranium heat-ray — justifies the brightest crest of the arc)",
+            "Biggest/brightest molten wing trailing edge + largest magma drips; optional short comet/flame trail",
+            "Strongest full-silhouette self-illumination rim + strongest heat aura of the family"
+          ],
+          "palette": [
+            {
+              "part": "body skin (vermilion ember)",
+              "color": "skin #ff5a1e"
+            },
+            {
+              "part": "skin dark",
+              "color": "#c23008"
+            },
+            {
+              "part": "skin light",
+              "color": "#ffb066"
+            },
+            {
+              "part": "horns / crest (BRIGHT GOLD — canon)",
+              "color": "#ffd24a"
+            },
+            {
+              "part": "chest spikes (BRIGHT GOLD — canon, same token as crest)",
+              "color": "#ffd24a"
+            },
+            {
+              "part": "beak (BLACK — canon)",
+              "color": "#1a0e08 (charcoal-black colorOverride on drawPteranoBeak)"
+            },
+            {
+              "part": "magma crack core (white-hot)",
+              "color": "plateEdge #ffcc33 with near-white center #fff6cc"
+            },
+            {
+              "part": "magma glow",
+              "color": "plateGlow rgba(255,140,0,0.98)"
+            },
+            {
+              "part": "eye",
+              "color": "#ffdd00"
+            },
+            {
+              "part": "aura (strongest)",
+              "color": "rgba(255,80,0,0.20)"
+            },
+            {
+              "part": "fxMotes",
+              "color": "'heat' (live FX)"
+            }
+          ],
+          "materialFinish": "Molten/incandescent — the whole body is a glowing coal lit from inside, with polished BRIGHT-GOLD bone (crest + chest spines) and a dead-matte CHARCOAL-BLACK beak for contrast. Strongest full-silhouette self-illum rim. Small underside sheen kept.",
+          "mustHaveForBlindID": [
+            "Vermilion-red glowing body (not dark rock)",
+            "BRIGHT GOLD horns/crest",
+            "BRIGHT GOLD chest spines",
+            "BLACK beak (the single most distinctive Fire-Rodan-only cue — no other Rodan has a black beak)",
+            "White-hot crack seams + brightest molten wing edge"
+          ],
+          "commonMisreads": [
+            "vs rodan_mv (t2): t2 is a DARK rock body with orange cracks and a rock-colored crest/beak; t3 is a bright vermilion glowing body with GOLD crest/spines + BLACK beak — the gold-and-black contract is the disambiguator (if the crest is bone-rock and the beak isn't black, it's t2)",
+            "vs Fire/Burning Godzilla (wyrm) & super_mecha (gold robot): both share warm gold/orange accents but are GROUNDED — Burning is a hunched plated lizard, super_mecha a blocky biped robot; Fire Rodan is the airborne pteranodon wing-triangle with a beak",
+            "vs mothra_supernova (golden airborne): Mothra is a rounded 4-wing moth with golden ocelli/god-rays and white antennae; Fire Rodan is the angular scalloped pteranodon with gold horns and a black beak — wing SHAPE + beak resolve it",
+            "vs Showa rodan (t1): t1 is cold brown with STRAIGHT bone horns; t3 is incandescent vermilion with GOLD curled crest"
+          ],
+          "hardAt40px": [
+            "Black beak on a bright body could read as a hole — keep the beak a solid charcoal CUT shape with a crisp edge against the vermilion so it reads as the dark beak, the signature Fire-Rodan cue",
+            "Gold-on-orange crest/spikes can muddy (gold near vermilion is low-contrast) — push the gold bright (#ffd24a) and keep the body skinDark behind the gold shapes for separation; the gold must stay clearly distinct from the body or the Heisei contract collapses into 'just orange'",
+            "White-hot cracks need the bright opaque core to read — thin #fff6cc center stroke over the orange crack (no blur available in bake)",
+            "Comet/flame trail clips the 150px-wide canvas at the largest wing span (3.4) + bulk (1.2) — keep any baked trail SHORT (< BW*0.6) off −X, or leave the trail entirely to the live 'heat' fxMotes and bake nothing"
+          ]
+        },
+        {
+          "formId": "supernova",
+          "character": "Godzilla 'Supernova' (SPECULATIVE — WYRM family, not Rodan; included for cross-family disambiguation only)",
+          "era": "Speculative endpoint (no film design; anchored to Heisei Burning Godzilla MELTDOWN + the GxK: Supernova 2027 title)",
+          "oneLineIdentity": "SPECULATIVE radiant-overload Godzilla beyond the gxk pink form — a walking supernova: biggest hunched plated body, tallest overgrown violet-white CRYSTAL dorsal ridge, white-violet energy seams, self-illuminated to dominate the night sky.",
+          "silhouette": "GROUNDED hunched mountain-of-mass wyrm (thick elephantine legs, deep barrel chest, small low head, vestigial T-rex arms) crowned by the tallest, most jagged sawtooth dorsal ridge in the roster. NOT airborne — this is the wyrm/Godzilla skeleton, included here only because its radiant palette could be confused with a radiant Rodan/Mothra.",
+          "signatureCues": [
+            "Tallest, most-overgrown violet-white CRYSTAL dorsal ridge (16 plates, max jaggedness) — the canonical Godzilla sawtooth ridge taken to a crystalline extreme",
+            "GROUNDED hunched-lizard silhouette with thick legs + small head (NOT a wing-triangle, NOT a moth)",
+            "White-violet glowing energy crack seams splitting the skin (denser/brighter than Burning's orange)",
+            "Violet self-illumination rim around the torso (night-visibility mandate — body never sinks into #05070f sky)",
+            "Biggest bulk of the wyrm arc + strong violet aura + white-hot eyes"
+          ],
+          "palette": [
+            {
+              "part": "body skin dark (raised off pure black for night-vis)",
+              "color": "~#2a1448 (gradient bottom; never pure #0d011a black)"
+            },
+            {
+              "part": "crystal plate gradient",
+              "color": "#2a1448 base -> #a55ae6 mid -> #dcb0ff tip"
+            },
+            {
+              "part": "energy seams (white-violet)",
+              "color": "white-violet opaque cores"
+            },
+            {
+              "part": "self-illum rim",
+              "color": "rgba(220,176,255,~0.5)"
+            },
+            {
+              "part": "eye",
+              "color": "#ffffff (white-hot)"
+            },
+            {
+              "part": "aura",
+              "color": "violet, cosmic motes (live FX)"
+            }
+          ],
+          "materialFinish": "Crystalline overgrown volcanic mass lit from within by violet energy; self-illuminating violet rim. Belly-highlight kept (organic wyrm).",
+          "mustHaveForBlindID": [
+            "Hunched grounded Godzilla body with a sawtooth dorsal ridge (NOT a flyer)",
+            "Tallest/most-jagged crystalline violet-white plate ridge",
+            "Violet self-illumination + white-violet energy seams",
+            "Biggest bulk in the wyrm arc"
+          ],
+          "commonMisreads": [
+            "vs Fire Rodan / mothra_supernova: those are AIRBORNE radiant forms (wing-triangle / 4-wing moth); supernova is the GROUNDED hunched plated wyrm — archetype silhouette + violet (not gold/orange) hue resolve it",
+            "vs gxk pink Godzilla (its own prior tier): supernova is bigger/tallest-plated and VIOLET-white, gxk is magenta/pink and leaner",
+            "vs void_ghidorah (also dark + self-lit): void is a three-neck thorny fan from a wormhole; supernova is a single hunched plated lizard — and the rim hues are deliberately split (violet vs cyan), do not harmonize"
+          ],
+          "hardAt40px": [
+            "Near-black body risks vanishing at night — MANDATORY violet self-illum rim + AO dark stop raised to ~#2a1448",
+            "16 tall plates is the heaviest sprite — replace per-plate blur halos with ONE wide radial violet wash behind the ridge + the self-illum rim; verify ×1.4-height plates on bulk 1.15 don't clip the 150x168 top edge",
+            "NOT a Rodan — do not give it wings, a beak, or a horizontal flight pose"
+          ]
+        },
+        {
+          "formId": "mothra_supernova",
+          "character": "Mothra 'Supernova' / golden god-ray apotheosis (SPECULATIVE — MOTHRA family, not Rodan; included for cross-family disambiguation only)",
+          "era": "Speculative apotheosis (no Mothra design revealed; anchored to her canonical golden-white 'god rays' + the golden-yellow 2024 GxK revival glow)",
+          "oneLineIdentity": "SPECULATIVE divine golden apotheosis of Mothra — the widest, most symmetric four-wing spread held level (descending-angel), golden-white radiant ocelli, gold-leaf wing pattern, and short god-ray spokes off the forewing tips.",
+          "silhouette": "AIRBORNE near-bilateral MOTH: small furred thorax centered between FOUR wings (large pointed forewings high/forward + smaller scalloped hindwings) whose combined span is the dominant mass, two thick swept-back WHITE antennae, short tapering abdomen. ROUNDED multi-lobe wings — explicitly NOT a Rodan wing-triangle.",
+          "signatureCues": [
+            "FOUR-wing bilateral moth layout (the dominant mass) — the structural opposite of Rodan's single-spar wing",
+            "One round EYESPOT (ocellus) per forewing tip — golden-white radiant ocelli (dark-gold ring -> gold -> white-hot center)",
+            "Two thick swept-back WHITE antennae",
+            "Golden-white 'GOD RAYS' — short flat triangular spokes fanning off the forewing tips (kept short to avoid canvas clip)",
+            "Radiant cream/gold fur body with a gold-leaf / amber wing pattern (stained-glass lit from behind)",
+            "Prominent white-core + gold-halo forehead glow-spot"
+          ],
+          "palette": [
+            {
+              "part": "fur body",
+              "color": "skin #fff6d8 (radiant cream)"
+            },
+            {
+              "part": "skin dark",
+              "color": "#e8cf88"
+            },
+            {
+              "part": "skin light",
+              "color": "#ffffff"
+            },
+            {
+              "part": "wingtip border (warm dark-gold, not black)",
+              "color": "plate #5a4416"
+            },
+            {
+              "part": "gold radiance accent",
+              "color": "plateEdge #ffd700"
+            },
+            {
+              "part": "glow",
+              "color": "plateGlow rgba(255,215,0,0.92)"
+            },
+            {
+              "part": "eye / ocellus center",
+              "color": "#ffffff"
+            },
+            {
+              "part": "aura (gold)",
+              "color": "rgba(255,215,0,0.24)"
+            }
+          ],
+          "materialFinish": "Radiant furred body + stained-glass gold-leaf wings lit from behind; all-over soft gold radiance (radial gradient behind thorax). Small thorax/underside belly sheen kept.",
+          "mustHaveForBlindID": [
+            "Four-wing bilateral moth layout (NOT a pteranodon wing-triangle)",
+            "Eyespot/ocellus per forewing tip (golden-white)",
+            "Two white swept-back antennae",
+            "Cream/gold fur body with gold-leaf wing banding + god-ray spokes"
+          ],
+          "commonMisreads": [
+            "vs Fire Rodan (the gold airborne Rodan): Rodan is an angular single-spar SCALLOPED wing-triangle with gold horns + a BLACK beak and NO eyespots; Mothra is a rounded FOUR-wing moth with ocelli + white antennae — wing shape (rounded 4-lobe vs angular triangle), eyespots, and antennae resolve it instantly",
+            "vs mothra_gvm / mothra_gxk (its own prior tiers): t1 is cool white+blue, t2 warm orange-bronze + blue joint spots; t3 is the golden god-ray apotheosis — gold ocelli + god-rays disambiguate",
+            "vs super_mecha (gold robot, grounded): different archetype entirely — blocky biped vs four-wing moth"
+          ],
+          "hardAt40px": [
+            "Eyespots must survive even on the FAR wing — keep ocellus radius ≥BH*0.09 at α0.82, never let near/far wings smear into one blob",
+            "God-rays are sub-pixel as individual gradient spokes — bake as low-alpha (0.10–0.16) FLAT triangular spokes, kept SHORT (< BH*0.4) to avoid clipping the canvas at the widest wingspan (3.3)",
+            "NOT a Rodan — rounded 4-lobe wings, eyespots, and white antennae are the hard separators from the gold Fire Rodan; do not give it a beak or a single-spar scalloped wing"
+          ]
+        }
+      ]
+    },
+    {
+      "family": "Mechagodzilla (hard-block robot family) — 4 forms, all film-canonical (no speculative entries; the supernova/mothra_supernova speculative forms named in the brief belong to the wyrm and mothra families, not mecha)",
+      "forms": [
+        {
+          "formId": "mecha_1",
+          "character": "Showa Mechagodzilla (1974 Godzilla vs. Mechagodzilla / 1975 Terror of Mechagodzilla)",
+          "era": "Showa (1974–1975)",
+          "oneLineIdentity": "The original 'fake Godzilla' — a crude, rounded, bolted-together CHROME robot lizard with two red control orbs on its temples and a grinning missile mouth.",
+          "silhouette": "Bipedal Godzilla shape but UPRIGHT and BLOCKY rather than hunched: bulbous rounded shoulders set high and proud, a round-topped boxy skull, a single short row of stubby silver dorsal fins, and a stiff segmented tail. The read at 40px is 'a shiny Godzilla made of riveted metal' — rounder and more bolted than the sleeker later mechas.",
+          "signatureCues": [
+            "TWO RED CYBANEK CONTROL ORBS — small glossy red domes flanking the skull at temple height, OUTSIDE/above the eyes (the #1 Showa identifier; nothing else in the roster has paired red temple orbs)",
+            "Pure SILVER/CHROME body with NO hue tint (Space Titanium) — the most reflective, untinted metal of the four",
+            "Round, crude, almost smooth mechanical Godzilla skull with a wide grinning 'missile mouth' (rows of small ports/teeth)",
+            "Rounded, riveted, BULBOUS shoulder caps with a shallow shoulder frill/collar — soft semicircle caps, not hard rectangular blocks",
+            "Stub finger-missile hands (short barrels at the fingertips) and visible heavy rivets/bolts across the plating",
+            "Multicolored rainbow 'Space Beam' fired from the eyes (six-color shifting) — distinct from later single-color beams"
+          ],
+          "palette": [
+            {
+              "part": "body / main plating",
+              "color": "#c8ccd2 (bright chrome silver)"
+            },
+            {
+              "part": "highlight / specular edge",
+              "color": "#f2f4f8 (near-white polished metal)"
+            },
+            {
+              "part": "shadow / recessed plate",
+              "color": "#7e8590 (cool steel gray)"
+            },
+            {
+              "part": "Cybanek temple orbs / eyes",
+              "color": "#e0202a (glossy red)"
+            },
+            {
+              "part": "Space Beam (eye) accent",
+              "color": "rainbow / multicolor — imply as #ffcf3a gold-to-cyan shift"
+            },
+            {
+              "part": "rivets / seam lines",
+              "color": "#5a606a (dark steel)"
+            }
+          ],
+          "materialFinish": "Bright polished chrome / unpainted reflective steel — high specular, neutral cool silver, visibly riveted and 'machined' rather than sculpted.",
+          "mustHaveForBlindID": [
+            "Two RED domes on the temples (Cybanek orbs) — without these it reads as generic robot",
+            "Pure untinted CHROME silver (no blue, no black, no gold)",
+            "Rounded/bulbous crude shoulders + round skull (the 'first, crudest robot' read)"
+          ],
+          "commonMisreads": [
+            "vs a plain wyrm Godzilla → disambiguator: hard specular metal edges + red temple orbs + visible rivets, never organic skin",
+            "vs mecha_2 (Heisei) → disambiguator: mecha_1 is ROUND/bulbous with red temple orbs and pure chrome; mecha_2 is ANGULAR steel-blue with huge outward shoulder cannon pods and no temple orbs",
+            "vs mecha_ghidorah's silver machine head → disambiguator: mecha_1 is a single full biped robot with red orbs; mecha_ghidorah is a 3-neck hydra fan with a cyan-visor center head"
+          ],
+          "hardAt40px": [
+            "The rainbow Space Beam — fake it as a single warm-gold-to-cyan gradient flash on the eyes during attack rather than literal six-color cycling",
+            "Rivets/bolts (sub-2px) — imply with 2–3 darker seam strokes on the shoulder caps only, not a full rivet field",
+            "Finger missiles — render as 3 short stub barrels only on the near-arm hand tip; too small to show on both hands",
+            "Grinning missile-mouth ports — imply with 3 tiny dark dots on a widened jaw rather than individual ports; the red temple orbs must NOT be overdrawn by the visor"
+          ]
+        },
+        {
+          "formId": "mecha_2",
+          "character": "Heisei MechaGodzilla 2 / Super MechaGodzilla (1993 Godzilla vs. Mechagodzilla II, combined with the Garuda)",
+          "era": "Heisei (1993)",
+          "oneLineIdentity": "The sleek military-jet upgrade — a streamlined steel-blue/gunmetal robot Godzilla with massive blocky shoulder-cannon pods and a sharp helmet-like head.",
+          "silhouette": "Sharper, leaner, and more ANGULAR than the Showa robot, but the load-bearing silhouette change is OVERSIZED BLOCKY SHOULDERS — large rectangular weapon pods that break the outline OUTWARD beyond the torso edge. Head reads as a defined wedge/helmet with a snout, not a round box. A taller row of angular dorsal fins; stiff segmented tail.",
+          "signatureCues": [
+            "LARGE blocky paired SHOULDER-CANNON PODS that jut outward past the torso line — THE Heisei signature (paralysis missiles / Garuda armaments mounted on the shoulders); this is a SILHOUETTE break, not a decal",
+            "Streamlined steel-BLUE / blue-gray gunmetal body (NT-1 alloy + artificial-diamond coat) — clearly cooler/bluer than Showa chrome",
+            "Sharp angular HELMET-like head with a defined snout point and a narrow angled visor slit (next-gen 'military' read)",
+            "Dorsal plates that GLOW/blink just before firing the rainbow Mega-Buster mouth beam (bake a static mid-pulse glow on the spine tips)",
+            "Wrist launchers and a small forward chin/shoulder Garuda aircraft-prow fin (the Garuda combination nod)"
+          ],
+          "palette": [
+            {
+              "part": "body / main plating",
+              "color": "#5c6e84 (steel blue-gray gunmetal)"
+            },
+            {
+              "part": "highlight / specular edge",
+              "color": "#aebccc (cool light steel)"
+            },
+            {
+              "part": "shadow / recessed plate",
+              "color": "#33404f (dark navy-steel)"
+            },
+            {
+              "part": "shoulder pods / heavy armor",
+              "color": "#46566a (darker blue plate)"
+            },
+            {
+              "part": "eyes / visor",
+              "color": "#ffd24a (amber) or #d8e6ff (cool white visor)"
+            },
+            {
+              "part": "spine glow (pre-beam) / Mega-Buster",
+              "color": "rainbow Mega-Buster — imply with #ffcf3a→#cf6aff glow on spine tips"
+            }
+          ],
+          "materialFinish": "Brushed steel-blue gunmetal with a cool semi-matte alloy sheen — harder, flatter, more 'aircraft fuselage' than Showa's mirror chrome.",
+          "mustHaveForBlindID": [
+            "The oversized outward-breaking SHOULDER PODS (cannon launchers) — the single non-negotiable Heisei cue",
+            "Steel-BLUE / blue-gray body color (not chrome, not black, not gold)",
+            "Angular helmet head with a defined snout (sharper than the round Showa skull)"
+          ],
+          "commonMisreads": [
+            "vs mecha_1 → disambiguator: mecha_2 is angular + steel-BLUE + huge shoulder pods + no red temple orbs; mecha_1 is round + chrome + red temple orbs",
+            "vs super_mecha (Kiryu) → disambiguator: mecha_2's shoulder weapons mount on the SHOULDERS and the body is blue-steel; super_mecha's added mass is a BACKPACK flight pack and the palette is light-silver/gold with organic muscle-line seams",
+            "vs a generic gray robot → disambiguator: the blue tint + paired boxy shoulder launchers"
+          ],
+          "hardAt40px": [
+            "Wrist launchers and chin Garuda prow — too small; drop or imply the chin prow as one tiny forward fin under the snout, skip wrist detail",
+            "Pre-beam spine blink — bake STATIC at a mid-pulse alpha on the spine top thirds (a real per-frame blink would freeze at frame 0 anyway); leave the animated blink to the live glow overlay",
+            "Narrow visor slit — keep it a clean thin angled line; thinner than 2px will vanish, so hold the slit at the legibility floor",
+            "Antennae — thin (≈1.2px) and likely lost at iso; rely on the shoulder pods and head wedge for ID, not antennae"
+          ]
+        },
+        {
+          "formId": "mecha_3",
+          "character": "MonsterVerse Mechagodzilla (2021 Godzilla vs. Kong) — Apex-built, controlled via the King Ghidorah skull",
+          "era": "MonsterVerse / Legendary (2021)",
+          "oneLineIdentity": "A lean, predatory black-and-gunmetal endoskeleton-robot with neon-red energy bleeding through the gaps, a Ghidorah-derived horned skull, and bladed Mecha-King-Ghidorah-style spines.",
+          "silhouette": "The LEANEST, most aggressive mecha — a forward-crouched T-800-endoskeleton posture, NOT bulky. Angular predatory wedge head with backswept horns (Ghidorah-derived), a row(s) of small square axe-blade dorsal fins, two 16-cell missile launchers rising from behind the shoulders, and a long segmented tail. Reads as 'sleek murder-robot lizard' rather than 'armored tank.'",
+          "signatureCues": [
+            "NEON-RED energy glowing through the GAPS/seams between the dark armor plates — the defining MV cue (red bleeding out of a black machine)",
+            "Ghidorah-derived predatory WEDGE skull: forward-pointed snout, two BACKSWEPT HORNS (not antennae), and two small bright RED eye dots (no single visor bar)",
+            "Bright-gunmetal-over-black armor — predominantly dark/near-black with steel highlights (distinctly the darkest of the four)",
+            "Bladed dorsal spines strikingly similar to Mecha-King Ghidorah's — small square axe-blade fins with red-lit tips, in tight rows converging down the tail",
+            "Two 16-cell shoulder MISSILE LAUNCHERS that rise from behind the shoulder pads, plus X-shaped panel/seam lines down the arms and legs (Showa Cross-Attack-Beam homage)",
+            "Long SEGMENTED tail ending in twin spinning DRILL blades; red 'proton scream' beam from the mouth"
+          ],
+          "palette": [
+            {
+              "part": "body / main armor",
+              "color": "#1a1a1a (near-black) to #2c2f33 (dark gunmetal)"
+            },
+            {
+              "part": "highlight / steel edge",
+              "color": "#7d8489 (brushed gunmetal)"
+            },
+            {
+              "part": "gap glow / eyes / spine tips / proton scream",
+              "color": "#ff2020 (neon red), hot core #ff6a4a"
+            },
+            {
+              "part": "shadow / deep recess",
+              "color": "#0d0d0d (black)"
+            },
+            {
+              "part": "self-illumination night rim",
+              "color": "rgba(255,32,32,0.4) (thin red silhouette rim)"
+            }
+          ],
+          "materialFinish": "Matte-to-satin black armor over bright gunmetal endoskeleton, with hot neon-red energy channels — industrial, weaponized, light-absorbing (needs the red rim to lift off the night sky).",
+          "mustHaveForBlindID": [
+            "RED light bleeding through the seams/gaps of a BLACK machine",
+            "Ghidorah-style horned wedge head with twin small RED eyes (NOT a visor bar, NOT a Godzilla box skull)",
+            "Lean, forward-crouched aggressive posture (the un-bulky mecha)"
+          ],
+          "commonMisreads": [
+            "vs mecha_ghidorah (the Ghidorah cyborg, also dark + red/cyan) → disambiguator: mecha_3 is a SINGLE biped robot with RED gaps; mecha_ghidorah is a 3-NECK hydra fan with a CYAN-visor center head + gold organic outer heads",
+            "vs super_mecha → disambiguator: mecha_3 is black/red and LEAN; super_mecha is silver/gold and BULKY with a backpack",
+            "vs a burning/red wyrm Godzilla → disambiguator: hard angular machine edges + black body + red SEAM lines (not organic glowing skin cracks); horns are mechanical and backswept"
+          ],
+          "hardAt40px": [
+            "The body sinks into the #05070f night sky — MANDATORY thin red self-illumination silhouette rim (rgba(255,32,32,~0.4)) to separate the outline",
+            "Red gap-glow on near-black at iso — widen the glowing seam strokes to ≥2px or they vanish; concentrate them on the chest/back where mass is largest",
+            "Three literal spine rows are sub-pixel-redundant — render one full row + one half-count offset row to imply 'bladed multi-row'",
+            "Twin drill-tail blades — imply with two small converging RIM-edged triangles at the tail tip rather than detailed drills",
+            "Backswept horns vs antennae — keep them as two tapering RIM-tipped curves; thin antennae would read identically, so make the horns clearly thicker and curved"
+          ]
+        },
+        {
+          "formId": "super_mecha",
+          "character": "Kiryu / MFS-3 Type-3 Mechagodzilla (2002 Godzilla Against Mechagodzilla & 2003 Godzilla: Tokyo S.O.S.)",
+          "era": "Millennium / Kiryu Saga (2002–2003)",
+          "oneLineIdentity": "The organic-armor pinnacle built on the real 1954 Godzilla skeleton — a smooth silver cyborg whose plating follows biological muscle lines, with a forehead-to-nape skull blade, exposed black cabling, and a rocket FLIGHT PACK on its back.",
+          "silhouette": "The HEAVIEST, most over-built mecha — bulky and powerful, but with ORGANIC, curved, muscle-following armor seams (armored anatomy, not a tank's hard boxes). A massive single lead dorsal fin heads a multi-row spine bank; a thicker, longer segmented organic tail; and a boxy BACKPACK flight pack (thruster + missile cluster) breaking the upper-back silhouette. Reads as 'a metal Godzilla with a jetpack and a blade on its head.'",
+          "signatureCues": [
+            "A long metal SPIKE/BLADE running along the top of the skull from the forehead to the back of the head — Kiryu's instant head identifier",
+            "Smooth LIGHT-SILVER / pale steel body whose armor follows BIOLOGICAL MUSCLE LINES (curved seams + armored anatomy), not rectangular panels",
+            "Backpack FLIGHT PACK on the upper back — rocket boosters/thruster nozzles + back missile cluster (the 'Super/jet-capable' add; nothing earlier has it)",
+            "Exposed THICK BLACK WIRING/cables visible through gaps in the armor (neck, shoulder, hip joints) — the cyborg-on-a-skeleton tell",
+            "MASSIVE single lead dorsal fin heading three rows of spines, plus a thicker organic segmented tail; rounded chest cannon housing (Absolute Zero cannon behind folding chest plates)",
+            "YELLOW eyes (turning red when possessed) with a red 'scar' marking below the eye"
+          ],
+          "palette": [
+            {
+              "part": "body / main plating (canonical 2002)",
+              "color": "#cfd4da (light silver) — Tokyo SOS is darker #9aa0a8 gray"
+            },
+            {
+              "part": "highlight / polished edge",
+              "color": "#f0f3f7 (bright silver)"
+            },
+            {
+              "part": "shadow / recessed seam",
+              "color": "#7a8089 (steel gray)"
+            },
+            {
+              "part": "exposed wiring / cables",
+              "color": "#241a10 to #1a1a1a (thick black cable)"
+            },
+            {
+              "part": "eyes",
+              "color": "#ffcf3a (yellow), #e0202a (red when possessed)"
+            },
+            {
+              "part": "thruster glow / chest cannon",
+              "color": "#bfe6ff (cold cyan freeze-ray) / #ffcf3a thruster"
+            },
+            {
+              "part": "GAME palette liberty",
+              "color": "GOLD/tan — the game uses gold to read as the 'final/ultimate' tier; canonical Kiryu is SILVER. See must-haves: the silhouette cues, not color, carry the ID."
+            }
+          ],
+          "materialFinish": "Smooth polished light-silver alloy with anatomical curved seams and a slight pearlescent sheen, contrasted against matte-black exposed cabling — refined, biological, 'cyborg' rather than 'tank.'",
+          "mustHaveForBlindID": [
+            "The forehead-to-nape SKULL BLADE/spike (Kiryu's signature head feature)",
+            "The BACKPACK flight pack with thruster nozzles (the 'Super/over-built' read)",
+            "ORGANIC muscle-line curved armor seams + exposed black wiring (distinguishes it from every box-paneled mecha)"
+          ],
+          "commonMisreads": [
+            "vs mecha_2 (also bulky, also has back/shoulder weapons) → disambiguator: super_mecha's added mass is a BACKPACK (not shoulder pods), its seams are CURVED/organic (not boxy), and it shows exposed black wiring + the skull blade",
+            "vs a plain silver wyrm Godzilla → disambiguator: visible armor SEAMS, exposed cables, the skull blade, and the rigid backpack — it is unmistakably mechanical",
+            "vs the game's gold palette being mistaken for a 'golden Godzilla' → disambiguator: keep the skull blade + backpack + wiring so it reads as Kiryu-in-gold, not an organic gold kaiju",
+            "vs mecha_1 chrome → disambiguator: mecha_1 is round/crude with red temple orbs; super_mecha is bulky/refined with a head blade, backpack, and organic seams"
+          ],
+          "hardAt40px": [
+            "Exposed black wiring — render as just 2–3 thick dark strokes at the neck-to-shoulder and hip gaps (lineWidth ≈ BH*0.02); a full cable field is noise at iso",
+            "Organic muscle-line seams — imply with a few curved quadratic seam strokes following the limb taper rather than a full anatomical map",
+            "The skull blade is thin in profile — bias it to read on the side/3-quarter facing as a raised ridge along the skull top; keep it ≥2px",
+            "Thruster nozzles — show as 2–3 small opaque bright-gold/cyan glowing circles at the backpack bottom (not a blend mode); the backpack itself must read as a distinct block above/behind the shoulders",
+            "Absolute Zero chest cannon — too detailed for iso; imply as one rounded chest-center disc/housing rather than the folding-plate mechanism"
+          ]
+        }
+      ]
+    }
+  ]
+}

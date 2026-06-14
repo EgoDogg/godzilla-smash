@@ -1,0 +1,184 @@
+{
+  "executiveSummary": "GODZILLA SMASH is a mechanically sound, well-juiced casual climber whose ECONOMICS are tuned correctly (HP===payout funds the exact upgrade that one-shots that building; combo ramps in ~9 kills; claws double power on a clean bounded 1e9 cap) and whose PER-KILL dopamine (hit-stop, flash, combo, SFX) lands hard. The verified weaknesses are almost entirely in the MACRO/FEEDBACK layer, not the math: (1) the single most important combo dopamine surface is shipped-but-disconnected — FX.spawnRewardText (entities.js:143) has zero callers and dealDamage (entities.js:1467) discards the combo-scaled payout that hitBuilding (world.js:550) returns, so the green \"+$\" number-go-up the combo earns is never drawn; (2) progression is largely INVISIBLE — no onboarding, no live forms-X/20 counter, no tier-up fanfare, no finale-distance signal, form purchases fire SFX-only (economy.js:299-315) despite Env.announce being available and proven; (3) the finale's strong climax beat (flash 0.95 + shake 22 + hitStop 260) is gated behind an UNDISCOVERABLE statue (world.js:216) with the only relevant copy actively misleading players (\"levels the city\"); (4) the post-finale tail is a 12e9 World-2 dead-sink that buys a \"Coming soon!\" tag and is buyable BEFORE the win (economy.js:328-336). Across 8 lenses the consistent prescription is the same: the game is built right but doesn't SHOW the player they're climbing. The fixes are overwhelmingly presentation (wire the dead popup, add announce toasts, signpost the finale, kill the dead-sink) rather than re-tuning difficulty. I have separated a small, high-confidence AUTO set (objectively-better, reversible, ship-without-asking) from a TASTE set (anything that touches difficulty character, grind length, or guided-vs-discovered feel — which is Mike's call).",
+  "earnedVsDopamineVerdict": "MIXED, leaning DOPAMINE-rich / EARNED-undersold. The earned side is genuinely well-built in the numbers (a real ~28-step claws climb, a combo window deliberately shorter than rubble dwell to punish camping, a hard bounded cap with a designed win-finale) but it is poorly COMMUNICATED, so the player rarely FEELS the climb they're actually doing. The dopamine side is strong moment-to-moment but has two structural holes: the combo reward popup is dead code (so the chief number-go-up is invisible), and the biggest beats (first kill, first form, tier-up, the finale itself) are unmarked or undiscoverable. Net: this is NOT a balance problem to be solved by re-tuning costs — re-grinding or steepening the curve would make it worse. It is a LEGIBILITY problem. Wire the existing-but-disconnected feedback (reward popup, announce toasts, a finale signpost) and the game snaps into the intended EARNED-and-DOPAMINE balance with almost no change to difficulty. The two genuine economy wrinkles worth Mike's judgment are the dominated atkSpeed/moveSpeed tracks (claws is always correct) and the burning-vs-claws value inversion at first-form — both TASTE, both about whether forms/utilities should be a distinct power axis or fixed-chunk flavor.",
+  "journeyByPhase": [
+    {
+      "phase": "first60",
+      "assessment": "Numbers are tuned beautifully (2-tap kills, first claws affordable ~3s in, immediate 6->12 power spike) but the LOOP IS INVISIBLE: zero onboarding, touch players never told tap-to-target or that a shop exists, no shop-affordability nudge, combo pip hidden on kill #1, no first-kill flourish. The dopamine is under-delivered because the player isn't TOLD where it is. Frictionless to a fault for discovery.",
+      "balance": "too-easy"
+    },
+    {
+      "phase": "earlyForm",
+      "assessment": "Grind LENGTH to burning (~15 kills) is well-paced with no time dead-zone, but the first-form MOMENT fails on both axes: forms are hidden behind the default Upgrades tab with no signal they exist, the purchase is a silent badge-swap (SFX only), and the economics quietly punish the player who finds it (at clawsL0, burning's 150 buys the same power 84 of claws buys — 1.78x worse). The game teaches forms are a trap before it teaches they're the fantasy.",
+      "balance": "mixed"
+    },
+    {
+      "phase": "midTracks",
+      "assessment": "The climb is well-earned (claws is a clean doubling ladder; the combo window-shorter-than-rubble forces movement) but the 3 'tracks' are not a real choice — claws strictly dominates atkSpeed/moveSpeed, which go worthless once you one-shot a tier. And the combo's payoff is invisible because the reward popup is dead code. Real earn, but a chunk of the intended decision- and reward-dopamine is missing or illusory.",
+      "balance": "mixed"
+    },
+    {
+      "phase": "lateClimb",
+      "assessment": "The intended 'cost wall' to the cap does not exist — income (~2.78x/tier) outpaces cost (2x/level) and each level opens a deeper-paying tier, so the final ~10 claws levels are 2-4 kills each and the approach ACCELERATES rather than dragging. Great number-go-up rush, thin earn at the very top. The real late friction isn't economic; it's the un-signposted finale and a 16x supernova->Ghidorah ladder cliff.",
+      "balance": "too-easy"
+    },
+    {
+      "phase": "finale",
+      "assessment": "The climax BEAT is dopamine done right (flash 0.95 + shake 22 + hitStop 260 + delayed win card), but it's gated behind an undiscoverable statue at row 54 back-center with NO marker, and the only guidance copy ('Max it to one-shot... that levels the city') misleads players into thinking maxing the upgrade IS the win. The win card overclaims ('CITY LEVELLED 100%') while the city visibly respawns, and 'Forms X/20' can read 1/20 because claws-only is the cheapest route to the cap. Reward exists but isn't reliably connected to the effort that earned it.",
+      "balance": "mixed"
+    },
+    {
+      "phase": "postFinale",
+      "assessment": "Closure happens as a moment then is immediately undone: finaleSeen is read nowhere outside economy.js, so the 'victory lap' is the same city, now muted. The one remaining sink is World 2 at 12e9 (~3.2x everything-else-combined) that buys a 'Coming soon!' tag, and it's buyable BEFORE the finale, deflating the run-up. No replay/NG+ hook anywhere. Too-grindy dead-sink on top of a too-easy emotional letdown.",
+      "balance": "mixed"
+    }
+  ],
+  "backlogAuto": [
+    {
+      "id": "AUTO-1",
+      "title": "Wire the dead combo reward popup so combo-scaled money visibly pops on every kill",
+      "file": "js/entities.js (dealDamage, ~line 1462-1467)",
+      "currentValue": "dealDamage calls `if (G.World && G.World.hitBuilding) G.World.hitBuilding(b, raw);` and DISCARDS the return value. FX.spawnRewardText (entities.js:143) is fully implemented (green '+amount' floating text, reduced-motion guarded) but has ZERO callers in js/ or docs/ (grep-confirmed).",
+      "proposedValue": "Capture and use the payout: `var paid = (G.World && G.World.hitBuilding) ? G.World.hitBuilding(b, raw) : 0; if (paid > 0 && fx.spawnRewardText) fx.spawnRewardText(b, paid);` — fires the green '+amount' only on a kill (payout>0 only on destroy), with the actual combo-scaled value hitBuilding already returns (world.js:550).",
+      "rationale": "hitBuilding already RETURNS the combo-scaled payout (verified world.js:550) and the green popup is fully built and reduced-motion-aware — this is shipped-but-disconnected code, not new feature work. It is the central dopamine beat for the entire mid-game and it is currently invisible. Highest-leverage single change in the whole review.",
+      "expectedFeelImpact": "Every kill now shows a green number-go-up that's bigger when the combo is higher — the x2 chain becomes VISIBLE for the first time, making the combo system legible and rewarding with zero balance change.",
+      "confidence": "high"
+    },
+    {
+      "id": "AUTO-2",
+      "title": "Announce form purchases (evolve/recruit fanfare) via the existing toast channel",
+      "file": "js/economy.js (buyForm, lines 299-315)",
+      "currentValue": "buyForm plays only audio('recruit') or audio('evolve') (economy.js:309-311); no on-screen acknowledgement of the single biggest power+visual leap in the game.",
+      "proposedValue": "After the successful purchase (before/with afterPurchase), call `if (G.Env && G.Env.announce) G.Env.announce(isBaseForm ? ('Recruited ' + f.name + '!') : ('Evolved to ' + f.name + (f.label ? ' - ' + f.label : '') + '!'));` — reuses the Env.announce channel already called from economy.js:400 and proven for rare-house toasts (world.js:642).",
+      "rationale": "The toast machinery already exists, is already imported into economy.js (used at line 400), and is already used for far smaller events (rare-house spawns). A form purchase landing quieter than a golden house is an objective feedback gap. Additive, no DOM creation, no balance change.",
+      "expectedFeelImpact": "The most dopamine-worthy purchase in the game finally gets a celebratory on-screen beat matching its SFX — turns a silent badge-swap into a clear 'I unlocked something' moment.",
+      "confidence": "high"
+    },
+    {
+      "id": "AUTO-3",
+      "title": "Reframe the first-upgrade hint to the immediate win instead of the end-game framing",
+      "file": "js/economy.js (buildUpgrades claws hint line, ~537-539)",
+      "currentValue": "'Each level DOUBLES attack power for EVERY form. Max it to one-shot the strongest building - that levels the city.' — leads a brand-new Lv-0 player with abstract end-game framing.",
+      "proposedValue": "'Doubles your attack - buy this and you'll smash buildings in ONE hit. (Keep upgrading to one-shot the whole city.)' — leads with the 2-taps->1-tap payoff the player is about to feel, end-game as the parenthetical.",
+      "rationale": "Pure copy change, no mechanical effect, trivially reversible. The current hint buries the immediate first-buy value prop under a finale pitch the new player can't yet contextualize. A careful designer ships this without asking.",
+      "expectedFeelImpact": "The first-purchase value prop matches what the player is about to FEEL, making the first buy obviously worth it the instant they read it.",
+      "confidence": "high"
+    },
+    {
+      "id": "AUTO-4",
+      "title": "Fix the overclaiming win-card copy to match the actual trigger",
+      "file": "index.html (win card title + sub, lines 153-154)",
+      "currentValue": "Title '🏙️ CITY LEVELLED — 100%'; sub 'The city is rubble. You win.' — but the win fires on smashing ONE statue while the city is demonstrably still standing and actively respawning.",
+      "proposedValue": "Title 'THE STATUE FALLS — CITY CONQUERED'; sub 'Nothing in the city can stand against your atomic breath. You win. Smash on — it rebuilds, and it's all yours.' (drops the false 100%/rubble claim; names the free-roam loop as intentional).",
+      "rationale": "Text-only, fully reversible, no mechanics. The current copy makes a demonstrably-false claim at the emotional peak and the abrupt drop into a respawning city reads as the game failing to end. Naming free-roam as a feature closes the loop verbally.",
+      "expectedFeelImpact": "Removes a hollow, observably-untrue claim at the climax so the payoff reads as earned and accurate, and tells the player the respawning sandbox is intentional rather than broken.",
+      "confidence": "high"
+    },
+    {
+      "id": "AUTO-5",
+      "title": "Gate the World 2 purchase behind finaleSeen so the shop can't be emptied before the win",
+      "file": "js/economy.js (buyWorld2 + worlds-tab button, ~329-330 and ~793-804)",
+      "currentValue": "buyWorld2() only checks affordability and !world2Unlocked (economy.js:329); the worlds-tab buy button is live before the finale, so a wealthy player can pre-pay the 12e9 endgame sink BEFORE destroying the statue, hitting an empty shop and deflating the run-up to the actual win.",
+      "proposedValue": "Disable the World 2 buy until Economy.finaleSeen is true: in buyWorld2 add `if (!state.finaleSeen) { sfxDeny(); return false; }`, and render the worlds-tab button disabled with sub 'Clear the city first' until finaleSeen. (If Mike later adopts the TASTE 'free teaser at finale' option this becomes moot — ship whichever wins.)",
+      "rationale": "Objective sequencing fix with a single guard condition, fully reversible. It does not change any cost or the finale itself — it only ensures the statue/finale is always the LAST beat of the run, which is unambiguously the intended order (the finale is the game's climax). Low risk; preserves the climax regardless of how Mike resolves the dead-sink TASTE question.",
+      "expectedFeelImpact": "Prevents the player from accidentally pre-empting the climax by emptying the shop early; the statue stays the true endgame.",
+      "confidence": "med"
+    }
+  ],
+  "backlogTaste": [
+    {
+      "id": "TASTE-1",
+      "title": "Signpost the finale once the cap is reachable (the single biggest miss)",
+      "question": "The win-finale fires on smashing an undiscoverable statue at row 54 back-center, with NO marker and the only guidance copy actively pointing players away from it. How much should we guide the player to the win?",
+      "options": [
+        "A) Copy + one-time toast only: when attackPower first crosses 1e9 (or claws hits MAX), fire Env.announce 'MAXIMUM POWER — find and smash the Statue at the city's heart to win,' and change the MAX-row sub to '...now smash the Statue to win.' (cheap, low-risk).",
+        "B) A + a persistent off-screen directional arrow/beam toward the statue, gated on canFinale() so it never spoils the landmark early (most removes the 'I maxed out and I'm lost' abandon case; needs new render code).",
+        "C) Keep it fully discovered — no signpost; stumbling onto the statue is intentional charm."
+      ],
+      "recommendation": "A now, B if playtesting shows players still wander. Definitely not C.",
+      "rationale": "This wastes the game's single best dopamine beat (flash 0.95/shake 22/hitStop 260) on a needle-in-a-54-row-haystack search, and it's the most likely place a FINISHED player rage-quits one screen short of their payoff. It's TASTE only because it shifts the finale's character from 'discovered' to 'guided' — but every lens that touched the finale flagged it as the top issue. A is reversible copy + one toast; B adds render work and is the stronger fix if A isn't enough."
+    },
+    {
+      "id": "TASTE-2",
+      "title": "Kill or repurpose the 12e9 World-2 dead-sink",
+      "question": "After the win, the only remaining purchase is World 2 at 12e9 (~3.2x the cost of everything else combined) and it buys a 'Coming soon!' tag. What should World 2 be?",
+      "options": [
+        "A) Make it a FREE teaser auto-granted at finale (set world2Unlocked in markFinale, remove the buy button) — World 2 becomes a reward for winning, not a paywall to a locked door.",
+        "B) Drop WORLD2_COST to 0 and reframe as 'World 2 — in development, you've earned a peek.'",
+        "C) Keep the 12e9 price but ONLY if it's re-pointed at something that actually PAYS (a real NG+/prestige multiplier — see TASTE-4), never at a 'Coming soon' stub."
+      ],
+      "recommendation": "A — auto-grant the teaser at finale and remove the purchase entirely.",
+      "rationale": "Paying 12 billion (the ultimate-feeling goal number) for a cosmetic 'Coming soon!' tag is the single worst beat in the post-finale loop — it's a feels-bad in both directions (too-grindy AND zero payoff). Whether winning should 'earn' the teaser vs require a final grind is a genuine character call, but no version where the money buys a locked door is defensible. If Mike wants a real end-game sink, it belongs on a prestige loop (TASTE-4), not here."
+    },
+    {
+      "id": "TASTE-3",
+      "title": "Are the 3 upgrade tracks meant to be a real choice, or flavor sinks?",
+      "question": "Claws is strictly dominant — one claws level is a flat 2.0x that beats the ENTIRE atkSpeed track (caps ~1.56x) for less than that track's last level, and both atkSpeed/moveSpeed go worthless once you one-shot a tier. Is that intended?",
+      "options": [
+        "A) Intentional flavor: atkSpeed/moveSpeed are just nice-to-have sinks for spare cash — accept it, but re-price them as cheap impulse buys rather than a parallel 'track' that implies a tradeoff.",
+        "B) Make them a real choice: give atkSpeed a niche where claws can't help — e.g. cheap early levels that are the coin-efficient way to chip through a too-tough tier until the next claws doubling (a 'bridge' buy at a damage wall).",
+        "C) Leave exactly as-is."
+      ],
+      "recommendation": "A (re-price as impulse buys) unless Mike wants real decision-dopamine, in which case B.",
+      "rationale": "Today there's one optimal line (all-claws) and no decision-dopamine in the track system. A is low-risk and honest about what the tracks are. B is structural (could let players brute-force walls and flatten the claws pacing) so it needs playtesting — that's why the whole question is TASTE. This is fundamentally a design-intent call about whether utilities are a tradeoff or flavor."
+    },
+    {
+      "id": "TASTE-4",
+      "title": "Add a lightweight NG+/Prestige loop (the highest-leverage retention lever)",
+      "question": "The game is strictly finite — win card is one-shot, replay value is exactly one playthrough, and there's no reset/prestige hook anywhere. Do you want a retention loop?",
+      "options": [
+        "A) Add a 'New Game+' win-card button that wipes claws/forms/frontier but keeps a persistent prestige tier granting a permanent small multiplier (e.g. +20%/prestige), and RE-POINT the would-be 12e9 sink at it (needs save v4 + back-compat default 0).",
+        "B) Stay finite: 'beat it once and you're done' — skip NG+ entirely, and the only post-finale fix is killing the dead-sink (TASTE-2) + a victory-lap visual.",
+        "C) A cheaper middle: re-viewable win card (a 🏆 HUD button after finale) so the climax is at least re-livable/shareable without a full re-climb."
+      ],
+      "recommendation": "Decide A vs B first — it's the core product question. If unsure, ship C (cheap) now and defer A.",
+      "rationale": "NG+ is the single highest-leverage retention fix and the natural home for the dead 12e9, converting 'bounded' into 'bounded-but-loopable' without new content. But it's a genuine product-direction change (finite-finish vs soft-loop) plus a save migration, so it must NOT ship autonomously. C is a cheap hedge that makes the one-shot climax recur without committing to a loop."
+    },
+    {
+      "id": "TASTE-5",
+      "title": "First-run onboarding philosophy (especially touch)",
+      "question": "There is ZERO first-run onboarding — touch players are never told tap-to-target or that a shop exists, and the smash->cash->shop->upgrade loop is never taught. Add guidance or keep pure-discovery?",
+      "options": [
+        "A) Minimal nudges: a subtle pulse/glow on the Shop button the first time the player can afford any upgrade (auto-clears after first open), + show the combo pip from kill #1 (move it off screen-center so the sprite doesn't occlude it).",
+        "B) A + a 2-step first-run coachmark overlay ('Drag to move / Tap a building to smash') that dismisses on first action, plus a one-time touch 'tap-to-target' aim-ring on the first standing building.",
+        "C) Keep the zero-text pure-discovery feel."
+      ],
+      "recommendation": "A as a floor (low-risk, high-value, especially the shop-affordability nudge). B if Mike wants explicit teaching for casual mobile.",
+      "rationale": "The economics make the first upgrade affordable ~3s in, but an untaught mobile player may smash aimlessly and never open the shop — the gap between 'can afford' and 'knows to buy' is the real first-minute risk. A is mostly reversible UI; the combo-pip-from-kill-1 piece is near-AUTO but I keep it here because moving the pip and choosing an empty-state tint is an art-direction call. Whether to add explicit coachmarks (B) vs preserve the clean aesthetic (C) is squarely Mike's taste."
+    },
+    {
+      "id": "TASTE-6",
+      "title": "Resolve the burning-vs-claws value inversion at first-form",
+      "question": "At clawsLevel 0, burning (cost 150, base 48) buys the exact power that 84 of claws buys — so the first time the aspirational 'become a new monster' purchase is affordable, it's 1.78x worse per dollar, training players that forms are a rip-off. Fix it?",
+      "options": [
+        "A) Cheap: drop burning's cost ~150 -> ~90 so it's roughly break-even with the 3 claws levels it replaces at L0 (still a splurge, no longer a trap). Keeps the curve.",
+        "B) Structural: give each owned form a small permanent multiplier on top of claws (e.g. +10%/form) so a form is ALWAYS real new progress — but this touches the core damage formula and ripples through all 20 forms, the cap, and the finale.",
+        "C) Leave it — accept that claws-first-then-form is the optimal line and just don't surface forms as the obvious first buy."
+      ],
+      "recommendation": "A if you want a quick de-trap; B only if you want forms to be a distinct power axis (big rebalance, do not ship without a full pass).",
+      "rationale": "The game's most aspirational early purchase is also its first feel-bad value, which teaches players to distrust forms — exactly the opposite of a Godzilla game's fantasy. A is one number (verify it doesn't trivialize the gz->burning gate). B is the 'forms as a real axis' answer but is high-risk and save/finale-sensitive. This is fundamentally Mike's call on whether forms are a separate axis or fixed-chunk claws."
+    },
+    {
+      "id": "TASTE-7",
+      "title": "Surface progression milestones: forms-X/20 counter, tier-up fanfare, finale-distance",
+      "question": "There's no live forms-collected counter, tier-crossings are silent, and there's no finale-distance signal — the player earns power they can't see themselves approaching. Which milestone signals to add?",
+      "options": [
+        "A) Live 'Collection X/20' line in the Evolutions/Characters tab hints + a tier-up Env.announce gated to genuinely-new HP tiers (not every row, to avoid spam in the dense D1 city).",
+        "B) A + replace/relabel the misleading 'Tier X/19' HUD badge (it tracks geography, can read 19/19 while attack is base-6) with a true 'Power N/19' meter showing how many ROW_HP rungs your attackPower one-shots.",
+        "C) Keep the ceiling hidden to preserve idle-game mystery; add nothing."
+      ],
+      "recommendation": "A (both pieces are low-risk and fill clear gaps). B is the stronger fix for the misleading badge but changes the most prominent HUD element, so preview it.",
+      "rationale": "The toast channel already exists and is unused for progression. The forms counter and tier-up fanfare are nearly AUTO, but both expose the content ceiling (a hard cap of 20 forms; World 2 still a stub) which is a deliberate reveal decision — and tier-up cadence in the dense gz-v22 city is a tuning judgment. The 'Tier X/19' badge is clearly misleading (clear AND wrong), but whether to show the finite goal at all is a genuine idle-game design call."
+    }
+  ],
+  "openQuestionsForMike": [
+    "FINALE GUIDANCE (top priority): the win is gated on an undiscoverable statue and the only guidance copy ('that levels the city') misleads. Do you want the finale GUIDED (one-time 'find the Statue' toast at cap, optionally an off-screen arrow) or DISCOVERED (stumble onto it)? My strong read: at minimum the toast — this is your single best dopamine beat and it's currently left to chance.",
+    "WORLD 2: is it a real roadmap placeholder (content coming) or permanent flavor? If real, make it a FREE teaser auto-granted at the finale, not a 12e9 paywall to a locked door. If permanent flavor, it shouldn't be a purchasable item at all. Either way the 12e9-for-a-'Coming soon'-tag is a feels-bad that should go.",
+    "PRODUCT SHAPE: is GODZILLA SMASH a finite 'beat it once' experience or do you want a retention loop? This decides whether to add an NG+/prestige loop (and re-point the dead 12e9 at it) or just clean up the ending. Highest-leverage single decision for the post-game.",
+    "FORMS AS AN AXIS: should forms be a distinct power source (a small permanent multiplier per owned form) or stay fixed-chunk claws (same 2x curve in bigger pieces)? Today they're the latter, which creates the first-form value-inversion trap and makes claws strictly dominant. This is the core economy-character call that several other items hang off.",
+    "UPGRADE TRACKS: are atkSpeed/moveSpeed intentionally just spare-cash flavor sinks, or should they be a real tradeoff (e.g. the right buy when you're walled and can't one-shot yet)? If flavor, consider re-pricing them as cheap impulse buys rather than a parallel 'track'.",
+    "ONBOARDING: explicit first-run coachmark + touch tap-to-target hint, or keep the zero-text pure-discovery feel? The economics work in the first 60s but an untaught mobile player may never open the shop.",
+    "COMBO CHARACTER: should the 3.25s window stay strictly anti-camp (lapses when you walk between cleared pockets) or get a small grace (~3.75s, still < 4.5s rubble dwell) so a clean chain survives normal roaming? And should there be a stretch goal above the x2 cap for in-run mastery?",
+    "MILESTONE VISIBILITY: OK to surface a live 'Collection X/20' counter and a finale-distance/power meter? Both pull players forward, but they also reveal the content ceiling (20 forms, World 2 a stub) — show the goal, or keep the ceiling hidden for idle-game mystery?"
+  ]
+}

@@ -531,6 +531,10 @@ window.GAME = window.GAME || {};
     // never stalls autofire). <50ms is imperceptible; genre kill-stops run 80-120ms.
     if (G.FX && typeof G.FX.hitStop === 'function') G.FX.hitStop(Math.min(95, 60 + Math.min(b.tier || 0, 18) * 2));
     if (G.FX && typeof G.FX.screenFlash === 'function') G.FX.screenFlash((b.tier || 0) >= 14 ? 0.28 : 0.18);
+    // Combo-scaled reward pop ('+$N', green) — the number-go-up the combo actually earns.
+    // Lives HERE in destroy() (not dealDamage) so DoT / AoE kills surface it too; `payout`
+    // is the combo-scaled value banked above. (FX.spawnRewardText was shipped but unwired.)
+    if (G.FX && typeof G.FX.spawnRewardText === 'function') G.FX.spawnRewardText(b, payout);
 
     b.hp = 0;
     b.dot = null;

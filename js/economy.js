@@ -305,10 +305,14 @@ window.GAME = window.GAME || {};
     state.ownedFormIds.push(id);
     var chain = formsByFamily(f.family);
     var isBaseForm = (chain[0] && chain[0].id === f.id);
-    if (f.family !== 'wyrm' && isBaseForm) {
-      audio('recruit');
-    } else {
-      audio('evolve');
+    var recruit = (f.family !== 'wyrm' && isBaseForm);
+    audio(recruit ? 'recruit' : 'evolve');
+    // On-screen fanfare to match the SFX — the biggest power + visual leap in the game
+    // deserves a toast, not a silent badge-swap. Env.announce already drives rare-house toasts.
+    if (G.Env && typeof G.Env.announce === 'function') {
+      G.Env.announce(recruit
+        ? ('Recruited ' + f.name + '!')
+        : ('Evolved to ' + f.name + (f.label ? ' — ' + f.label : '') + '!'));
     }
     afterPurchase();
     return true;
@@ -535,7 +539,7 @@ window.GAME = window.GAME || {};
     var base   = f ? f.base : Cfg.START_ATTACK;
     var nxtPow = base * Math.pow(Cfg.CLAWS_MULT, state.clawsLevel + 1);
     body.appendChild(hintLine(
-      'Each level DOUBLES attack power for EVERY form. Max it to one-shot the strongest building — that levels the city.'
+      'Doubles your attack — buy this and you will smash buildings in ONE hit. (Keep upgrading to one-shot the whole city.)'
     ));
     if (curPow >= CAP_HP) {
       // Bounded-economy cap reached: one-shots everything; nothing left to upgrade.
