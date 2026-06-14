@@ -104,15 +104,12 @@ mid-write → sticky "NOT SAVING — Export now" · private-mode (IDB blocked) �
 5. *`switchSlot` missing a re-sync step* → codified ordered sequence shared with `load()`.
 6. *Accidental destructive op* → two-step inline confirm + a session undo for delete.
 
-## Open decisions for Mike (all with a fleet recommendation)
-1. **`persist()` / install-nudge timing** — cold boot vs gated on first engagement. **Rec: gate it**
-   (a cold first-visit request is usually silently denied, burning the signal; re-attempt at milestones).
-2. **Overwrite-on-import** — new-slot only vs new-default + confirm-gated per-slot overwrite. **Rec: both**
-   (overwrite is the only sane behavior at 3/3 slots + "restore onto this device").
-3. **Delete undo** — none vs a one-tap session-only undo (`_lastDeleted`, in-memory). **Rec: yes** (cheap;
-   turns a mis-tap into a non-event).
-4. **Backup-nudge aggressiveness** — passive banner only vs banner + contextual prompts (after first
-   progress, at the finale, red on private-mode) + a 5-day staleness re-nudge. **Rec: the fuller set**
-   (eviction is silent and ~7 days out; the 5-day cadence sits under the cap; never modal).
+## Decisions — LOCKED by Mike (2026-06-14)
+1. **`persist()` / install-nudge timing** → **gated on first engagement** (first purchase / row≥5; cache the result; re-attempt at milestones). ✅
+2. **Overwrite-on-import** → **both** — new-slot by default + a confirm-gated per-slot overwrite (for 3/3 slots + "restore onto this device"). ✅
+3. **Delete undo** → **yes** — a one-tap session-only `_lastDeleted` undo, paired with the two-step confirm. ✅
+4. **Backup-nudge aggressiveness** → **passive banner ONLY** (Mike's call — less nagging). Keep the Saves-panel backup banner + the passive durability chip (green/amber/red); **skip** the proactive contextual prompts (finale prompt, 5-day re-nudge, modal red warnings). The export button is always available; the chip surfaces a red state in the panel without interrupting play.
+
+**SEQUENCING (Mike):** build the save system **AFTER** the character-fidelity phase (Mothra → Ghidorah → Rodan → Mecha) completes. Prep is done; the build is the 6-phase rollout above.
 
 `Cfg.SAVE = { SLOTS:3, KEY_V4:'godzilla-save-v4', CODE_VERSION:1, EXPORT_PREFIX:'GZS1:', MAX_CODE_LEN:20000, BACKUP_NUDGE_MS:~5d, PRESTIGE_MAX:… }`.
