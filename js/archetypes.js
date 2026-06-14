@@ -482,7 +482,9 @@ window.GAME = window.GAME || {};
   }
 
   // §3 — Mothra furred OVAL thorax (compact horizontal egg + fuzzy fur edge + short abdomen).
-  function drawMothThorax(ctx, BH, BW, fg, pal, thick) {
+  function drawMothThorax(ctx, BH, BW, fg, pal, shape) {
+    var s = shape || {};
+    var thick = (s.furThorax === 'thick');
     var cy = -BH * 0.46, rx = BW * 0.34, ry = BH * 0.30;
     var g = ctx.createLinearGradient(0, cy - ry, 0, cy + ry);
     g.addColorStop(0, pal.skinLight); g.addColorStop(0.5, pal.skin); g.addColorStop(1, pal.skinDark);
@@ -493,7 +495,17 @@ window.GAME = window.GAME || {};
     ctx.save();                                         // fuzzy fur edge
     ctx.globalAlpha = 0.5; ctx.strokeStyle = pal.skinLight; ctx.lineWidth = thick ? 2.8 : 1.8;
     ctx.beginPath(); ctx.ellipse(0, cy, rx * 1.04, ry * 1.04, 0, 0, 6.2832); ctx.stroke();
+    if (thick) {                                        // GxK/Supernova thicker fur — a 2nd outer fuzz ring
+      ctx.globalAlpha = 0.28; ctx.lineWidth = 2.2;
+      ctx.beginPath(); ctx.ellipse(0, cy, rx * 1.12, ry * 1.12, 0, 0, 6.2832); ctx.stroke();
+    }
     ctx.restore();
+    if (s.joints) {                                     // GxK 2024 bioluminescent JOINT spots — opaque eye-blue pinpoints
+      ctx.fillStyle = pal.eye;
+      var sp = [[rx * 0.92, cy - ry * 0.15], [-rx * 0.92, cy - ry * 0.15],     // wing-root joints
+                [0, cy - ry * 0.40], [rx * 0.30, cy + ry * 0.28], [-rx * 0.30, cy + ry * 0.28]]; // chest + abdomen
+      for (var j = 0; j < sp.length; j++) { ctx.beginPath(); ctx.arc(sp[j][0], sp[j][1], BH * 0.022, 0, 6.2832); ctx.fill(); }
+    }
   }
 
   // §5 — Rodan slim near-horizontal body lozenge (beak-leading +X → stub tail −X, 3-stop gradient).
@@ -574,14 +586,24 @@ window.GAME = window.GAME || {};
     var dark = pal.skinDark, skin = pal.skin, light = pal.skinLight;
     // half-span in px, scaled by wingSpan but CAPPED so the widest tip stays inside the 150px
     // canvas (anchor 75); wingSpan escalates relative size within that bound (§3.4/§5.4 feasibility).
-    var WH = Math.min(BH * wingSpan * 0.125, 50);
+    var WH = Math.min(BH * wingSpan * 0.125, s.godrays ? 55 : 50);   // supernova uncaps so its 3.3 span reads widest
+
+    /* Supernova angelic aura halo behind the body (§3 apotheosis) */
+    if (isMoth && pal.aura) {
+      ctx.save();
+      var ag = ctx.createRadialGradient(0, -BH * 0.46, 0, 0, -BH * 0.46, WH);
+      ag.addColorStop(0, pal.aura); ag.addColorStop(1, 'rgba(0,0,0,0)');
+      ctx.fillStyle = ag;
+      ctx.beginPath(); ctx.arc(0, -BH * 0.46, WH, 0, 6.2832); ctx.fill();
+      ctx.restore();
+    }
 
     /* back wing */
     if (isMoth) drawMothWing(ctx, WH, BH, fg, pal, wingFlap, false, dark, s);
     else        drawPteranoWing(ctx, WH, BH, fg, pal, wingFlap, false, dark, s);
 
     /* airborne body (horizontal — moth furred oval / rodan slim lozenge) */
-    if (isMoth) drawMothThorax(ctx, BH, BW, fg, pal, s.furThorax === 'thick');
+    if (isMoth) drawMothThorax(ctx, BH, BW, fg, pal, s);
     else        drawPteranoBody(ctx, BH, BW, fg, pal);
 
     /* belly highlight (small underside sheen §1.8) */
@@ -600,10 +622,13 @@ window.GAME = window.GAME || {};
     if (isMoth) drawMothWing(ctx, WH, BH, fg, pal, wingFlap, true, skin, s);
     else        drawPteranoWing(ctx, WH, BH, fg, pal, wingFlap, true, skin, s);
 
+    /* Supernova GOD-RAYS overlay (after the wings, subtle gold spokes) */
+    if (isMoth && s.godrays) drawGodRays(ctx, BH, WH, pal.plateEdge || pal.eye);
+
     /* head — lowered + nudged forward to attach to the airborne body */
     ctx.save();
     ctx.translate(isMoth ? 0 : BW * 0.12, BH * 0.30);
-    drawFlyerHead(ctx, BH, BW, fg, pal, atk, wingStyle);
+    drawFlyerHead(ctx, BH, BW, fg, pal, atk, wingStyle, s);
     ctx.restore();
 
     ctx.restore();
@@ -641,25 +666,43 @@ window.GAME = window.GAME || {};
     ctx.save();
     ctx.globalAlpha = alpha;
     /* FOREwing — large, swept high/forward; tip outward-offset so far/near read distinct */
-    var fTipX = side * nearW * 1.0 * compress + lean * side * BH * 0.10;
-    var fTipY = -BH * 0.92 + flapAmt;
+    var level = !!(shape && shape.godrays);                     // supernova: forewings raised toward a descending-angel level
+    var fTipX = side * nearW * 1.0 * compress + lean * side * BH * (level ? 0.04 : 0.10);
+    var fTipY = (level ? -BH * 0.78 : -BH * 0.92) + flapAmt;
     mothLobe(ctx, rootX, rootY, fTipX, fTipY, side, BH, border, 1.0);
     mothLobe(ctx, rootX, rootY, fTipX, fTipY, side, BH, field, 0.80);
     mothLobe(ctx, rootX, rootY, fTipX, fTipY, side, BH, rootCol, 0.45);
     /* HINDwing — smaller, lower/back */
-    var hTipX = side * nearW * 0.58 * compress;
-    var hTipY = -BH * 0.14 + flapAmt * 1.1;
+    var hTipX = side * nearW * 0.70 * compress;                 // pushed out so the 4-wing count resolves on all forms
+    var hTipY = -BH * 0.04 + flapAmt * 1.1;
     mothLobe(ctx, rootX, rootY + BH * 0.05, hTipX, hTipY, side, BH, border, 1.0);
     mothLobe(ctx, rootX, rootY + BH * 0.05, hTipX, hTipY, side, BH, field, 0.78);
     /* EYESPOT on the forewing tip (the brand) — concentric border/iris/pale */
     var er = (shape && shape.eyespot != null ? shape.eyespot : 0.85);
     var ex = rootX + (fTipX - rootX) * 0.72, ey = rootY + (fTipY - rootY) * 0.62;
     ctx.fillStyle = border; ctx.beginPath(); ctx.arc(ex, ey, BH * 0.14 * er, 0, 6.2832); ctx.fill();
-    ctx.fillStyle = pal.eye; ctx.beginPath(); ctx.arc(ex, ey, BH * 0.09 * er, 0, 6.2832); ctx.fill();
+    ctx.fillStyle = pal.eyespotIris || pal.eye; ctx.beginPath(); ctx.arc(ex, ey, BH * 0.09 * er, 0, 6.2832); ctx.fill();
     ctx.fillStyle = pal.skinLight; ctx.beginPath(); ctx.arc(ex, ey, BH * 0.038 * er, 0, 6.2832); ctx.fill();
     ctx.restore();
   }
   function BW_from_BH(BH) { return BH * 0.5; }
+
+  /* §3 — Supernova angelic GOD-RAYS: flat low-alpha gold spokes radiating from the thorax (baked,
+     no composite/blur — opaque gold at low globalAlpha per §1.6). */
+  function drawGodRays(ctx, BH, WH, col) {
+    ctx.save();
+    var cy = -BH * 0.46, rays = 7;
+    ctx.fillStyle = col; ctx.globalAlpha = 0.13;
+    for (var i = 0; i < rays; i++) {
+      var a = (i / rays) * 6.2832 + 0.2, len = WH * (i % 2 ? 1.15 : 0.82), wsp = 0.10;
+      ctx.beginPath();
+      ctx.moveTo(0, cy);
+      ctx.lineTo(Math.cos(a - wsp) * len, cy + Math.sin(a - wsp) * len);
+      ctx.lineTo(Math.cos(a + wsp) * len, cy + Math.sin(a + wsp) * len);
+      ctx.closePath(); ctx.fill();
+    }
+    ctx.restore();
+  }
 
   /* Pteranodon wing (§5): one broad single-spar membrane with a SCALLOPED trailing edge (hard
      concave cuts — instantly not-Mothra). opts.scallops sets the notch count; opts.fireRim adds
@@ -707,7 +750,7 @@ window.GAME = window.GAME || {};
 
   /* Flyer head: moth = round with large compound-eye suggestion;
      pteranodon = elongated crest + beak. */
-  function drawFlyerHead(ctx, BH, BW, fg, pal, atk, wingStyle) {
+  function drawFlyerHead(ctx, BH, BW, fg, pal, atk, wingStyle, shape) {
     if (fg.show === 'back') {
       ctx.fillStyle = pal.skinDark;
       ctx.beginPath();
@@ -734,9 +777,13 @@ window.GAME = window.GAME || {};
         ctx.beginPath();
         ctx.ellipse(hx + BW * 0.38, -BH * 0.836, BW * 0.025, BH * 0.020, 0, 0, 6.2832);
         ctx.fill();
+        if (shape && shape.joints) {                    // GxK forehead "third-eye" biolum spot
+          ctx.fillStyle = pal.eye;
+          ctx.beginPath(); ctx.arc(hx + BW * 0.24, -BH * 0.90, BW * 0.03, 0, 6.2832); ctx.fill();
+        }
       }
-      /* antennae */
-      ctx.strokeStyle = pal.skinDark; ctx.lineWidth = 1.8; ctx.lineCap = 'round';
+      /* antennae — white feathery, swept back (§3 must-have) */
+      ctx.strokeStyle = pal.skinLight; ctx.lineWidth = 3; ctx.lineCap = 'round';
       ctx.beginPath();
       ctx.moveTo(hx + BW * 0.22, -BH * 0.87);
       ctx.quadraticCurveTo(hx + BW * 0.10, -BH * 1.00, hx + BW * 0.05, -BH * 1.04);

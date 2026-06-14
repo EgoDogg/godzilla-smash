@@ -4,7 +4,7 @@ window.GAME.Config = {
   saveKey: 'godzilla-save-v3',
   // In-page console probe of the live asset version. The AUTHORITY is sw.js `CACHE`;
   // bump BOTH together to ship (game.js warns at boot if they drift out of sync).
-  CACHE_VERSION: 'gz-v28',
+  CACHE_VERSION: 'gz-v29',
 
   // --- Isometric grid (world units = tiles). Wide, open, zoomed-out city:
   //     21 cols of 2×2 blocks split by wide streets; 58 rows. TILE_*/WZ_PX are
@@ -178,7 +178,7 @@ window.GAME.Config = {
       palette: {
         skin: '#fff6d8', skinDark: '#e8cf88', skinLight: '#ffffff',
         plate: '#5a4416', plateEdge: '#ffd700', plateGlow: 'rgba(255,215,0,0.92)',
-        breath: ['#ffffff', '#ffd700'], breathGlow: 'rgba(255,215,0,0.98)', eye: '#ffffff', aura: 'rgba(255,215,0,0.24)', fxMotes: 'pink' },
+        breath: ['#ffffff', '#ffd700'], breathGlow: 'rgba(255,215,0,0.98)', eye: '#ffffff', eyespotIris: '#ffd700', aura: 'rgba(255,215,0,0.24)', fxMotes: 'pink' },
       shape: { archetype: 'flyer', wingSpan: 3.3, wingStyle: 'moth', plates: 0, bulk: 1.0, eyespot: 1.15, furThorax: 'thick', joints: true, godrays: true, wingField: ['#e8b020', '#f5d878'] },
       attack: { kind: 'cloud', cooldown: 0.46, dot: { frac: 0.06, ticks: 10, intervalMs: 300 } } },
 
