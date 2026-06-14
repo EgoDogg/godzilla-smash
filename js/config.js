@@ -4,7 +4,7 @@ window.GAME.Config = {
   saveKey: 'godzilla-save-v3',
   // In-page console probe of the live asset version. The AUTHORITY is sw.js `CACHE`;
   // bump BOTH together to ship (game.js warns at boot if they drift out of sync).
-  CACHE_VERSION: 'gz-v30',
+  CACHE_VERSION: 'gz-v31',
 
   // --- Isometric grid (world units = tiles). Wide, open, zoomed-out city:
   //     21 cols of 2×2 blocks split by wide streets; 58 rows. TILE_*/WZ_PX are
@@ -239,7 +239,7 @@ window.GAME.Config = {
         skin: '#ff5a1e', skinDark: '#c23008', skinLight: '#ffb066',
         plate: '#c23008', plateEdge: '#ffcc33', plateGlow: 'rgba(255,140,0,0.98)', fissureCore: '#fff6cc', fissureGlow: 'rgba(255,140,0,0.6)',
         breath: ['#ff4500', '#ff8c00'], breathGlow: 'rgba(255,100,0,0.98)', eye: '#ffdd00', aura: 'rgba(255,80,0,0.20)', fxMotes: 'heat' },
-      shape: { archetype: 'flyer', wingSpan: 3.4, wingStyle: 'pteranodon', plates: 0, bulk: 1.2, scallops: 4, fireRim: true, fissures: 0.8, crest: 'vsplit', goldCrest: true },
+      shape: { archetype: 'flyer', wingSpan: 3.4, wingStyle: 'pteranodon', plates: 0, bulk: 1.2, scallops: 4, fireRim: true, fissures: 0.8, crest: 'vsplit', goldCrest: true, beakColor: '#1a0e08' },
       attack: { kind: 'dive', aoeRadius: 2.8, shake: 13, cooldown: 0.7 } },
 
     // ============ Mechagodzilla (mecha) — t1, t2, t3, t4 (ASCENDING) ============

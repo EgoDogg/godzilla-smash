@@ -93,23 +93,31 @@ window.GAME = window.GAME || {};
   // baked sprite with no additive compositing (§1.6); core lineWidth 2.6 clears the 2px floor
   // (§1.4). Deterministic per-index seeds (stable across frames). intensity ~0..1 scales count
   // (burning ~0.5 → 5 seams, supernova ~1.0 → 8). Suppressed facing away (drawn on the back §2.3).
-  function drawFissures(ctx, BH, BW, fg, coreCol, glowCol, intensity) {
+  function drawFissures(ctx, BH, BW, fg, coreCol, glowCol, intensity, flyerMode) {
     if (fg && fg.show === 'back') return;
     var n = Math.max(3, Math.round(4 + (intensity != null ? intensity : 0.5) * 4));
     ctx.save();
     ctx.lineCap = 'round'; ctx.lineJoin = 'round';
     for (var i = 0; i < n; i++) {
       var hx = hash(i * 2.0 + 1.0), hy = hash(i * 3.0 + 7.0), hl = hash(i * 5.0 + 3.0);
-      var sx = lerp(-BW * 0.26, BW * 0.30, hx);
-      var sy = lerp(-BH * 0.74, -BH * 0.22, hy);
-      var len = (0.16 + hl * 0.18) * BH;
-      var ang = (hx - 0.5) * 1.4 + Math.PI * 0.5;       // mostly vertical, jittered
+      var sx, sy, len, ang;
+      if (flyerMode) {                                  // §5 slim horizontal flyer body — keep cracks ON the lozenge (no vertical magma trunk)
+        sx = lerp(-BW * 0.30, BW * 0.34, hx);
+        sy = lerp(-BH * 0.66, -BH * 0.46, hy);          // clamp start-y to the body band
+        len = (0.06 + hl * 0.05) * BH;                  // short seams (vs the wyrm's long torso cracks)
+        ang = (hy - 0.5) * 1.1;                         // fan ACROSS the lozenge (mostly horizontal)
+      } else {
+        sx = lerp(-BW * 0.26, BW * 0.30, hx);
+        sy = lerp(-BH * 0.74, -BH * 0.22, hy);
+        len = (0.16 + hl * 0.18) * BH;
+        ang = (hx - 0.5) * 1.4 + Math.PI * 0.5;         // mostly vertical, jittered
+      }
       var mx = sx + Math.cos(ang) * len * 0.5 + (hl - 0.5) * BW * 0.10;
       var my = sy + Math.sin(ang) * len * 0.5;
       var ex = sx + Math.cos(ang) * len, ey = sy + Math.sin(ang) * len;
-      ctx.strokeStyle = glowCol; ctx.lineWidth = 5.0;   // wider faint under-stroke
+      ctx.strokeStyle = glowCol; ctx.lineWidth = flyerMode ? 3.4 : 5.0;   // wider faint under-stroke
       ctx.beginPath(); ctx.moveTo(sx, sy); ctx.quadraticCurveTo(mx, my, ex, ey); ctx.stroke();
-      ctx.strokeStyle = coreCol; ctx.lineWidth = 2.6;   // bright opaque core (>=2.2px)
+      ctx.strokeStyle = coreCol; ctx.lineWidth = flyerMode ? 2.2 : 2.6;   // bright opaque core (>=2.2px)
       ctx.beginPath(); ctx.moveTo(sx, sy); ctx.quadraticCurveTo(mx, my, ex, ey); ctx.stroke();
     }
     ctx.restore();
@@ -510,7 +518,7 @@ window.GAME = window.GAME || {};
 
   // §5 — Rodan slim near-horizontal body lozenge (beak-leading +X → stub tail −X, 3-stop gradient).
   function drawPteranoBody(ctx, BH, BW, fg, pal) {
-    var cy = -BH * 0.55, hw = BW * 0.72, hh = BH * 0.15;
+    var cy = -BH * 0.55, hw = BW * 0.55, hh = BH * 0.12;   // §5 narrowed so the wings dwarf the slim body
     var g = ctx.createLinearGradient(0, cy - hh, 0, cy + hh);
     g.addColorStop(0, pal.skinLight); g.addColorStop(0.5, pal.skin); g.addColorStop(1, pal.skinDark);
     ctx.fillStyle = g;
@@ -534,6 +542,30 @@ window.GAME = window.GAME || {};
       ctx.moveTo(tx, ty);
       ctx.quadraticCurveTo(tx + s * BW * 0.05, ty + BH * 0.07, tx, ty + BH * 0.10);
       ctx.lineTo(tx - s * BW * 0.035, ty + BH * 0.07);
+      ctx.closePath(); ctx.fill();
+    }
+  }
+
+  // §5 — Rodan craggy sternum: 3 downward spikes stepping toward the beak along the leading underside.
+  // Self-contained (only sets ctx.fillStyle); optional dark `edge` backing gives value separation on warm bodies.
+  function drawChestSpikes(ctx, BH, BW, fg, col, edge) {
+    for (var i = 0; i < 3; i++) {
+      var bx = BW * (0.12 + i * 0.13);                  // step toward the beak (+X leading)
+      var by = -BH * 0.49 + i * BH * 0.015;
+      var sz = BH * 0.06;
+      if (edge) {                                       // slightly larger dark triangle behind for value separation
+        ctx.fillStyle = edge;
+        ctx.beginPath();
+        ctx.moveTo(bx - BW * 0.065, by - BH * 0.004);
+        ctx.lineTo(bx + BW * 0.065, by - BH * 0.004);
+        ctx.lineTo(bx, by + sz + BH * 0.008);
+        ctx.closePath(); ctx.fill();
+      }
+      ctx.fillStyle = col;
+      ctx.beginPath();
+      ctx.moveTo(bx - BW * 0.05, by);
+      ctx.lineTo(bx + BW * 0.05, by);
+      ctx.lineTo(bx, by + sz);                          // tip points down
       ctx.closePath(); ctx.fill();
     }
   }
@@ -612,8 +644,17 @@ window.GAME = window.GAME || {};
     ctx.ellipse(0, -BH * 0.40, BW * 0.16, BH * 0.10, 0, 0, 6.2832);
     ctx.fill(); ctx.restore();
 
-    /* Rodan heat: magma cracks across the lit body (reuse drawFissures §1.7) */
-    if (s.fissures && pal.fissureCore) drawFissures(ctx, BH, BW, fg, pal.fissureCore, pal.fissureGlow, s.fissures);
+    /* Rodan craggy sternum (§5) — bone/rock/gold spikes, pteranodon-only */
+    if (wingStyle === 'pteranodon') {
+      var spikeCol, spikeEdge;
+      if (s.goldCrest)               { spikeCol = '#ffd24a'; spikeEdge = pal.skinDark; }   // Fire Rodan gold + dark backing
+      else if (s.crest === 'vsplit') { spikeCol = '#9a6a50'; spikeEdge = pal.skinDark; }   // MV rock (lightened for legibility) + backing
+      else                           { spikeCol = '#d8b070'; spikeEdge = null; }           // Showa bone-tan
+      drawChestSpikes(ctx, BH, BW, fg, spikeCol, spikeEdge);
+    }
+
+    /* Rodan heat: magma cracks confined to the body band (flyerMode kills the wyrm vertical trunk §5) */
+    if (s.fissures && pal.fissureCore) drawFissures(ctx, BH, BW, fg, pal.fissureCore, pal.fissureGlow, s.fissures, true);
 
     /* tucked talons (no planted feet / walk swing) */
     drawTuckedTalons(ctx, BH, BW, fg, dark);
@@ -728,7 +769,7 @@ window.GAME = window.GAME || {};
     ctx.quadraticCurveTo(tipX * 0.5 + side * BH * 0.02, rootY - BH * 0.18 + flapAmt * 0.3, tipX, tipY);   // leading edge → tip
     for (var k = 0; k < scallops; k++) {                                  // SCALLOPED trailing edge (concave notches)
       var t1 = (k + 1) / scallops;
-      var ax = lerp(tipX, trailRootX, t1), ay = lerp(tipY, trailRootY, t1) + BH * 0.10;
+      var ax = lerp(tipX, trailRootX, t1), ay = lerp(tipY, trailRootY, t1) + BH * 0.04;   // §5 flatter trailing edge (less drooping skirt)
       var cxs = lerp(tipX, trailRootX, (k + 0.5) / scallops) - side * BH * 0.05;
       var cys = lerp(tipY, trailRootY, (k + 0.5) / scallops) + BH * 0.02;
       ctx.quadraticCurveTo(cxs, cys, ax, ay);
@@ -740,7 +781,7 @@ window.GAME = window.GAME || {};
     if (shape && shape.fireRim && pal.plateGlow) {                        // glowing molten trailing edge (heat tiers)
       ctx.strokeStyle = pal.plateGlow; ctx.lineWidth = BH * 0.03; ctx.lineJoin = 'round'; ctx.globalAlpha = alpha;
       ctx.beginPath(); ctx.moveTo(tipX, tipY);
-      for (var m = 0; m < scallops; m++) { var tt = (m + 1) / scallops; ctx.lineTo(lerp(tipX, trailRootX, tt), lerp(tipY, trailRootY, tt) + BH * 0.10); }
+      for (var m = 0; m < scallops; m++) { var tt = (m + 1) / scallops; ctx.lineTo(lerp(tipX, trailRootX, tt), lerp(tipY, trailRootY, tt) + BH * 0.04); }
       ctx.stroke();
     }
     ctx.restore();
@@ -793,24 +834,24 @@ window.GAME = window.GAME || {};
       ctx.quadraticCurveTo(hx + BW * 0.26, -BH * 1.00, hx + BW * 0.22, -BH * 1.04);
       ctx.stroke();
     } else {
-      /* pteranodon: long crest + narrow beak */
-      ctx.fillStyle = pal.skinDark;   /* crest */
-      ctx.beginPath();
-      ctx.moveTo(hx + BW * 0.10, -BH * 0.86);
-      ctx.quadraticCurveTo(hx + BW * 0.18, -BH * 0.96, hx + BW * 0.50, -BH * 1.02);
-      ctx.quadraticCurveTo(hx + BW * 0.55, -BH * 1.03, hx + BW * 0.54, -BH * 0.99);
-      ctx.quadraticCurveTo(hx + BW * 0.24, -BH * 0.94, hx + BW * 0.14, -BH * 0.84);
-      ctx.closePath(); ctx.fill();
+      /* pteranodon: rear-skull crest horns (drawCrestHorns) — straight bone (t1) vs forked rock (t2) vs forked gold (t3) */
+      var crestStyle = (shape && shape.crest) || 'straight';
+      var crestCol, crestBack;
+      if (shape && shape.goldCrest)     { crestCol = '#ffd24a'; crestBack = pal.skinDark; }   // Fire Rodan gold + dark backing sliver
+      else if (crestStyle === 'vsplit') { crestCol = '#9a6a50'; crestBack = pal.skinDark; }   // MV rock (lightened for legibility) + backing
+      else                              { crestCol = '#d8b070'; crestBack = null; }           // Showa bone-tan reads on the brown body
+      if (crestBack) drawCrestHorns(ctx, BH, BW, hx + BW * 0.30, -BH * 0.86 + BH * 0.012, crestStyle, crestBack);
+      drawCrestHorns(ctx, BH, BW, hx + BW * 0.30, -BH * 0.86, crestStyle, crestCol);
       ctx.fillStyle = pal.skin;       /* head blob */
       ctx.beginPath();
       ctx.ellipse(hx + BW * 0.26, -BH * 0.84, BW * 0.18 * fg.headScale, BH * 0.08, 0, 0, 6.2832);
       ctx.fill();
-      /* beak */
-      ctx.fillStyle = pal.skinDark;
+      /* beak — long, down-hooked; shape.beakColor overrides (Fire Rodan charcoal-black, the #1 t3 cue) */
+      ctx.fillStyle = (shape && shape.beakColor) || pal.skinDark;
       ctx.beginPath();
-      ctx.moveTo(hx + BW * 0.36, -BH * 0.82);
-      ctx.quadraticCurveTo(hx + BW * 0.56, -BH * 0.815 + mo, hx + BW * 0.60, -BH * 0.812 + mo * 0.5);
-      ctx.quadraticCurveTo(hx + BW * 0.52, -BH * 0.800 + mo, hx + BW * 0.38, -BH * 0.800);
+      ctx.moveTo(hx + BW * 0.34, -BH * 0.845);
+      ctx.quadraticCurveTo(hx + BW * 0.56, -BH * 0.83 + mo, hx + BW * 0.58, -BH * 0.785 + mo * 0.5);   // long sweep to a drooped tip
+      ctx.quadraticCurveTo(hx + BW * 0.52, -BH * 0.79 + mo, hx + BW * 0.40, -BH * 0.80);               // lower jaw back to the head
       ctx.closePath(); ctx.fill();
       if (fg.show !== 'back34') {
         ctx.fillStyle = pal.eye;
