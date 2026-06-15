@@ -762,6 +762,64 @@ window.GAME = window.GAME || {};
   }
 
   // ===========================================================================================
+  // Export / import codes  (Phase 4) — 'GZS1:' + base64url(UTF-8 JSON) + '.' + crc32hex
+  // A code leaves the storage sandbox entirely (clipboard / notes / email) = the only TRUE backup.
+  // CRC32 = corruption detection only; self-cheating a single-player code is accepted (no leaderboard).
+  // ===========================================================================================
+  function exportSlotCode(id) {
+    var sl = slotById(id);
+    if (!sl) return null;
+    var payload = JSON.stringify({ fmt: 'gzs', v: (SAVE.CODE_VERSION || 1), exportedAt: nowMs(),
+                                   name: sl.name, game: sanitizeGame(sl.game) });
+    return (SAVE.EXPORT_PREFIX || 'GZS1:') + U.b64u.enc(payload) + '.' + U.crc32(payload);
+  }
+
+  // parseSlotCode(raw) → { ok:true, name, game, exportedAt } | { ok:false, error }.
+  function parseSlotCode(raw) {
+    if (typeof raw !== 'string') return { ok: false, error: 'No code provided' };
+    var code = raw.trim();
+    var prefix = SAVE.EXPORT_PREFIX || 'GZS1:';
+    if (code.length > (SAVE.MAX_CODE_LEN || 20000)) return { ok: false, error: 'Code is too long' };
+    if (code.indexOf(prefix) !== 0) return { ok: false, error: 'Not a Godzilla save code' };
+    var rest = code.slice(prefix.length);
+    var dot = rest.lastIndexOf('.');
+    if (dot < 1) return { ok: false, error: 'Malformed code' };
+    var b64 = rest.slice(0, dot), crc = rest.slice(dot + 1).toLowerCase();
+    if (!/^[A-Za-z0-9\-_]+$/.test(b64) || !/^[0-9a-f]{8}$/.test(crc)) return { ok: false, error: 'Code has invalid characters' };
+    var payload;
+    try { payload = U.b64u.dec(b64); } catch (e) { return { ok: false, error: 'Could not decode the code' }; }
+    if (U.crc32(payload) !== crc) return { ok: false, error: 'Code is corrupted (checksum mismatch)' };
+    var obj;
+    try { obj = JSON.parse(payload); } catch (e) { return { ok: false, error: 'Could not read the code' }; }
+    if (!obj || obj.fmt !== 'gzs' || !obj.game) return { ok: false, error: 'Not a valid save code' };
+    return { ok: true, name: (typeof obj.name === 'string' ? obj.name : 'Imported'),
+             game: sanitizeGame(obj.game), exportedAt: obj.exportedAt || 0 };
+  }
+
+  // importSlotCode(raw, targetId) — targetId set → OVERWRITE that slot (caller confirm-gates it);
+  // else create a NEW slot. Returns { ok, slotId, name, overwrote? } | { ok:false, error, full? }.
+  function importSlotCode(raw, targetId) {
+    var p = parseSlotCode(raw);
+    if (!p.ok) return p;
+    var c = ensureContainer();
+    if (targetId) {
+      var sl = slotById(targetId);
+      if (!sl) return { ok: false, error: 'That slot no longer exists' };
+      sl.game = p.game;
+      sl.name = sanitizeName(p.name) || sl.name;
+      sl.lastPlayed = nowMs();
+      writeContainer(c);
+      if (targetId === c.activeSlot) { applySlotToState(sl.game); reinitAfterSlotChange(); }
+      return { ok: true, slotId: targetId, name: sl.name, overwrote: true };
+    }
+    if (c.slots.length >= slotCap()) return { ok: false, error: 'All slots are full — overwrite one instead', full: true };
+    var slot = makeSlot(sanitizeName(p.name) || ('Slot ' + (c.slots.length + 1)), p.game, nowMs());
+    c.slots.push(slot);
+    writeContainer(c);
+    return { ok: true, slotId: slot.id, name: slot.name };
+  }
+
+  // ===========================================================================================
   // Mute
   // ===========================================================================================
   function isMuted()    { return state.muted; }
@@ -1118,7 +1176,26 @@ window.GAME = window.GAME || {};
   // ---- Saves tab (Phase 3) — multi-slot manager over the Phase-2 slot API -------------------
   // Inline UI state: which slot row is mid-delete-confirm or mid-rename, and the last session
   // delete (for the undo banner). Re-rendered by refreshShop() on every action (no new CSS).
-  var savesUI = { confirmId: null, renameId: null, undoName: null };
+  var savesUI = { confirmId: null, renameId: null, undoName: null, importRaw: null, overwriteConfirmId: null };
+
+  function savesToast(msg) { if (G.Env && typeof G.Env.announce === 'function') G.Env.announce(msg); }
+
+  // Copy text to the clipboard (async API → textarea+execCommand fallback) then toast.
+  function copyCode(text, okMsg) {
+    function fallback() {
+      try {
+        var ta = document.createElement('textarea');
+        ta.value = text; ta.style.cssText = 'position:fixed;left:-9999px;top:0;opacity:0;';
+        document.body.appendChild(ta); ta.focus(); ta.select();
+        var ok = document.execCommand && document.execCommand('copy');
+        document.body.removeChild(ta);
+        savesToast(ok ? okMsg : 'Copy failed — long-press the code to copy it manually');
+      } catch (e) { savesToast('Copy failed — select the code manually'); }
+    }
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(function () { savesToast(okMsg); }, fallback);
+    } else fallback();
+  }
 
   function relTime(ms) {
     if (!ms) return 'new';
@@ -1148,7 +1225,47 @@ window.GAME = window.GAME || {};
   }
 
   function buildSaves(body) {
-    body.appendChild(hintLine('Each slot is a separate save — the active one is what you play. Slots are stored in this browser.'));
+    // ----- Overwrite-on-import mode (all slots full) — pick a slot to replace -----
+    if (savesUI.importRaw) {
+      var pinfo = parseSlotCode(savesUI.importRaw);
+      var inm = (pinfo.ok ? pinfo.name : 'the imported save');
+      body.appendChild(hintLine('All slots are full. Choose a slot to OVERWRITE with “' + inm + '” — this replaces that slot permanently.'));
+      var slotsO = listSlots();
+      for (var oi = 0; oi < slotsO.length; oi++) {
+        (function (sl) {
+          var row = document.createElement('div'); row.className = 'shop-item' + (sl.active ? ' owned' : '');
+          var l = document.createElement('div'); l.className = 'si-l';
+          var txt = document.createElement('div'); txt.style.minWidth = '0'; txt.style.overflow = 'hidden';
+          var t = document.createElement('div'); t.className = 'si-t'; t.textContent = sl.name + (sl.active ? ' (active)' : '');
+          t.style.whiteSpace = 'nowrap'; t.style.overflow = 'hidden'; t.style.textOverflow = 'ellipsis';
+          var s = document.createElement('div'); s.className = 'si-s'; s.textContent = 'Forms ' + sl.summary.forms + '/' + sl.summary.total + ' · ⚡ ' + U.fmt(sl.summary.power);
+          txt.appendChild(t); txt.appendChild(s); l.appendChild(txt); row.appendChild(l);
+          var actions = actionsBox();
+          if (savesUI.overwriteConfirmId === sl.id) {
+            var w = document.createElement('div'); w.className = 'si-s'; w.style.color = '#ff8080'; w.style.flex = 'none'; w.textContent = 'Replace?';
+            actions.appendChild(w);
+            actions.appendChild(saveBtn('Yes', function () {
+              var r = importSlotCode(savesUI.importRaw, sl.id);
+              savesUI.importRaw = null; savesUI.overwriteConfirmId = null;
+              savesToast(r.ok ? ('Imported into “' + r.name + '”') : ('Import failed — ' + r.error));
+              refreshShop();
+            }, { bg: '#b5341f', minWidth: '46px' }));
+            actions.appendChild(saveBtn('No', function () { savesUI.overwriteConfirmId = null; refreshShop(); }, { minWidth: '46px' }));
+          } else {
+            actions.appendChild(saveBtn('Overwrite', function () { savesUI.overwriteConfirmId = sl.id; refreshShop(); }, { minWidth: '88px' }));
+          }
+          row.appendChild(actions); body.appendChild(row);
+        })(slotsO[oi]);
+      }
+      var cr = document.createElement('div'); cr.className = 'shop-item';
+      var cl = document.createElement('div'); cl.className = 'si-l';
+      var ct = document.createElement('div'); ct.className = 'si-t'; ct.textContent = 'Cancel import'; cl.appendChild(ct); cr.appendChild(cl);
+      cr.appendChild(saveBtn('Cancel', function () { savesUI.importRaw = null; savesUI.overwriteConfirmId = null; refreshShop(); }, { minWidth: '64px' }));
+      body.appendChild(cr);
+      return;
+    }
+
+    body.appendChild(hintLine('Each slot is a separate save — the active one is what you play. Export a slot to a backup code (the only copy that survives clearing this browser).'));
 
     // Undo banner for the last delete this session.
     if (savesUI.undoName && canUndoDelete()) {
@@ -1197,6 +1314,7 @@ window.GAME = window.GAME || {};
           }
           actions.appendChild(saveBtn('✎', function () { savesUI.renameId = sl.id; savesUI.confirmId = null; refreshShop(); }, { minWidth: '34px' }));
           actions.appendChild(saveBtn('🗑', function () { savesUI.confirmId = sl.id; savesUI.renameId = null; refreshShop(); }, { minWidth: '34px' }));
+          actions.appendChild(saveBtn('⬆', function () { var code = exportSlotCode(sl.id); if (code) copyCode(code, 'Backup code for “' + sl.name + '” copied'); }, { minWidth: '34px' }));
         }
         row.appendChild(actions);
         body.appendChild(row);
@@ -1217,7 +1335,23 @@ window.GAME = window.GAME || {};
       body.appendChild(nr);
     }
 
-    body.appendChild(hintLine('Slots: ' + slotCount() + ' / ' + slotCap() + ' · stored in this browser'));
+    // Import a backup code (→ a new slot, or the overwrite picker when full).
+    var ir = document.createElement('div'); ir.className = 'shop-item';
+    var il = document.createElement('div'); il.className = 'si-l'; il.style.flex = '1'; il.style.minWidth = '0';
+    var iin = document.createElement('input'); iin.type = 'text'; iin.placeholder = 'Paste a GZS1: backup code';
+    iin.style.cssText = 'width:100%;min-width:0;font:600 12px system-ui;padding:7px 9px;border-radius:8px;border:1px solid var(--line);background:#0f1118;color:var(--text);';
+    il.appendChild(iin); ir.appendChild(il);
+    ir.appendChild(saveBtn('Import', function () {
+      var raw = iin.value.trim();
+      if (!raw) { savesToast('Paste a backup code first'); return; }
+      var r = importSlotCode(raw);
+      if (r.ok) { savesToast('Imported as “' + r.name + '”'); savesUI.confirmId = null; savesUI.renameId = null; refreshShop(); }
+      else if (r.full) { savesUI.importRaw = raw; savesUI.overwriteConfirmId = null; refreshShop(); }
+      else savesToast('Import failed — ' + r.error);
+    }, { aff: true, minWidth: '72px' }));
+    body.appendChild(ir);
+
+    body.appendChild(hintLine('Slots: ' + slotCount() + ' / ' + slotCap() + ' · stored in this browser · ⬆ exports a backup code'));
   }
 
   // ---- Shop render / open --------------------------------------------------------------------
@@ -1350,6 +1484,11 @@ window.GAME = window.GAME || {};
     deleteSlot:    deleteSlot,
     undoDelete:    undoDelete,
     canUndoDelete: canUndoDelete,
+
+    // export / import codes (Phase 4)
+    exportSlotCode: exportSlotCode,
+    parseSlotCode:  parseSlotCode,
+    importSlotCode: importSlotCode,
 
     // mute
     isMuted:    isMuted,

@@ -63,6 +63,50 @@ window.GAME = window.GAME || {};
     try { localStorage.setItem(key, JSON.stringify(obj)); return true; } catch (e) { return false; }
   };
 
+  // UTF-8 bytes of a string (TextEncoder where available).
+  U.utf8 = function (str) {
+    if (typeof TextEncoder !== 'undefined') return new TextEncoder().encode(str);
+    const out = [];
+    for (let i = 0; i < str.length; i++) {
+      let c = str.charCodeAt(i);
+      if (c < 0x80) out.push(c);
+      else if (c < 0x800) out.push(0xc0 | (c >> 6), 0x80 | (c & 0x3f));
+      else if (c >= 0xd800 && c <= 0xdbff) {
+        const c2 = str.charCodeAt(++i), u = 0x10000 + ((c & 0x3ff) << 10) + (c2 & 0x3ff);
+        out.push(0xf0 | (u >> 18), 0x80 | ((u >> 12) & 0x3f), 0x80 | ((u >> 6) & 0x3f), 0x80 | (u & 0x3f));
+      } else out.push(0xe0 | (c >> 12), 0x80 | ((c >> 6) & 0x3f), 0x80 | (c & 0x3f));
+    }
+    return out;
+  };
+
+  // CRC32 over a string's UTF-8 bytes → 8-char lowercase hex (export-code corruption detection).
+  U.crc32 = function (str) {
+    const bytes = U.utf8(str);
+    let c = 0xffffffff;
+    for (let i = 0; i < bytes.length; i++) {
+      c ^= bytes[i];
+      for (let k = 0; k < 8; k++) c = (c >>> 1) ^ (0xedb88320 & -(c & 1));
+    }
+    return ((c ^ 0xffffffff) >>> 0).toString(16).padStart(8, '0');
+  };
+
+  // base64url of a UNICODE string (TextEncoder/TextDecoder — never btoa(JSON), which mangles emoji).
+  U.b64u = {
+    enc: function (str) {
+      const bytes = U.utf8(str);
+      let bin = '';
+      for (let i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i]);
+      return btoa(bin).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+    },
+    dec: function (s) {
+      let b64 = ('' + s).replace(/-/g, '+').replace(/_/g, '/');
+      while (b64.length % 4) b64 += '=';
+      const bin = atob(b64), bytes = new Uint8Array(bin.length);
+      for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+      return (typeof TextDecoder !== 'undefined') ? new TextDecoder().decode(bytes) : decodeURIComponent(escape(bin));
+    }
+  };
+
   // prefers-reduced-motion (read once; modules cut shake/particles when true).
   U.reducedMotion = (function () {
     try { return window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches; }
