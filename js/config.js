@@ -2,6 +2,9 @@
 window.GAME = window.GAME || {};
 window.GAME.Config = {
   saveKey: 'godzilla-save-v3',
+  // Save system (backend-free multi-slot v4 container — docs/campaign/save-system-plan.md).
+  SAVE: { SLOTS: 3, KEY_V4: 'godzilla-save-v4', V3_KEY: 'godzilla-save-v3', CODE_VERSION: 1,
+          EXPORT_PREFIX: 'GZS1:', MAX_CODE_LEN: 20000, BACKUP_NUDGE_MS: 432000000 /* 5d */, PRESTIGE_MAX: 100 },
   // In-page console probe of the live asset version. The AUTHORITY is sw.js `CACHE`;
   // bump BOTH together to ship (game.js warns at boot if they drift out of sync).
   CACHE_VERSION: 'gz-v32',

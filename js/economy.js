@@ -408,55 +408,46 @@ window.GAME = window.GAME || {};
   }
 
   // ===========================================================================================
-  // Save / Load  (v3 FRESH — no migration from v2)
+  // Save / Load  (v4 multi-slot container — docs/campaign/save-system-plan.md, Phase 1)
+  //
+  // ONE localStorage key holds the WHOLE container, written as a single atomic setItem so slots
+  // can never cross-corrupt and quota is all-or-nothing. The container is the synchronous source
+  // of truth, read once at boot. A legacy v3 (single flat) save is migrated into a v4 container
+  // with one slot, CRASH-SAFELY: the v3 key is KEPT as a safety net and only reaped on a LATER
+  // boot that re-parsed a well-formed v4 (never deleting the only good copy after a failed write).
+  //
+  //   v4 = { v:4, rev, activeSlot:<id>, migratedFrom?, slots:[ {id,name,createdAt,lastPlayed,
+  //          lastBackupAt,backupPromptSeen,prestige, game:{<the 15 flat fields>} } ] }
   // ===========================================================================================
-  var SAVE_KEY = 'godzilla-save-v3';
+  var SAVE      = Cfg.SAVE || {};
+  var KEY_V4    = SAVE.KEY_V4 || 'godzilla-save-v4';
+  var V3_KEY    = SAVE.V3_KEY || 'godzilla-save-v3';
 
+  var container      = null;    // the live v4 container = the in-memory source of truth (set in load())
   var _saveWarnShown = false;   // surface a save failure (quota / private mode) once
-  function save() {
-    state.lastSeen = Date.now();
-    var ok = U.safeSave(SAVE_KEY, {
-      v: 3,                       // schema version (load() rejects non-3; satisfies the migration hook)
-      lastSeen:       state.lastSeen,
-      money:          state.money,
-      clawsLevel:     state.clawsLevel,
-      atkSpeedLevel:  state.atkSpeedLevel,
-      moveSpeedLevel: state.moveSpeedLevel,
-      finisherOwned:  state.finisherOwned,
-      ownedFormIds:   state.ownedFormIds.slice(),
-      activeFormId:   state.activeFormId,
-      maxReachedRow:  state.maxReachedRow,
-      world2Unlocked: state.world2Unlocked,
-      muted:          state.muted,
-      finaleSeen:     state.finaleSeen,
-      maxPowerSeen:   state.maxPowerSeen,
-      formAxisSeen:   state.formAxisSeen,
-      peakCombo:      state.peakCombo
-    });
-    // safeSave returns false on quota/private-mode/ITP eviction — tell the player ONCE
-    // rather than silently losing progress. (G.UI.toast does not exist — use Env.announce.)
-    if (!ok && !_saveWarnShown) {
-      _saveWarnShown = true;
-      if (G.Env && typeof G.Env.announce === 'function') {
-        G.Env.announce('Progress is not saving (storage full or private mode)');
-      }
-    }
+
+  // String slot ids (never an array index, so delete/switch can't alias a stale slot).
+  function newSlotId() {
+    var t = (typeof Date !== 'undefined' && Date.now) ? Date.now() : 0;
+    var r = (typeof Math !== 'undefined' && Math.random) ? Math.random() : 0;
+    return 's' + t.toString(36) + '-' + r.toString(36).slice(2, 8);
   }
 
-  // load() → bool. Returns false (leaving fresh defaults) when no v3 save exists.
-  // Validates every field defensively; ignores v2 and earlier saves.
-  function load() {
-    var s = U.safeLoad(SAVE_KEY);
-    if (!s || s.v !== 3) return false;
+  // freshGame() — the 15 default persisted fields (mirrors the initial `state` defaults).
+  function freshGame() {
+    return {
+      money: 0, clawsLevel: 0, atkSpeedLevel: 0, moveSpeedLevel: 0, finisherOwned: false,
+      ownedFormIds: ['gz2014'], activeFormId: 'gz2014', maxReachedRow: 0,
+      world2Unlocked: false, muted: false, lastSeen: 0, finaleSeen: false,
+      maxPowerSeen: false, formAxisSeen: true, peakCombo: 1
+    };
+  }
 
-    state.money      = (typeof s.money === 'number' && isFinite(s.money)) ? Math.max(0, s.money) : 0;
-    state.clawsLevel = U.clamp(s.clawsLevel | 0, 0, 64);   // upper-bound a corrupt save (normal ceiling ~28; 64 keeps attackPower finite)
-    state.atkSpeedLevel = U.clamp(s.atkSpeedLevel | 0, 0, Cfg.ATKSPD.LEVELS);
-    state.moveSpeedLevel = U.clamp(s.moveSpeedLevel | 0, 0, Cfg.MOVESPD.LEVELS);
-    state.finisherOwned = !!s.finisherOwned;
-    recalcMoveMult();
-
-    // ownedFormIds: keep only known form ids, de-duplicated, ensure gz2014 is always present.
+  // sanitizeGame(raw) → a FRESH clean game object. An ALLOWLIST build: reads ONLY the 15 known
+  // fields BY NAME (never spreads raw → prototype-pollution-proof) and clamps every one, so an
+  // imported / migrated / corrupt save can never carry a state a normal play session couldn't.
+  function sanitizeGame(raw) {
+    var s = raw || {};
     var owned = [];
     if (Array.isArray(s.ownedFormIds)) {
       for (var i = 0; i < s.ownedFormIds.length; i++) {
@@ -464,40 +455,162 @@ window.GAME = window.GAME || {};
         if (formDef(id) && owned.indexOf(id) === -1) owned.push(id);
       }
     }
-    if (owned.indexOf('gz2014') === -1) owned.unshift('gz2014');
-    state.ownedFormIds = owned;
+    if (owned.indexOf('gz2014') === -1) owned.unshift('gz2014');   // gz2014 is always owned
+    var active = (typeof s.activeFormId === 'string' && owned.indexOf(s.activeFormId) !== -1) ? s.activeFormId : 'gz2014';
+    return {
+      money:          (typeof s.money === 'number' && isFinite(s.money)) ? Math.max(0, s.money) : 0,
+      clawsLevel:     U.clamp(s.clawsLevel | 0, 0, 64),   // normal ceiling ~28; 64 keeps attackPower finite
+      atkSpeedLevel:  U.clamp(s.atkSpeedLevel | 0, 0, Cfg.ATKSPD.LEVELS),
+      moveSpeedLevel: U.clamp(s.moveSpeedLevel | 0, 0, Cfg.MOVESPD.LEVELS),
+      finisherOwned:  !!s.finisherOwned,
+      ownedFormIds:   owned,
+      activeFormId:   active,
+      maxReachedRow:  U.clamp(s.maxReachedRow | 0, 0, Cfg.GRID.rows - 1),
+      world2Unlocked: !!s.world2Unlocked,
+      muted:          !!s.muted,
+      lastSeen:       (typeof s.lastSeen === 'number' && isFinite(s.lastSeen)) ? s.lastSeen : 0,
+      finaleSeen:     !!s.finaleSeen,
+      maxPowerSeen:   !!s.maxPowerSeen,
+      formAxisSeen:   true,
+      peakCombo:      (typeof s.peakCombo === 'number' && s.peakCombo >= 1) ? s.peakCombo : 1
+    };
+  }
 
-    // activeFormId must be an owned form; otherwise fall back to gz2014.
-    if (typeof s.activeFormId === 'string' && owned.indexOf(s.activeFormId) !== -1) {
-      state.activeFormId = s.activeFormId;
-    } else {
-      state.activeFormId = 'gz2014';
+  // serializeState() → the 15 flat fields read out of live `state` (for writing into a slot).
+  function serializeState() {
+    return {
+      money: state.money, clawsLevel: state.clawsLevel, atkSpeedLevel: state.atkSpeedLevel,
+      moveSpeedLevel: state.moveSpeedLevel, finisherOwned: state.finisherOwned,
+      ownedFormIds: state.ownedFormIds.slice(), activeFormId: state.activeFormId,
+      maxReachedRow: state.maxReachedRow, world2Unlocked: state.world2Unlocked,
+      muted: state.muted, lastSeen: state.lastSeen, finaleSeen: state.finaleSeen,
+      maxPowerSeen: state.maxPowerSeen, formAxisSeen: state.formAxisSeen, peakCombo: state.peakCombo
+    };
+  }
+
+  function makeSlot(name, game, now) {
+    return { id: newSlotId(), name: name, createdAt: now, lastPlayed: now,
+             lastBackupAt: 0, backupPromptSeen: false, prestige: 0, game: game };
+  }
+
+  function freshContainer(game) {
+    var now = (typeof Date !== 'undefined' && Date.now) ? Date.now() : 0;
+    var slot = makeSlot('Slot 1', game, now);
+    return { v: 4, rev: 0, activeSlot: slot.id, migratedFrom: null, slots: [slot] };
+  }
+
+  // readContainer() → a structurally-valid v4 container, or null.
+  function readContainer() {
+    var c = U.safeLoad(KEY_V4);
+    if (!c || c.v !== 4 || !Array.isArray(c.slots) || c.slots.length < 1) return null;
+    return c;
+  }
+
+  // activeSlotOf(c) → the active slot, self-healing a dangling activeSlot id to the first slot.
+  function activeSlotOf(c) {
+    for (var i = 0; i < c.slots.length; i++) { if (c.slots[i].id === c.activeSlot) return c.slots[i]; }
+    c.activeSlot = c.slots[0].id;
+    return c.slots[0];
+  }
+
+  // writeContainer(c) → atomic single-key write; bumps the monotonic rev (the conflict authority,
+  // immune to clock skew — used by the Phase-5 IDB mirror to decide which copy is newer).
+  function writeContainer(c) {
+    c.rev = (c.rev | 0) + 1;
+    var ok = U.safeSave(KEY_V4, c);
+    // safeSave returns false on quota / private-mode / ITP eviction — tell the player ONCE rather
+    // than silently losing progress. (G.UI.toast does not exist — use Env.announce.)
+    if (!ok && !_saveWarnShown) {
+      _saveWarnShown = true;
+      if (G.Env && typeof G.Env.announce === 'function') {
+        G.Env.announce('Progress is not saving (storage full or private mode)');
+      }
     }
+    return ok;
+  }
 
-    state.maxReachedRow  = U.clamp(s.maxReachedRow | 0, 0, Cfg.GRID.rows - 1);
-    state.world2Unlocked = !!s.world2Unlocked;
-    state.muted          = !!s.muted;
-    state.lastSeen       = (typeof s.lastSeen === 'number' && isFinite(s.lastSeen)) ? s.lastSeen : 0;
-    state.finaleSeen     = !!s.finaleSeen;
-    state.maxPowerSeen   = !!s.maxPowerSeen;
-    state.peakCombo      = (typeof s.peakCombo === 'number' && s.peakCombo >= 1) ? s.peakCombo : 1;
-
-    // Forms-as-axis: refresh the memoized multiplier for the loaded collection. Show a one-time
-    // "power rebalanced, progress intact" toast to anyone whose save PREDATES this formula change
-    // (the field is absent → undefined); their claws/forms/finale are all preserved, only the
-    // displayed number restates. Fresh players default formAxisSeen=true and never see it.
+  // applySlotToState(game) → sanitize the slot's game, assign into live `state`, recompute the
+  // memoized multipliers. ALWAYS sanitizes, so no apply path can install a state a load couldn't.
+  function applySlotToState(game) {
+    var g = sanitizeGame(game);
+    state.money          = g.money;
+    state.clawsLevel     = g.clawsLevel;
+    state.atkSpeedLevel  = g.atkSpeedLevel;
+    state.moveSpeedLevel = g.moveSpeedLevel;
+    state.finisherOwned  = g.finisherOwned;
+    state.ownedFormIds   = g.ownedFormIds;
+    state.activeFormId   = g.activeFormId;
+    state.maxReachedRow  = g.maxReachedRow;
+    state.world2Unlocked = g.world2Unlocked;
+    state.muted          = g.muted;
+    state.lastSeen       = g.lastSeen;
+    state.finaleSeen     = g.finaleSeen;
+    state.maxPowerSeen   = g.maxPowerSeen;
+    state.formAxisSeen   = g.formAxisSeen;
+    state.peakCombo      = g.peakCombo;
+    recalcMoveMult();
     recomputeCollMult();
-    if (s.formAxisSeen === undefined && typeof setTimeout === 'function') {
-      setTimeout(function () {
-        if (G.Env && typeof G.Env.announce === 'function') {
-          G.Env.announce('Power rebalanced — your claws and collection are intact; every monster you own now permanently boosts your damage.');
-        }
-      }, 1600);
-    }
-    state.formAxisSeen = true;
-
     hudDirty = true;
-    return true;
+  }
+
+  // The forms-as-axis "power rebalanced, progress intact" toast (gz-v26) — fires ONCE for a save
+  // that PREDATES the formula (formAxisSeen absent). Preserved across the v4 migration: a pre-
+  // formula v3 toasts at migration, then the v4 slot.game carries formAxisSeen:true forever.
+  function fireRebalanceToast() {
+    if (typeof setTimeout !== 'function') return;
+    setTimeout(function () {
+      if (G.Env && typeof G.Env.announce === 'function') {
+        G.Env.announce('Power rebalanced — your claws and collection are intact; every monster you own now permanently boosts your damage.');
+      }
+    }, 1600);
+  }
+
+  // maybeReapV3(c) — once a well-formed v4 (migrated from v3) has been RE-READ on a later boot,
+  // the v3 safety-net is provably redundant → remove it. Idempotent (guards on getItem) and never
+  // runs on the migrating boot itself (that boot takes the migrate branch, not readContainer).
+  function maybeReapV3(c) {
+    if (c.migratedFrom !== 'v3') return;
+    try {
+      if (typeof localStorage !== 'undefined' && localStorage.getItem(V3_KEY) !== null) {
+        localStorage.removeItem(V3_KEY);
+      }
+    } catch (e) { /* private mode / blocked — leave the net in place */ }
+  }
+
+  // save() — persist live state into the active slot of the v4 container, atomically.
+  function save() {
+    if (!container) container = freshContainer(freshGame());   // safety: load() normally runs first
+    state.lastSeen = (typeof Date !== 'undefined' && Date.now) ? Date.now() : 0;
+    var slot = activeSlotOf(container);
+    slot.game = serializeState();
+    slot.lastPlayed = state.lastSeen;
+    writeContainer(container);
+  }
+
+  // load() → bool (an existing save was found). Establishes the in-memory container (reading v4,
+  // else migrating a v3 save, else seeding a fresh one), points at the active slot, applies it.
+  function load() {
+    var existing = readContainer();
+    if (existing) {
+      container = existing;
+      maybeReapV3(container);                              // a later boot after a v3 migration → reap the net
+      applySlotToState(activeSlotOf(container).game);
+      return true;
+    }
+    // No v4 container yet — migrate a legacy v3 save if present, else seed a fresh container.
+    var raw3  = U.safeLoad(V3_KEY);
+    var hasV3 = !!(raw3 && raw3.v === 3);
+    var toast = hasV3 && (raw3.formAxisSeen === undefined);   // pre-formula save → rebalance toast once
+    container = freshContainer(hasV3 ? sanitizeGame(raw3) : freshGame());
+    if (hasV3) {
+      container.migratedFrom = 'v3';
+      writeContainer(container);                           // persist the migration now; KEEP v3 (reap next boot)
+    }
+    // Fresh new player: leave the container in memory only; the first save() writes it (so a
+    // brand-new private-mode player isn't warned at boot before they've done anything).
+    applySlotToState(activeSlotOf(container).game);
+    if (toast) fireRebalanceToast();
+    return hasV3;
   }
 
   // ===========================================================================================
@@ -967,9 +1080,10 @@ window.GAME = window.GAME || {};
     openShop:    openShop,
     closeShop:   closeShop,
 
-    // save / load
+    // save / load (v4 multi-slot container)
     save: save,
     load: load,
+    sanitizeGame: sanitizeGame,   // shared allowlist (Phase 4 import + tests)
 
     // mute
     isMuted:    isMuted,
