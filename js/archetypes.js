@@ -1200,9 +1200,9 @@ window.GAME = window.GAME || {};
     ctx.fill();
 
     var dark = pal.skinDark, skin = pal.skin, light = pal.skinLight;
-    var torsoOpts = { joints: s.joints, leanPose: s.leanPose };
+    var torsoOpts = { joints: s.joints, leanPose: s.leanPose, selfIllum: s.selfIllum };
     var spineOpts = { spineSize: s.spineSize, leadFin: s.leadFin };
-    var headOpts  = { headStyle: s.headStyle, cybanek: s.cybanek, horns: s.horns };
+    var headOpts  = { headStyle: s.headStyle, cybanek: s.cybanek, horns: s.horns, headBlade: s.headBlade };
 
     /* backpack thruster cluster (super_mecha) — FIRST, behind the body */
     if (s.backpack) drawMechBackpack(ctx, BH, BW, fg, pal);
@@ -1222,11 +1222,35 @@ window.GAME = window.GAME || {};
     /* torso silhouette — HARD BLOCK */
     drawMechTorso(ctx, BH, BW, fg, skin, dark, light, pal, torsoOpts);
 
+    /* bulbous crude-robot shoulder caps (mecha_1 §6) — outboard mass proud of the torso top */
+    if (s.roundShoulders) {
+      ctx.save();
+      var capR = BW * 0.16, capY = -BH * 0.72;
+      for (var sc = -1; sc <= 1; sc += 2) {
+        var capX = sc < 0 ? -BW * 0.34 : BW * (0.36 + fg.dir * 0.06);
+        ctx.fillStyle = skin;
+        ctx.beginPath(); ctx.arc(capX, capY, capR, Math.PI, 2 * Math.PI); ctx.closePath(); ctx.fill();
+        ctx.strokeStyle = rimCol(0.5); ctx.lineWidth = 1.6;
+        ctx.beginPath(); ctx.arc(capX, capY, capR, Math.PI, 2 * Math.PI); ctx.stroke();
+      }
+      ctx.restore();
+    }
+
     /* outward shoulder cannon pods (mecha_2) — the load-bearing silhouette break */
     if (s.shoulderCannon) drawShoulderCannon(ctx, BH, BW, fg, pal);
 
-    /* panel overlays on torso */
-    drawMechPanels(ctx, BH, BW, fg, pal, 1.0);
+    /* panel overlays on torso (gapGlow → mecha_3 concentrated hot seams) */
+    drawMechPanels(ctx, BH, BW, fg, pal, 1.0, { gapGlow: s.gapGlow });
+
+    /* exposed black cabling anchors the gold as METAL (super_mecha §6) */
+    if (s.wiring) {
+      ctx.save();
+      ctx.strokeStyle = '#1a1a1a'; ctx.lineWidth = BH * 0.02; ctx.lineCap = 'round';
+      ctx.beginPath(); ctx.moveTo(BW * 0.10, -BH * 0.74); ctx.lineTo(BW * 0.30, -BH * 0.66); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(-BW * 0.12, -BH * 0.72); ctx.lineTo(-BW * 0.26, -BH * 0.64); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(BW * 0.02, -BH * 0.30); ctx.lineTo(BW * 0.20, -BH * 0.26); ctx.stroke();
+      ctx.restore();
+    }
 
     /* dorsal spine array (replaces organic plates) */
     drawMechSpines(ctx, BH, BW, fg, pal, plateN, spineOpts);
@@ -1251,8 +1275,8 @@ window.GAME = window.GAME || {};
      OUTWARD (the single most important mecha_2 add — changes the outline, not the surface). */
   function drawShoulderCannon(ctx, BH, BW, fg, pal) {
     var lean = fg.dir;
-    var px = BW * (0.40 + lean * 0.08), py = -BH * 0.82;
-    var pw = BW * 0.30, ph = BH * 0.22;
+    var px = BW * (0.50 + lean * 0.10), py = -BH * 0.82;
+    var pw = BW * 0.34, ph = BH * 0.22;
     ctx.fillStyle = pal.plate || pal.skinDark;
     ctx.beginPath(); ctx.rect(px, py, pw, ph); ctx.fill();
     ctx.strokeStyle = pal.plateEdge; ctx.lineWidth = 2.0; ctx.stroke();
@@ -1283,30 +1307,39 @@ window.GAME = window.GAME || {};
   function drawMechTorso(ctx, BH, BW, fg, skin, dark, light, pal, opts) {
     opts = opts || {};
     var lean = fg.dir, round = opts.joints === 'round', lp = opts.leanPose ? BH * 0.05 : 0;
+    var sh = opts.leanPose ? BW * 0.10 : 0;                 // §6 forward-shear the TOP over the waist (mecha_3 predator lean)
     var topY = -BH * (0.84 - (opts.leanPose ? 0.03 : 0));   // flat-top shoulder line
+    var p = new Path2D();
+    p.moveTo(-BW * 0.34, -BH * 0.28 + lp);                  // back-bottom (anchored)
+    p.lineTo(-BW * 0.42 + sh, -BH * 0.72);                  // straight back rise
+    if (round) p.quadraticCurveTo(-BW * 0.40 + sh, topY, -BW * 0.14 + sh, topY);   // bulbous top-left
+    else       p.lineTo(-BW * 0.14 + sh, topY);            // sharp flat-top corner
+    p.lineTo(BW * (0.24 + lean * 0.06) + sh, topY);        // FLAT broad shoulder top
+    if (round) p.quadraticCurveTo(BW * (0.46 + lean * 0.08) + sh, -BH * 0.74, BW * (0.50 + lean * 0.06) + sh, -BH * 0.58);
+    else { p.lineTo(BW * (0.50 + lean * 0.08) + sh, -BH * 0.72); p.lineTo(BW * (0.48 + lean * 0.06) + sh, -BH * 0.56); }
+    p.lineTo(BW * (0.42 + lean * 0.04), -BH * 0.30 + lp);  // chest side (straight, anchored)
+    p.lineTo(BW * 0.06, -BH * 0.13 + lp);                  // waist bottom (anchored)
+    p.closePath();
     ctx.fillStyle = pal.skin;
-    ctx.beginPath();
-    ctx.moveTo(-BW * 0.34, -BH * 0.28 + lp);               // back-bottom
-    ctx.lineTo(-BW * 0.42, -BH * 0.72);                    // straight back rise
-    if (round) ctx.quadraticCurveTo(-BW * 0.40, topY, -BW * 0.14, topY);   // bulbous top-left
-    else       ctx.lineTo(-BW * 0.14, topY);              // sharp flat-top corner
-    ctx.lineTo(BW * (0.24 + lean * 0.06), topY);          // FLAT broad shoulder top
-    if (round) ctx.quadraticCurveTo(BW * (0.46 + lean * 0.08), -BH * 0.74, BW * (0.50 + lean * 0.06), -BH * 0.58);
-    else { ctx.lineTo(BW * (0.50 + lean * 0.08), -BH * 0.72); ctx.lineTo(BW * (0.48 + lean * 0.06), -BH * 0.56); }
-    ctx.lineTo(BW * (0.42 + lean * 0.04), -BH * 0.30 + lp);   // chest side (straight)
-    ctx.lineTo(BW * 0.06, -BH * 0.13 + lp);               // waist bottom
-    ctx.closePath(); ctx.fill();
+    ctx.fill(p);
+    /* §6 red self-illum rim (mecha_3) — re-stroke the full outline so the near-black body lifts off the night sky */
+    if (opts.selfIllum && pal.rimGlow) {
+      ctx.save();
+      ctx.strokeStyle = pal.rimGlow; ctx.lineWidth = 2.5; ctx.lineJoin = 'round'; ctx.globalAlpha = 0.5;
+      ctx.stroke(p);
+      ctx.restore();
+    }
     /* RIM specular on the top/shoulder edge (§1.1 — one key light, neutral warm-white) */
     ctx.save();
     ctx.strokeStyle = rimCol(0.5); ctx.lineWidth = 2.5; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
     ctx.beginPath();
-    ctx.moveTo(-BW * 0.14, topY);
-    ctx.lineTo(BW * (0.24 + lean * 0.06), topY);
+    ctx.moveTo(-BW * 0.14 + sh, topY);
+    ctx.lineTo(BW * (0.24 + lean * 0.06) + sh, topY);
     ctx.stroke(); ctx.restore();
   }
 
   /* Flat rectangular panels drawn over the mech torso. */
-  function drawMechPanels(ctx, BH, BW, fg, pal, alpha) {
+  function drawMechPanels(ctx, BH, BW, fg, pal, alpha, opts) {
     var lean = fg.dir;
     ctx.save();
     ctx.globalAlpha = alpha * 0.65;
@@ -1331,6 +1364,19 @@ window.GAME = window.GAME || {};
     ctx.beginPath();
     ctx.rect(-BW * 0.18, -BH * 0.28, BW * 0.38, BH * 0.14);
     ctx.fill();
+
+    /* mecha_3 §6 — concentrate the red into 2 hot seam CHANNELS (red through black) instead of a body-wide wash */
+    if (opts && opts.gapGlow) {
+      ctx.globalAlpha = alpha; ctx.lineCap = 'round';
+      var cxg = BW * (0.02 + lean * 0.04);
+      ctx.strokeStyle = '#ff2020'; ctx.lineWidth = 2.6;
+      ctx.beginPath(); ctx.moveTo(cxg, -BH * 0.60); ctx.lineTo(cxg, -BH * 0.34); ctx.stroke();             // chest-center hot channel
+      ctx.beginPath(); ctx.moveTo(-BW * 0.12, -BH * 0.27); ctx.lineTo(BW * 0.14, -BH * 0.27); ctx.stroke(); // belly hot channel
+      ctx.strokeStyle = '#ff6a4a'; ctx.lineWidth = 1.0;
+      ctx.beginPath(); ctx.moveTo(cxg, -BH * 0.60); ctx.lineTo(cxg, -BH * 0.34); ctx.stroke();             // bright hot core
+      ctx.restore();
+      return;   // skip the body-wide seams + rivets so the rest of the body stays neutral black
+    }
 
     ctx.globalAlpha = alpha * 0.90;
 
@@ -1534,6 +1580,20 @@ window.GAME = window.GAME || {};
     }
     ctx.fill();
 
+    /* Kiryu forehead-to-nape SKULL BLADE (super_mecha §6) — raised ridge along the skull top */
+    if (opts.headBlade) {
+      ctx.save();
+      ctx.fillStyle = pal.skinLight;
+      ctx.beginPath();
+      ctx.moveTo(hlx + hw * 0.10, hly);
+      ctx.lineTo(hlx + hw * 0.50, hly - BH * 0.035);
+      ctx.lineTo(hlx + hw * 0.90, hly);
+      ctx.closePath(); ctx.fill();
+      ctx.strokeStyle = rimCol(0.6); ctx.lineWidth = 1.4;
+      ctx.beginPath(); ctx.moveTo(hlx + hw * 0.10, hly); ctx.lineTo(hlx + hw * 0.50, hly - BH * 0.035); ctx.stroke();
+      ctx.restore();
+    }
+
     /* panel lines on skull */
     ctx.save();
     ctx.strokeStyle = pal.plateEdge; ctx.lineWidth = 1.2; ctx.globalAlpha = 0.70;
@@ -1557,17 +1617,24 @@ window.GAME = window.GAME || {};
         ctx.beginPath(); ctx.arc(hlx + hw * 0.56, hly + hh * 0.46, er, 0, 6.2832); ctx.fill();
         ctx.beginPath(); ctx.arc(hlx + hw * 0.84, hly + hh * 0.52, er, 0, 6.2832); ctx.fill();
       } else {
+        /* visor — narrowed+centered for Cybanek (mecha_1) so a chrome gap reads between it and the temple orbs;
+           the non-cybanek branch keeps the EXACT current literals (mecha_2/super + the cyborg helmet head). */
+        var cyb = opts.cybanek;
+        var vfx = cyb ? hlx + hw * 0.30 : hlx + BW * 0.04;
+        var vfw = cyb ? hw * 0.40       : hw * 0.80;
+        var vex = cyb ? hlx + hw * 0.33 : hlx + BW * 0.06;
+        var vew = cyb ? hw * 0.34       : hw * 0.74;
         ctx.fillStyle = pal.plate || pal.skinDark;
-        ctx.beginPath(); ctx.rect(hlx + BW * 0.04, hly + hh * 0.35, hw * 0.80, hh * 0.28); ctx.fill();
+        ctx.beginPath(); ctx.rect(vfx, hly + hh * 0.35, vfw, hh * 0.28); ctx.fill();
         ctx.fillStyle = pal.eye; ctx.globalAlpha = 0.90;
-        ctx.beginPath(); ctx.rect(hlx + BW * 0.06, hly + hh * 0.38, hw * 0.74, hh * 0.22); ctx.fill();
+        ctx.beginPath(); ctx.rect(vex, hly + hh * 0.38, vew, hh * 0.22); ctx.fill();
         ctx.globalAlpha = 1;
       }
     }
 
     /* CYBANEK orbs (mecha_1) — two red temple domes outside the visor; THE Showa identifier */
     if (opts.cybanek) {
-      var cr = Math.max(2.2, hw * 0.13);
+      var cr = Math.max(2.6, hw * 0.15);
       ctx.fillStyle = pal.eye;
       ctx.beginPath(); ctx.arc(hlx + hw * 0.04, hly + hh * 0.28, cr, 0, 6.2832); ctx.fill();
       ctx.beginPath(); ctx.arc(hlx + hw * 0.96, hly + hh * 0.28, cr, 0, 6.2832); ctx.fill();
