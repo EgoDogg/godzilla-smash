@@ -614,6 +614,154 @@ window.GAME = window.GAME || {};
   }
 
   // ===========================================================================================
+  // Slot core API  (Phase 2 — no UI; the Saves tab in Phase 3 drives these)
+  // ===========================================================================================
+  var _lastDeleted = null;   // session-only undo for the last deleteSlot (NOT persisted)
+
+  function nowMs() { return (typeof Date !== 'undefined' && Date.now) ? Date.now() : 0; }
+
+  // Slot names: trim + strip control chars + clamp length, but KEEP unicode (emoji names allowed).
+  function sanitizeName(name) {
+    if (typeof name !== 'string') return '';
+    var out = '';                                   // drop control chars (0-31) + DEL (127), KEEP unicode/emoji
+    for (var i = 0; i < name.length; i++) { var c = name.charCodeAt(i); if (c >= 32 && c !== 127) out += name.charAt(i); }
+    out = out.replace(/\s+/g, ' ').trim();
+    return out.length > 24 ? out.slice(0, 24) : out;
+  }
+
+  // powerOfGame(game) → attackPower for a slot's game WITHOUT touching live state (for list
+  // summaries). Mirrors attackPower(): START_ATTACK × CLAWS_MULT^claws × (1 + Σ FORM_BONUS).
+  function powerOfGame(game) {
+    var g = sanitizeGame(game), s = 0, owned = g.ownedFormIds, i;
+    for (i = 0; i < owned.length; i++) s += formBonusOf(owned[i]);
+    if (Cfg.ACTIVE_DOUBLE_COUNT) s += formBonusOf(g.activeFormId);
+    return Cfg.START_ATTACK * Math.pow(Cfg.CLAWS_MULT, g.clawsLevel) * (1 + s);
+  }
+
+  function ensureContainer() { if (!container) container = freshContainer(freshGame()); return container; }
+  function slotById(id) {
+    var c = ensureContainer();
+    for (var i = 0; i < c.slots.length; i++) if (c.slots[i].id === id) return c.slots[i];
+    return null;
+  }
+
+  // Persist live state into the CURRENTLY-active slot (used before switching away from it).
+  function flushActiveSlot() {
+    var c = ensureContainer();
+    state.lastSeen = nowMs();
+    var cur = activeSlotOf(c);
+    cur.game = serializeState();
+    cur.lastPlayed = state.lastSeen;
+  }
+
+  // Re-init the world + player + HUD after the active slot's game changed under us.
+  function reinitAfterSlotChange() {
+    if (G.World && G.World.spawnCity) G.World.spawnCity();
+    if (G.Main && G.Main.rebuildPlayer) G.Main.rebuildPlayer();
+    refreshShop();
+    hudDirty = true;
+  }
+
+  // listSlots() → [{id, name, active, summary:{forms, total, power, lastPlayed}}] in slot order.
+  function listSlots() {
+    var c = ensureContainer(), total = Cfg.FORMS.length;
+    return c.slots.map(function (sl) {
+      var g = sanitizeGame(sl.game);
+      return {
+        id: sl.id, name: sl.name, active: sl.id === c.activeSlot,
+        summary: { forms: g.ownedFormIds.length, total: total, power: powerOfGame(g), lastPlayed: sl.lastPlayed || 0 }
+      };
+    });
+  }
+  function activeSlotId() { return ensureContainer().activeSlot; }
+  function slotCount()    { return ensureContainer().slots.length; }
+  function slotCap()      { return Cfg.SAVE && Cfg.SAVE.SLOTS || 3; }
+
+  // switchSlot(id) → bool. Flushes the current slot, swaps active, re-applies + re-inits.
+  function switchSlot(id) {
+    var c = ensureContainer();
+    var target = slotById(id);
+    if (!target || id === c.activeSlot) return false;
+    flushActiveSlot();                  // 1. persist the slot we're leaving
+    c.activeSlot = id;                  // 2. swap
+    target.lastPlayed = nowMs();
+    writeContainer(c);
+    applySlotToState(target.game);      // 3. apply + re-init world/player/HUD
+    reinitAfterSlotChange();
+    return true;
+  }
+
+  // newSlot(name) → new slot id, or null if at capacity. Does NOT switch to it.
+  function newSlot(name) {
+    var c = ensureContainer();
+    if (c.slots.length >= slotCap()) return null;
+    var nm = sanitizeName(name) || ('Slot ' + (c.slots.length + 1));
+    var sl = makeSlot(nm, freshGame(), nowMs());
+    c.slots.push(sl);
+    writeContainer(c);
+    return sl.id;
+  }
+
+  function renameSlot(id, name) {
+    var sl = slotById(id);
+    if (!sl) return false;
+    var nm = sanitizeName(name);
+    if (!nm) return false;
+    sl.name = nm;
+    writeContainer(ensureContainer());
+    return true;
+  }
+
+  // deleteSlot(id) → bool. Stashes a session undo. Deleting the LAST slot reseeds a fresh one
+  // (and resets live state); deleting the ACTIVE slot switches to the most-recently-played remaining.
+  function deleteSlot(id) {
+    var c = ensureContainer();
+    var idx = -1;
+    for (var i = 0; i < c.slots.length; i++) if (c.slots[i].id === id) idx = i;
+    if (idx === -1) return false;
+    var wasActive = (id === c.activeSlot);
+    _lastDeleted = { slot: JSON.parse(JSON.stringify(c.slots[idx])), index: idx, wasActive: wasActive };
+    c.slots.splice(idx, 1);
+
+    if (c.slots.length === 0) {                       // deleted the last slot → reseed + reset
+      var fresh = makeSlot('Slot 1', freshGame(), nowMs());
+      c.slots.push(fresh);
+      c.activeSlot = fresh.id;
+      writeContainer(c);
+      applySlotToState(fresh.game);
+      reinitAfterSlotChange();
+      return true;
+    }
+    if (wasActive) {                                  // switch to the most-recently-played remaining
+      var best = c.slots[0];
+      for (var j = 1; j < c.slots.length; j++) if ((c.slots[j].lastPlayed || 0) > (best.lastPlayed || 0)) best = c.slots[j];
+      c.activeSlot = best.id;
+      writeContainer(c);
+      applySlotToState(best.game);
+      reinitAfterSlotChange();
+    } else {
+      writeContainer(c);
+    }
+    return true;
+  }
+
+  function canUndoDelete() { return !!_lastDeleted; }
+
+  // undoDelete() → bool. Re-inserts the last session-deleted slot at its old index (does not switch
+  // to it). No-op if there's no room, or its id is somehow already present.
+  function undoDelete() {
+    var c = ensureContainer();
+    if (!_lastDeleted) return false;
+    if (c.slots.length >= slotCap()) return false;
+    if (slotById(_lastDeleted.slot.id)) { _lastDeleted = null; return false; }
+    var at = Math.min(_lastDeleted.index, c.slots.length);
+    c.slots.splice(at, 0, _lastDeleted.slot);
+    writeContainer(c);
+    _lastDeleted = null;
+    return true;
+  }
+
+  // ===========================================================================================
   // Mute
   // ===========================================================================================
   function isMuted()    { return state.muted; }
@@ -1084,6 +1232,18 @@ window.GAME = window.GAME || {};
     save: save,
     load: load,
     sanitizeGame: sanitizeGame,   // shared allowlist (Phase 4 import + tests)
+
+    // slot core API (Phase 2 — the Saves tab in Phase 3 drives these)
+    listSlots:     listSlots,
+    activeSlotId:  activeSlotId,
+    slotCount:     slotCount,
+    slotCap:       slotCap,
+    switchSlot:    switchSlot,
+    newSlot:       newSlot,
+    renameSlot:    renameSlot,
+    deleteSlot:    deleteSlot,
+    undoDelete:    undoDelete,
+    canUndoDelete: canUndoDelete,
 
     // mute
     isMuted:    isMuted,
