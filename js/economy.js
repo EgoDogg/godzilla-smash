@@ -1115,6 +1115,111 @@ window.GAME = window.GAME || {};
     body.appendChild(itemRow(w2));
   }
 
+  // ---- Saves tab (Phase 3) — multi-slot manager over the Phase-2 slot API -------------------
+  // Inline UI state: which slot row is mid-delete-confirm or mid-rename, and the last session
+  // delete (for the undo banner). Re-rendered by refreshShop() on every action (no new CSS).
+  var savesUI = { confirmId: null, renameId: null, undoName: null };
+
+  function relTime(ms) {
+    if (!ms) return 'new';
+    var d = nowMs() - ms; if (d < 0) d = 0;
+    var m = Math.floor(d / 60000);
+    if (m < 1)  return 'just now';
+    if (m < 60) return m + 'm ago';
+    var h = Math.floor(m / 60);
+    if (h < 24) return h + 'h ago';
+    return Math.floor(h / 24) + 'd ago';
+  }
+
+  function saveBtn(label, onClick, opts) {
+    opts = opts || {};
+    var b = document.createElement('button');
+    b.className = 'buy' + (opts.aff ? ' aff' : '');
+    b.textContent = label;
+    b.style.minWidth = opts.minWidth || '60px';
+    if (opts.bg) b.style.background = opts.bg;
+    if (opts.disabled) b.disabled = true; else b.addEventListener('click', onClick);
+    return b;
+  }
+  function actionsBox() {
+    var d = document.createElement('div');
+    d.style.display = 'flex'; d.style.gap = '6px'; d.style.flex = 'none'; d.style.alignItems = 'center';
+    return d;
+  }
+
+  function buildSaves(body) {
+    body.appendChild(hintLine('Each slot is a separate save — the active one is what you play. Slots are stored in this browser.'));
+
+    // Undo banner for the last delete this session.
+    if (savesUI.undoName && canUndoDelete()) {
+      var ur = document.createElement('div'); ur.className = 'shop-item';
+      var ul = document.createElement('div'); ul.className = 'si-l';
+      var ut = document.createElement('div'); ut.className = 'si-t'; ut.textContent = 'Deleted “' + savesUI.undoName + '”';
+      ul.appendChild(ut); ur.appendChild(ul);
+      ur.appendChild(saveBtn('Undo', function () { undoDelete(); savesUI.undoName = null; refreshShop(); }, { aff: true }));
+      body.appendChild(ur);
+    }
+
+    var slots = listSlots();
+    for (var i = 0; i < slots.length; i++) {
+      (function (sl) {
+        var row = document.createElement('div');
+        row.className = 'shop-item' + (sl.active ? ' owned' : '');
+        var l = document.createElement('div'); l.className = 'si-l';
+        var txt = document.createElement('div'); txt.style.minWidth = '0'; txt.style.overflow = 'hidden';
+        var t = document.createElement('div'); t.className = 'si-t'; t.textContent = sl.name;
+        t.style.whiteSpace = 'nowrap'; t.style.overflow = 'hidden'; t.style.textOverflow = 'ellipsis';
+        var s = document.createElement('div'); s.className = 'si-s';
+        s.textContent = 'Forms ' + sl.summary.forms + '/' + sl.summary.total + ' · ⚡ ' + U.fmt(sl.summary.power) + ' · ' + relTime(sl.summary.lastPlayed);
+        txt.appendChild(t); txt.appendChild(s); l.appendChild(txt); row.appendChild(l);
+
+        var actions = actionsBox();
+        if (savesUI.confirmId === sl.id) {                          // two-step inline delete confirm
+          var warn = document.createElement('div'); warn.className = 'si-s'; warn.style.color = '#ff8080'; warn.style.flex = 'none'; warn.textContent = 'Delete?';
+          actions.appendChild(warn);
+          actions.appendChild(saveBtn('Yes', function () {
+            var nm = sl.name; deleteSlot(sl.id);
+            savesUI.confirmId = null; savesUI.renameId = null; savesUI.undoName = nm; refreshShop();
+          }, { bg: '#b5341f', minWidth: '46px' }));
+          actions.appendChild(saveBtn('No', function () { savesUI.confirmId = null; refreshShop(); }, { minWidth: '46px' }));
+        } else if (savesUI.renameId === sl.id) {                    // inline rename
+          var inp = document.createElement('input');
+          inp.type = 'text'; inp.value = sl.name; inp.maxLength = 24;
+          inp.style.cssText = 'width:118px;font:600 13px system-ui;padding:6px 8px;border-radius:8px;border:1px solid var(--line);background:#0f1118;color:var(--text);min-width:0;';
+          actions.appendChild(inp);
+          actions.appendChild(saveBtn('Save', function () { renameSlot(sl.id, inp.value); savesUI.renameId = null; refreshShop(); }, { aff: true, minWidth: '52px' }));
+          actions.appendChild(saveBtn('Cancel', function () { savesUI.renameId = null; refreshShop(); }, { minWidth: '58px' }));
+        } else {                                                    // default: switch / rename / delete
+          if (sl.active) {
+            var tag = document.createElement('div'); tag.className = 'tag'; tag.textContent = 'ACTIVE'; tag.style.flex = 'none'; actions.appendChild(tag);
+          } else {
+            actions.appendChild(saveBtn('Switch', function () { savesUI.confirmId = null; savesUI.renameId = null; switchSlot(sl.id); }, { aff: true, minWidth: '62px' }));
+          }
+          actions.appendChild(saveBtn('✎', function () { savesUI.renameId = sl.id; savesUI.confirmId = null; refreshShop(); }, { minWidth: '34px' }));
+          actions.appendChild(saveBtn('🗑', function () { savesUI.confirmId = sl.id; savesUI.renameId = null; refreshShop(); }, { minWidth: '34px' }));
+        }
+        row.appendChild(actions);
+        body.appendChild(row);
+      })(slots[i]);
+    }
+
+    // New slot (under capacity).
+    if (slotCount() < slotCap()) {
+      var nr = document.createElement('div'); nr.className = 'shop-item';
+      var nl = document.createElement('div'); nl.className = 'si-l';
+      var ntx = document.createElement('div'); ntx.style.minWidth = '0';
+      var nt = document.createElement('div'); nt.className = 'si-t'; nt.textContent = 'New Slot';
+      var ns = document.createElement('div'); ns.className = 'si-s'; ns.textContent = 'Start a fresh save — your current one is untouched.';
+      ntx.appendChild(nt); ntx.appendChild(ns); nl.appendChild(ntx); nr.appendChild(nl);
+      nr.appendChild(saveBtn('+ New', function () {
+        var id = newSlot(''); if (id) { savesUI.confirmId = null; savesUI.renameId = null; refreshShop(); }
+      }, { aff: true, minWidth: '64px' }));
+      body.appendChild(nr);
+    }
+
+    body.appendChild(hintLine('Slots: ' + slotCount() + ' / ' + slotCap() + ' · stored in this browser'));
+  }
+
   // ---- Shop render / open --------------------------------------------------------------------
 
   function syncTabButtons() {
@@ -1140,6 +1245,7 @@ window.GAME = window.GAME || {};
       case 'evolutions': buildEvolutions(body); break;
       case 'characters': buildCharacters(body);  break;
       case 'worlds':     buildWorlds(body);      break;
+      case 'saves':      buildSaves(body);       break;
       case 'upgrades':
       default:           buildUpgrades(body);    break;
     }
