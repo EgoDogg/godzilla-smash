@@ -23,7 +23,7 @@ A 10-agent verified audit swarm (5 code finders + 2 web researchers → 2 advers
 ---
 
 ## ▶ CONTINUATION PROMPT (paste into a fresh session)
-> Continue work on **Godzilla Smash** — 2.5D isometric Canvas2D incremental PWA at `/Users/MGitk/Projects/Godzilla Game/` (vanilla JS, no build, `window.GAME`, 15 modules in `js/`; live at https://egodogg.github.io/godzilla-smash/ · repo `EgoDogg/godzilla-smash` via `gh`; played on an M1 iPad). Currently **gz-v13**.
+> Continue work on **Godzilla Smash** — 2.5D isometric Canvas2D incremental PWA at `/Users/MGitk/Projects/godzilla-smash/` (vanilla JS, no build, `window.GAME`, 15 modules in `js/`; live at https://egodogg.github.io/godzilla-smash/ · repo `EgoDogg/godzilla-smash` via `gh`; played on an M1 iPad). Currently **gz-v13**.
 >
 > A verified 10-agent audit + full implementation plan already exist. **Read in order:** `docs/next-run-execution-plan.md` (THE plan — every change has file:line anchors verified at gz-v13), `docs/audit-2026-06.md` (findings + refuted appendix), `docs/next-session-handoff.md` (conventions), and memories `godzilla-game-concept` + `godzilla-preview-verification-gotcha` (preview cache traps — follow exactly).
 >

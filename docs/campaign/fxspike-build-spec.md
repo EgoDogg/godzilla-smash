@@ -32,7 +32,7 @@ Foundation facts confirmed on disk: shader `Godzilla/FXSoftAdditive` GUID `d69a8
 Run git-clean per CLAUDE.md ("commit before every agent session"). Work on `unity-port`.
 
 ```bash
-cd "/Users/MGitk/Projects/Godzilla Game" && git status --porcelain && git log --oneline -1
+cd "/Users/MGitk/Projects/godzilla-smash" && git status --porcelain && git log --oneline -1
 ```
 **Verify:** working tree clean; HEAD at or after `7530d50`.
 
@@ -74,7 +74,7 @@ Every FX component/baker calls `AddFxSortingLayer.EnsureFx()` (never re-implemen
 
 **Verify:**
 ```bash
-cd "/Users/MGitk/Projects/Godzilla Game" && "$UNITY" -batchmode -projectPath GodzillaSmash -executeMethod Godzilla.Editor.AddFxSortingLayer.Run -logFile - -quit ; grep -A8 m_SortingLayers GodzillaSmash/ProjectSettings/TagManager.asset
+cd "/Users/MGitk/Projects/godzilla-smash" && "$UNITY" -batchmode -projectPath GodzillaSmash -executeMethod Godzilla.Editor.AddFxSortingLayer.Run -logFile - -quit ; grep -A8 m_SortingLayers GodzillaSmash/ProjectSettings/TagManager.asset
 ```
 Expect a `- name: FX / uniqueID: <nonzero>` entry appended after `Default`. Re-run once; assert NOT doubled.
 
@@ -158,7 +158,7 @@ EditorBuildSettings.scenes=scenes.ToArray();
 
 **Verify:**
 ```bash
-cd "/Users/MGitk/Projects/Godzilla Game" && "$UNITY" -batchmode -projectPath GodzillaSmash -executeMethod Godzilla.Editor.FxAssetBaker.BakeAll -logFile - ; echo "exit=$?"; ls -la GodzillaSmash/Assets/Presentation/FX/*.png GodzillaSmash/Assets/Presentation/FX/*.mat GodzillaSmash/Assets/Presentation/FX/SupernovaFxRig.prefab GodzillaSmash/Assets/Scenes/FxSpike.unity
+cd "/Users/MGitk/Projects/godzilla-smash" && "$UNITY" -batchmode -projectPath GodzillaSmash -executeMethod Godzilla.Editor.FxAssetBaker.BakeAll -logFile - ; echo "exit=$?"; ls -la GodzillaSmash/Assets/Presentation/FX/*.png GodzillaSmash/Assets/Presentation/FX/*.mat GodzillaSmash/Assets/Presentation/FX/SupernovaFxRig.prefab GodzillaSmash/Assets/Scenes/FxSpike.unity
 ```
 Expect `exit=0`, `[FxAssetBaker] OK`, all 3 PNGs + 3 mats + prefab + scene present, FX layer in TagManager.
 
@@ -328,7 +328,7 @@ Jitter BOTH x AND y at the 8 interior verts; endpoints locked.
 
 **Verify:**
 ```bash
-cd "/Users/MGitk/Projects/Godzilla Game" && "$UNITY" -batchmode -projectPath GodzillaSmash -executeMethod Godzilla.Editor.FxRenderHarness.BlendCorrectness -logFile - ; echo "exit=$?"
+cd "/Users/MGitk/Projects/godzilla-smash" && "$UNITY" -batchmode -projectPath GodzillaSmash -executeMethod Godzilla.Editor.FxRenderHarness.BlendCorrectness -logFile - ; echo "exit=$?"
 ```
 Gate(a) must stay green (no regression). Beam jitter/V-ramp asserted in Step 10.
 
@@ -357,7 +357,7 @@ public struct KillFlash {
 
 **Verify (Core gate — runs without graphics):**
 ```bash
-cd "/Users/MGitk/Projects/Godzilla Game" && "$UNITY" -batchmode -projectPath GodzillaSmash -runTests -testPlatform EditMode -testResults /tmp/fx-editmode.xml -logFile - ; echo "exit=$?"; grep -c 'result="Passed"' /tmp/fx-editmode.xml
+cd "/Users/MGitk/Projects/godzilla-smash" && "$UNITY" -batchmode -projectPath GodzillaSmash -runTests -testPlatform EditMode -testResults /tmp/fx-editmode.xml -logFile - ; echo "exit=$?"; grep -c 'result="Passed"' /tmp/fx-editmode.xml
 ```
 Expect KillFlash decay tests passing; no `Floor=0.004` anywhere.
 
@@ -387,7 +387,7 @@ Mirror BlendCorrectness exactly: sRGB RT, `allowHDR=false`, `cam.Render`, `ReadP
 
 **Verify:**
 ```bash
-cd "/Users/MGitk/Projects/Godzilla Game" && "$UNITY" -batchmode -projectPath GodzillaSmash -executeMethod Godzilla.Editor.FxRenderHarness.AnimateAndCoverage -logFile - ; echo "exit=$?"; ls docs/campaign/shots/unity/fxspike-anim-*.png
+cd "/Users/MGitk/Projects/godzilla-smash" && "$UNITY" -batchmode -projectPath GodzillaSmash -executeMethod Godzilla.Editor.FxRenderHarness.AnimateAndCoverage -logFile - ; echo "exit=$?"; ls docs/campaign/shots/unity/fxspike-anim-*.png
 ```
 Expect `exit=0`, 5 PNGs, `[FxGate]` logs showing 5 coverage + 4 animation asserts pass and peak-overdraw ≤24.
 
@@ -403,7 +403,7 @@ Expect `exit=0`, 5 PNGs, `[FxGate]` logs showing 5 coverage + 4 animation assert
 
 **Verify:**
 ```bash
-cd "/Users/MGitk/Projects/Godzilla Game/tools/fx-ref-bake" && npm i --silent && node bake.js && ls ref-glow-*.png && cd "/Users/MGitk/Projects/Godzilla Game" && python3 tools/fx-verify/check.py docs/campaign/shots/unity/fxspike-anim-1.png tools/fx-ref-bake/ref-glow-0.5.png ; echo "ssim-exit=$?"
+cd "/Users/MGitk/Projects/godzilla-smash/tools/fx-ref-bake" && npm i --silent && node bake.js && ls ref-glow-*.png && cd "/Users/MGitk/Projects/godzilla-smash" && python3 tools/fx-verify/check.py docs/campaign/shots/unity/fxspike-anim-1.png tools/fx-ref-bake/ref-glow-0.5.png ; echo "ssim-exit=$?"
 ```
 Smoke-run `bake.js` once and eyeball `ref-glow-0.5.png` is non-blank BEFORE trusting `check.py`. On first green, print the 4 idle-phase SSIMs and tighten FLOOR to `(min observed - 0.05)`.
 
@@ -412,7 +412,7 @@ Smoke-run `bake.js` once and eyeball `ref-glow-0.5.png` is non-blank BEFORE trus
 ## Step 12 — full-stack regression + tag
 
 ```bash
-cd "/Users/MGitk/Projects/Godzilla Game" && \
+cd "/Users/MGitk/Projects/godzilla-smash" && \
 "$UNITY" -batchmode -projectPath GodzillaSmash -executeMethod Godzilla.Editor.FxRenderHarness.BlendCorrectness -logFile - ; echo "gate-a=$?" ; \
 "$UNITY" -batchmode -projectPath GodzillaSmash -executeMethod Godzilla.Editor.FxRenderHarness.AnimateAndCoverage -logFile - ; echo "gate-b=$?" ; \
 "$UNITY" -batchmode -projectPath GodzillaSmash -runTests -testPlatform EditMode -testResults /tmp/fx.xml -logFile - ; echo "core=$?"

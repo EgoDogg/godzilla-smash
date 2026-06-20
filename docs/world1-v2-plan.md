@@ -12,7 +12,7 @@ I have everything I need. Producing the master blueprint.
 
 # GODZILLA SMASH — WORLD 1 v2 · MASTER BUILD BLUEPRINT
 
-v1 (`game.js`, 596 lines, flat, single-strip tap game) is **deleted**, not refactored. v2 is greenfield on one `window.GAME` namespace. All paths root at `/Users/MGitk/Projects/Godzilla Game/`; new code lives in `js/`. Reused verbatim: `index.html` shell, `#scene` canvas, `#shop` modal + `.shop-item` CSS, `manifest.json`, icons, `sw.js`.
+v1 (`game.js`, 596 lines, flat, single-strip tap game) is **deleted**, not refactored. v2 is greenfield on one `window.GAME` namespace. All paths root at `/Users/MGitk/Projects/godzilla-smash/`; new code lives in `js/`. Reused verbatim: `index.html` shell, `#scene` canvas, `#shop` modal + `.shop-item` CSS, `manifest.json`, icons, `sw.js`.
 
 ## 1 · Architecture + Module File List (load order)
 

@@ -33,7 +33,7 @@ HARD-STOP on upgrading: the claws cap (attackPower()>=1e9 → sfxDeny) is the st
 **Status:** synthesis lock, >=97% on mechanics; two feel items flagged below at ~90%.
 **Date:** 2026-06-13
 **Verified against live code:** `js/config.js` + `js/economy.js` (all line refs confirmed).
-**Full doc written to:** `/Users/MGitk/Projects/Godzilla Game/docs/research-2026-06c.md`
+**Full doc written to:** `/Users/MGitk/Projects/godzilla-smash/docs/research-2026-06c.md`
 
 ---
 

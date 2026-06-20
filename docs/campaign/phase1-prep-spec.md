@@ -72,8 +72,8 @@ namespace Godzilla.Core
 
 **File 3 (EDIT):** `tools/core-tests/gen-vectors.js` — after the existing `require('.../js/utils.js')` line, add the iso deps; append the iso block before `process.stdout.write` (line ~62):
 ```js
-require('/Users/MGitk/Projects/Godzilla Game/js/config.js'); // iso.js dep: Config.GRID — MUST load before iso.js
-require('/Users/MGitk/Projects/Godzilla Game/js/iso.js');    // attaches GAME.iso
+require('/Users/MGitk/Projects/godzilla-smash/js/config.js'); // iso.js dep: Config.GRID — MUST load before iso.js
+require('/Users/MGitk/Projects/godzilla-smash/js/iso.js');    // attaches GAME.iso
 const ISO = global.GAME.iso;
 
 // --- iso.worldToScreen --- integer tiles, fractional centers, statue lift z=4, flyer altitude, corners, wz-omitted.

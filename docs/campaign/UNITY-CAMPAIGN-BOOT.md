@@ -3,13 +3,13 @@
 **The "where am I?" doc. Read first on every session boot.** ≤130 lines.
 Build source (LOCKED plan): `docs/campaign/unity-migration-plan.md` (§0/§3/§4/§5/§8/§9 + Appendix A = authoritative S3; §1/§7 atlas-bake is **superseded first-fleet residue**).
 **Canonical anchoring** — Branch: `unity-port` (off `main`, tracks `origin/unity-port`) · Remote: `git@github-personal:EgoDogg/godzilla-smash.git` · Pre-campaign anchor: `gz-v32` (`729d36d`).
-Repo path: `/Users/MGitk/Projects/Godzilla Game/` — ⚠️ **RENAME to `/Users/MGitk/Projects/godzilla-smash/` PENDING** (space breaks the MCP bridge; full-coverage cutover in `docs/campaign/gate-closure/` + the approved plan — a resuming cold session at the OLD path before the cutover is expected). Web PWA stays LIVE on `main`: https://egodogg.github.io/godzilla-smash/
+Repo path: `/Users/MGitk/Projects/godzilla-smash/` (renamed from `Godzilla Game` on 2026-06-20 — the space broke the MCP bridge; cutover history in `docs/campaign/gate-closure/G0a-repo-rename-cutover.md`). Web PWA stays LIVE on `main`: https://egodogg.github.io/godzilla-smash/
 Ledger: `docs/campaign/unity-campaign-progress.json` (42 units · all default-FAIL).
 **The web save-system campaign (`campaign-progress.json` + `CAMPAIGN-BOOT.md`) is SUSPENDED — do not touch it.**
 
 ## SESSION-START RITUAL (in order)
 1. **HALT-check** `unity-campaign-progress.json._halt`. If non-null → read the matching `BLOCKERS.md` envelope first.
-2. `git -C "/Users/MGitk/Projects/Godzilla Game" log --oneline -8 && git status --short && git branch --show-current`
+2. `git -C "/Users/MGitk/Projects/godzilla-smash" log --oneline -8 && git status --short && git branch --show-current`
 3. Read `STEER.md` (human override: PAUSE/SKIP/PIVOT/DEFER/NOTE + queued feel/fidelity feedback). Honor unprocessed directives first. **Gate the Unity-vs-Spine call + every FX/feel verdict here.**
 4. Read `BLOCKERS.md` — pick up any block whose `### Resolution` is populated.
 5. Read `unity-campaign-progress.json` → first unit in `_run_policy.sequence` with `passes:false` = resume point. If it's `human_gate:true`, check its gate in the table below; if still open, drive the next un-gated unit instead.

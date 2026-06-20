@@ -1029,7 +1029,7 @@ I now have a complete, accurate picture of all 15 modules, the procedural art en
 
 ### Godzilla Smash — Complete System-by-System Migration Inventory
 
-**Source of truth read directly from disk** at `/Users/MGitk/Projects/Godzilla Game`. Live version: **gz-v32** (sw.js `CACHE` + config.js `CACHE_VERSION` in sync). ~10,816 LOC of vanilla ES5-style JS across 15 IIFE modules hanging off one global `window.GAME` namespace, loaded in a fixed `<script>` order in `index.html` (no bundler, no build step). All art is procedural Canvas2D baked to offscreen canvases at runtime. PWA via `manifest.json` + `sw.js`.
+**Source of truth read directly from disk** at `/Users/MGitk/Projects/godzilla-smash`. Live version: **gz-v32** (sw.js `CACHE` + config.js `CACHE_VERSION` in sync). ~10,816 LOC of vanilla ES5-style JS across 15 IIFE modules hanging off one global `window.GAME` namespace, loaded in a fixed `<script>` order in `index.html` (no bundler, no build step). All art is procedural Canvas2D baked to offscreen canvases at runtime. PWA via `manifest.json` + `sw.js`.
 
 **Global architecture pattern (carries to Unity as DESIGN):** every module is `(function (G) { 'use strict'; … G.X = …; })(window.GAME)`. Cross-module calls are *defensive* (`if (G.Foo && G.Foo.bar)`) so any module degrades gracefully if a sibling loads late or is stubbed — this is the headless-testability seam the campaign used. The DAG: `Config → Utils → iso → Assets → Archetypes → SpriteBuilders → Audio → Economy → Entities → World → Env(world_events) → Input → Render → UI → Main`.
 

@@ -15,7 +15,7 @@ fullscreen launch, and it works offline after the first load.
 ## Option A — Netlify Drop (fastest, ~2 min, no account needed to test)
 
 1. Go to **https://app.netlify.com/drop**
-2. Drag the **`Godzilla Game` folder** onto the page (extra files don't hurt).
+2. Drag the **`godzilla-smash` folder** onto the page (extra files don't hurt).
 3. It gives you a live HTTPS URL like `https://random-name.netlify.app`.
    (Sign in with GitHub/email if you want to keep the URL or rename it.)
 
