@@ -730,6 +730,291 @@ Top migration risks across the whole plan, scored for a solo dev building his fi
 
 This choice is the natural fit for the locked **2.5D sprite / isometric** dimension — it is not a compromise against it. City ground renders as a Unity **Isometric Tilemap** (one chunk-batched renderer); **buildings and kaiju render as billboard Sprites** with custom-axis depth sort, mirroring today's `drawImage` model exactly. The art splits cleanly along the same seam the web build already uses: **static bodies → pre-baked sprite atlas (B)**, **live FX → URP additive sprites/particles (the Phase-0 spike)**. No 3D meshes, no rigging, no Tilemap-rebuild of buildings — the iso-Tilemap carries only the ground plane, exactly where it's the documented mobile win.
 
+## 8. The S3 native art-authoring pipeline
+
+This is the make-or-break of the S3 Hybrid strategy. Logic ports mechanically (it's tested vanilla JS → tested C#); the **art does not port** — it gets re-authored natively. This section is the build guide for that re-authoring, synthesized to be decision-useful. Everything here is grounded in the actual source (`js/archetypes.js`, `js/config.js`, `js/entities.js`, `js/assets.js`, `js/world.js`, `js/sprites_special.js`) and mid-2026 Unity research, not re-derived.
+
+### 8.0 The fact that makes the whole thing tractable
+
+The 20 kaiju are **not 20 art assets — they are 4 family rigs × ~20 data skins, literally encoded in `config.js` already.** `Archetypes.build()` dispatches `shape.archetype` (`wyrm`|`flyer`|`hydra`|`mecha`) to exactly four builders; every form is one of those four called with a different `palette{}` + `shape{}` block. The `shape{}` knobs (`plates`, `bulk`, `tail`, `wingSpan`, `wingStyle`, `heads`, `neckSpread`, `spineSize`, `leanPose`, …) **ARE rig/skin parameters** — you transcribe them, you don't invent them. And the bodies are **static frame-0 bakes** (the §1.6 bake guardrails in `archetypes.js` forbid `globalCompositeOperation`/`shadowBlur`/`filter` and freeze `frame=0`), so native skeletal rigging **loses nothing and adds** the wing-flap / neck-sway / breath-charge / walk motion the JS only ever faked per-frame in the glow overlay.
+
+So the production matrix is: **4 rigs × 5 authored facings × (idle, walk, attack) clips → skinned 20× by data.** Not 20 × 8 × stages of hand-drawing.
+
+### 8.1 Rig tool — **Unity built-in 2D Animation, NOT Spine** (decided)
+
+For a solo first-Unity-project dev with a Swift/Flutter MVVM background and **4 rigs** (not dozens of characters), Unity's built-in **2D Animation package** (`com.unity.2d.animation` 10.x on Unity 6.3, free) beats Spine:
+
+- **Free, in-engine, no second tool / license / runtime coupling.** Spine is a $369 Pro license + a separate authoring app + a runtime whose version you babysit in lockstep with both Spine and Unity (the `spine-unity 4.3` / `6000.x` / separate-URP-shaders-UPM coupling is three moving parts). The whole S3 thesis is "a Unity codebase that *is* Unity" — Spine reintroduces the cross-toolchain tax S3 deletes.
+- **Skin-swap IS the native sweet spot.** "4 rigs + 20 skins" is *exactly* the **Sprite Library Asset + Sprite Resolver** use case — one rig prefab, a Sprite Library per skin, runtime swap by assigning the library asset. This maps 1:1 onto the JS `pal`/`shape` swap. Same mechanism does **facing** (Category = facing).
+- **The art is bone-translatable, not mesh-deform art.** Every builder is rigid filled paths pivoting at joints (leg = `quadraticCurveTo` + `lift`/`footFwd`; wing = `sin(flapPhase)` tip offset; neck = `sin` on a control point). That's bone rotation, free in Unity 2D Animation. Spine's one exclusive — free-form mesh/FFD — buys nothing this roster needs.
+- **Auto-geometry + auto-weights + silhouette auto-bone** collapse the rigging grind for 4 silhouettes (hours, not weeks); **Burst + Collections** make Sprite Skin deform mobile-cheap.
+
+**Mike's Swift/Flutter MVVM background transfers directly** — the Sprite Library / Sprite Resolver / ScriptableObject pattern is the same "view binds to a swappable data asset" idiom he already runs.
+
+**The two pre-registered escalation triggers (don't decide abstractly, decide on a failure):**
+1. **The hydra's 3 necks.** Unity 2D IK is the package's weakest area (fixed-length chains, capped at 3 bones, "very little control"). Three writhing Ghidorah necks are *precisely* the case free Unity 2D IK gets tedious. If the hydra necks fight the toolchain in Phase 2, that's the Spine moment — **for the hydra only**, keeping Unity 2D for the other three families.
+2. A future genuinely soft-body form (Biollante-style writhing flesh). Nothing in the current 20 needs it.
+
+> Do **not** use the deprecated **Anima2D** package.
+
+### 8.2 The 4 rigs (the irreducible hand-craft)
+
+Each family = **one rig prefab** (bone hierarchy + weighted mesh parts + Animator). Source the silhouette from a one-time reference bake (§8.4), trace into separable parts, bone-skin in the Skinning Editor.
+
+| Rig | Forms | Bones (~) | Parts (~) | Source builder |
+|---|---|---|---|---|
+| **wyrm** (Godzilla) | gz2014, burning, gvk, gxk, supernova (5) | pelvis · tail×3 · 2 legs · spine×2 · 2 arms · dorsal-plate strip (≤16) · neck→head→jaw | 10–12 | `buildWyrm` |
+| **flyer** (Mothra/Rodan) | mothra×3, rodan×3 (6) | hover root · body · fore+hind wing bones ×2 sides · head (+antennae/beak) · talons | 8–10 | `buildFlyer` (one rig spans `moth`↔`pterano`; Rodan zeroes the hind-wing bone) |
+| **hydra** (Ghidorah) | ghidorah, king, mecha-king, grand, void (5) | pelvis · fan tail · 2 legs · spine×2 · 2 bat-wings · **3 neck chains ×3 bones → head → horns** | 14–16 | `buildHydra` (center neck **sorts on top** via Sorting Group; `void` is a body-hidden skin, not a rig) |
+| **mecha** (Mechagodzilla) | mecha_1/2/3/super (4) | wyrm skeleton + attachment bones: shoulder-cannon, backpack, drill-tail-tip, lead-fin (enable per skin) | 10–12 | `buildMecha` (shares wyrm joint topology; keep as a separate prefab) |
+
+**Net: 4 rig prefabs.** (Possibly 3 if mecha shares the wyrm skeleton — defer that optimization past Phase 0.)
+
+**Facing — author 5, mirror 3 (hard port constraint).** The web's `FACING_MAP` = 5 authored facings (S/SE/E/NE/N) + 3 mirror-X (NW/W/SW). This is load-bearing: `facingGeom` is **not** a rotation of one pose — back views *omit the face* (`show:'back'`), which a billboard-rotated single rig cannot reproduce. Keep author-5 / mirror-3: facing is a Sprite Library Category; mirror = `SpriteRenderer.flipX`. **Mitigation:** author S/SE/E at full fidelity, N/NE simpler (the web's back view is already a near-featureless nub). Prove ONE facing in Phase 0 before committing to 5.
+
+### 8.3 Animation clips — the capability the web never had
+
+The web bakes frame 0 only; native rigging adds real interpolated motion. **None of these need new sim work** — every drive signal (`fsm`, `walkPhase`, `attackT`/`attackFrame`, `flapPhase`, `facing`) is already computed and ported. The web *threw the interpolation away* by baking discrete frames; native rigging keeps the same scalars and lets the Animator interpolate. The cost is rig authoring, not sim wiring.
+
+| Clip | Drives | Sim signal | Families |
+|---|---|---|---|
+| Idle breath | spine/head bob | NEW autonomous sine | all |
+| Walk | leg swing, body bob | `fsm==='walk'`, `walkPhase`→normalized time | wyrm/hydra/mecha |
+| Attack | jaw open, arm reach, lunge | `fsm==='attack'`, `attackT` one-shot | all |
+| Wing-flap | fore+hind/spar bones | continuous, `flapPhase` (+ `atk*0.6` downstroke) | flyer |
+| Neck sway | 3 neck chains, phase-offset | NEW continuous (web hydra heads are **frozen** — biggest "alive" upgrade) | hydra |
+| Hit-react | whole-body flinch | `fsm==='hurt'` (web only did a screen-flash) | all |
+
+The `KaijuView` adapter (the Presentation half of the entities.js sim/draw cut) owns the Animator: reads `sim.fsm`→state, scalars→float params, `sim.facing`→facing library + flipX, `formId`→skin asset. **Muzzle/eye/plate attachment bones expose world positions to the FX layer** so the additive glow/beam stays coupled to the rig (the muzzle-matches-glow invariant — §8.5).
+
+### 8.4 Reference-bake → author workflow
+
+Run the existing JS bakers **once** to emit flat, deterministic reference PNGs to trace/rig against, then retire the *runtime* generator (but **keep the harness forever** — see the risk callout).
+
+1. **Bake harness (Claude writes this cold).** A `bake-refs.html` loading only `utils.js` + `config.js` + `archetypes.js` (the only deps — `Archetypes.build*` is called directly, bypassing the bake cache), exposing `window.bakeForm(formId, base, fsm, frame)` → `canvas.toDataURL()`. A ~15-line Puppeteer driver loops `FORMS × base[0..4] × {idle, walk, attack}` → **~300 PNGs** in under a minute. **Bake at 4×** (600×672) for crisp trace refs.
+   - **Use Puppeteer (headless Chrome / Blink-Skia), not node-canvas.** The bodies use no `screen`-blend so node-canvas (Cairo) *would* render them, but Cairo anti-aliases the dozens of `quadraticCurveTo` curves differently from the shipping Skia engine — a needless fidelity gap for a trace ref. Puppeteer is byte-identical to the live sprite. (The known headless-empty-canvas bug doesn't apply: you read pixels synchronously via `toDataURL`, not by screenshotting a mid-async `<canvas>`.)
+   - Re-bake needs a full page reload (IIFE re-eval) — free, since each run is a fresh `page.goto`.
+2. **Trace + split the silhouette into part-layers** (head/torso/near+far arm/near+far leg/tail/plates/wings/necks) in Affinity Designer / Illustrator / Inkscape. **Hand-trace from the baked PNG + the code coordinates** — the wyrm torso is *one 7-curve path with a 3-stop gradient*; re-drawing it from `archetypes.js` coordinates is **faster than cleaning a 40-path auto-vectorize**. Reserve auto-vectorize (Vectorizer.AI / Recraft) only for the fiddly *repeating* elements (plate rows, wing membranes), never the smooth torso/limbs.
+3. **Export `.psb` → Unity 2D PSD Importer** → auto-rigged hierarchy → add bones, weight-paint, set pivot `(0.5, 0.86)` to honor `ANCHOR_X=75, ANCHOR_Y=144.5`.
+4. **Skin the other 16 forms by data.** Transcribe each `config.js` `palette{}` → a `FormDefinition` ScriptableObject (tint set + material params) and `shape{}` proportion knobs → bone-scale table + part-enable toggles. A small **`FormAssetRebuilder` Editor command** (Claude writes it) regenerates all 20 SOs from a `forms.json` manifest — text source of truth, deterministic, no SO YAML-merge pain.
+
+### 8.5 The additive-glow FX layer — URP approach (the highest-risk ~40% of the look)
+
+The live additive layer is `globalCompositeOperation='screen'` at **3 distinct sites** (the FX-pool flush: beams/bolts/missiles; the `_flash` kill/purchase re-blit; the `drawGlow` overlay: aura/plate/eye/breath/motes) + ~77 `globalAlpha` pulses. It collapses to **5 named effects** to re-author:
+
+| # | Effect | Native target |
+|---|---|---|
+| 1 | Plate/eye/aura glow (`drawGlow`) | Glow Shader Graph on a soft-radial sprite (aura) + emissive channel on plate sprites, shimmer = `sin`-driven `_Phase` |
+| 2 | Atomic beam / bolts / breath (FX flush) | **Pooled stretched additive quad** muzzle→target with shader-faked jitter (see callout — *not* a per-frame LineRenderer) |
+| 3 | Motes (`MOTE_FX` heat/pink/cosmic) | **ParticleSystem (Shuriken, NOT VFX Graph)** — one additive prefab per `fxMotes` key, color from `FormDefinition` |
+| 4 | Breath-charge muzzle flash | Additive sprite parented to the **MuzzleSocket** head-bone (the muzzle-matches-glow invariant) |
+| 5 | White kill-flash (`_flash`) | Additive flash material lerp OR a fullscreen UI quad |
+
+**The core technical decision: the glow must NOT depend on bloom.** A verified, unresolved Unity 6.3 LTS bug (Unity Discussions, Dec 27–28 2025) is that **URP 2D particle bloom works in the Editor but fails on Android** (HDR clamped before the bloom pass, GLES3 + Vulkan, no fix). If the look depended on bloom it would be blocked on mobile. **It doesn't** — the `screen`-brightening reproduces with an in-framebuffer blend on an LDR pipeline (the path confirmed to work on Android); bloom is a desktop-only "soft halo" toggle, not a dependency.
+
+**Architecture rules carried from the source + the adversarial pass:**
+- **One shared FX material**, per-form color via `MaterialPropertyBlock` (keeps batching intact).
+- **Port the web's particle caps as a quality tier** (320 desktop / 90 reduced-motion) — a pre-validated mobile fill-rate budget.
+- **Cap glow-sprite SIZE, not just count** (additive is overdraw; the aura halo is the worst offender — clamp to the silhouette bbox, use a pre-baked soft-radial texture).
+- **All additive FX on a dedicated "FX" sort layer drawn last**, not interleaved into the iso `depthKey` sort — fixes glow drawing *through* buildings and preserves single-draw-call batching.
+- **Graphics Jobs OFF / verified** on the device checklist (a fixed-but-GPU-specific Vulkan particle bug can fake a "missing motes" failure).
+
+### 8.6 Buildings / city / specials — lowest risk, native flat sprites
+
+Confirmed from `sprites_special.js` + `assets.js`: buildings/specials use **baked radial/linear gradients with NO live `screen` composite**, and change appearance only when the damage stage flips. This is the low-risk track.
+
+- **Every building/special/plane = a flat `SpriteRenderer` billboard** on the ortho-iso plane (not a 3D box mesh — keeps everything in one URP 2D sort domain with the additive FX; community consensus for fixed-cam iso favors alpha-blended sprites over low-poly 3D).
+- **Ground = the only Isometric Tilemap** (Grid cell `(1, 0.5, 1)` = the 28/56 ratio, Chunk mode, one draw call, sorting layer strictly below everything).
+- **~12 authored prism "shell" sprites** (5 bands × {flat/pitch} × {1×1, 2×1}) cover the silhouettes; the 3 damage stages are **overlays** (cracks/scorch/window-knockout), swapped via Sprite Library or a plain `spriteRenderer.sprite = stageSprite[stage]` on the stage-change event. Window grids = a seeded Shader Graph material (per-instance `_Seed` via `MaterialPropertyBlock`, fed the same `hash(tier*97 + stage*13 + 7)` the JS used → deterministic-faithful).
+- **Specials** (statue, pyramid, field, sandpile, plane, gold/rainbow/diamond house-tints) = hand-authored hero prefab sprites — the **one place a single img2img pass per static prop is fine** (no consistency constraint). Their additive touchpoints (statue torch, neon edge, antenna beacon, gold/diamond sheen) ride the §8.5 FX layer.
+- **All logic ports verbatim to Core**: `CityGenerator` (= `spawnCity`), `BuildingFsm`, single-damage-entry `hitBuilding`/`applyDot`, `rollRareSpawn`, `updateFlyers`, and the **bit-exact mulberry32 + `hash` seed** (the `WORLD_SEED=0x9E3779B1` city is byte-identical to the PWA — free, since the GZS1 codec already forces correct `uint`/`>>>0` math). Sorting = native **Transparency Sort Axis** (Custom, the iso diagonal) + per-entity `sortingOrder` from the ported `depthKey` for the dynamic tie-break. `pickBuildingAtScreen` → `Physics2D.OverlapPoint` against per-building silhouette `PolygonCollider2D` (preserves "tap the tower's crown").
+
+### 8.7 The realistic tool stack
+
+| Job | Tool |
+|---|---|
+| Rig + animation | **Unity 2D Animation** (PSD Importer, Skinning Editor, 2D IK) — free, in-engine |
+| Reference bake | **Puppeteer** over the existing JS bakers (one-time; harness kept forever) |
+| Trace + part-split | **Affinity Designer / Illustrator / Inkscape** (hand-trace from PNG + code coords) |
+| Auto-vectorize (fiddly parts only) | Vectorizer.AI / Recraft |
+| FX additive material | URP **Sprite-Unlit / Shader Graph** additive; optional **NovaShader** (CyberAgent, free OSS) to skip hand-writing the particle material |
+| Particles | **ParticleSystem (Shuriken)** — NOT VFX Graph (mobile fill-rate) |
+| Skin SOs + import + shader + particle plumbing | **Claude Code** writes 100% of it (node/Puppeteer harness, `FormAssetRebuilder`, AssetPostprocessor, materials-via-code, prefab setup) |
+| AI image-gen | **Store icon + key art + a couple static props only.** NOT the kaiju. |
+
+**Honest verdict on AI image tools:** pixel-art AI (Retro Diffusion, Scenario "pixel mode") is the *wrong category* — the art is smooth-vector, not pixels. img2img for the bodies fails on cross-form/cross-facing consistency (~85% ceiling, mid-2026) — and worse, you'd be **destroying determinism you already have**: the 5 facings are 5 exact renders of the same vector math, pixel-aligned by construction; any generative pass can only subtract. **The bodies are rigged, not generated.** The real AI leverage is (1) Unity's ML auto-rig for 4 skeletons, (2) Claude writing all the art-adjacent plumbing, (3) gen reserved for the store icon and a few static props.
+
+### 8.8 Honest effort estimate
+
+| Track | Days | Owner |
+|---|---|---|
+| Bake harness + retire runtime generator | ~0.5 | Claude |
+| `config.js` → 20 skin SOs (palette + knob→bone-scale transcription) | ~0.5 | Claude |
+| **4 master rigs** (trace + split + bone + weight + 3 clips × 5 facings) | **~14–18** | **Mike (hand-craft)** |
+| 16 data-skins (palette + proportion swaps on existing rigs) | ~8–11 | Claude-scaffolded, Mike reviews |
+| Buildings (~12 shells + window/damage overlays + city gen wiring) | ~4–6 | mixed |
+| 8 static specials (AI-assisted) | ~2 | Claude + light cleanup |
+| FX additive layer (5 effects, the Phase-0 spike + production) | ~4–6 | Claude builds, Mike judges feel |
+| **Total art track** | **~33–45 focused days** | |
+
+The serial human bottleneck is **the ~15 days of genuine hand-rig craft** (the irreducible core, and the Unity skill Mike is here to learn) — everything else parallelizes with Claude. **The first rig is the learning tax: budget 1.5–2 weeks for rig #1 (the entire PSD-Importer + weight-paint + Animator + pivot-vs-depthKey curve), then rigs 2–4 hit a 3–5-day pace.** This number is **~2× the plan's earlier §4 Phase-1+2 day-counts** — those predate the native-rebuild confirmation and assumed an atlas-bake ("20 forms" = re-run a generator). The native-art path is meaningfully more hand-work; **plan against this number, not the older phase counts.**
+
+---
+
+> ### ⚠️ What is genuinely risky + the fallback
+>
+> **The single make-or-break risk is the additive-glow FX fidelity on low-end Android — and it is the body skins' problem too, not just the FX lane's.** For the glow-heavy tiers (supernova, void, gxk) the *skin identity* IS the glow: `rimGlow` re-strokes the whole torso outline, fissures define the chest, the aura defines the gestalt. A body-minus-glow looks "slightly dead" on gz2014 but is **missing the feature that distinguishes the tier** on supernova. So "the 16 skins are fast/cheap data" is true *only* for the low-glow forms.
+>
+> **Two spec corrections the adversarial pass surfaced (get these right or Phase 0 fakes a NO-GO):**
+> 1. **Use a screen-equivalent blend, NOT plain additive.** Canvas2D `screen` = `1−(1−s)(1−d)` (self-limiting, rolls off); plain Unity additive `One One` = `a+b` (blows saturated/pale regions to white → reads neon). The faithful match is a **soft-additive / screen Shader Graph** (`Blend OneMinusDstColor One`) — *same per-pixel cost, correct look.* Shipping plain `One One` will read blown-out vs the web and can be mis-judged as an idiom failure when it's a one-line blend-mode typo.
+> 2. **Beams = pooled stretched additive quads with shader-faked jitter, NOT per-frame LineRenderer.** `strokeJagged` re-randomizes every vertex every frame and beams autofire ~9/s; driving a LineRenderer with fresh `SetPositions` arrays each frame is a GC-churn footgun that stutters on exactly the satisfying hold-to-blast. Fake the jitter in the shader → zero per-frame allocation.
+>
+> **The fallback (if the corrected spec still under-reads):** screen-blend Shader Graph on pre-baked soft-radial textures + pooled quad beams, all on a dedicated FX sort layer drawn last, **Graphics-Jobs-off / bloom-off**; re-introduce true bloom *halo spill* as a **desktop/high-end-only toggle** (where the 6.3 Android bug is irrelevant) and accept faithful-in-spirit-minus-halo on low-end, which Mike has pre-authorized. **None of these flips kills S3** — each is a contained FX-idiom adjustment, and the PWA stays live so a NO-GO costs only the Phase-0 spike.
+>
+> **Second risk: the hydra's 3-neck IK against free Unity 2D Animation** — the pre-registered Spine-escalation trigger (hydra only). **Third: the first-Unity-project learning tax** the "3–5 days/rig" floor hides — rig #1 is 1.5–2 weeks. Build the screen-blend Shader Graph **before** the first rig, so rig #1 is authored against a correct glow and you never re-judge "dead" PNGs.
+
+## 9. Phase 0/1 de-risk spec & kickoff
+
+This is the **first buildable slice** of the S3 Hybrid port — a single checkable GO/NO-GO gate that Mike (or a future build session) can execute directly. It proves the *three things S3 leaves under-specified and highest-risk* before any parallel build is committed: **(1)** the toolchain (Unity 6.3 LTS + URP 2D + MCP + CI) round-trips end-to-end; **(2)** the **additive-glow FX layer** — ~40% of the look, the one piece with no atlas equivalent — reaches faithful-in-spirit fidelity *within a low-end Android overdraw budget*; **(3)** the `entities.js` **sim/draw tangle** (225 `ctx.` calls woven through 1,672 LOC) actually cuts along a clean `KaijuSim`(Core, no `UnityEngine`) / `KaijuView`(Presentation adapter) seam. Because the PWA (gz-v32) stays live throughout, a **NO-GO costs only this ~2-week spike** and never threatens the shipping game.
+
+> **One decision Mike must make before D1:** the **screenshot-diff pass threshold** (plan open-question #3). Recommendation locked below in §9.5 Gate 2 — *"Mike judges it faithful-in-spirit side-by-side"* as the primary authority, with an **SSIM ≥ ~0.85 on the silhouette region** as an automatable sanity floor (NOT pixel-identity — additive bloom will never pixel-match Canvas2D `screen` and must not be required to). His sign-off on that number is what gives the FX gate a clear pass/fail.
+
+### 9.1 Project skeleton (the seam IS the architecture)
+
+Create these **five assemblies on day 1**, dependency direction one-way `Core ← Data ← Presentation ← App`, with `Editor → (Data, Core)` and `Tests.EditMode → Core only`:
+
+```
+Assets/Scripts/
+  Core/          Godzilla.Core.asmdef          ── NO "UnityEngine" reference (enforced)
+    Math/        Mulberry32, Hash32, Crc32, Clamp, Lerp, Fmt   (bit-exact ports)
+    Iso/         IsoMath (worldToScreen, DepthKey), TraumaModel
+    Entities/    KaijuSim, Locomotion, AttackBeam              (Phase-1 subset only)
+    World/        BuildingFsm, DamageRouter                     (Phase-1 subset only)
+  Data/          Godzilla.Data.asmdef          ── UnityEngine, data only
+    FormDefinition.cs (ScriptableObject), BalanceConfig.cs (POCO)
+  Presentation/  Godzilla.Presentation.asmdef  ── UnityEngine + URP + Cinemachine
+    KaijuView.cs, BuildingView.cs, FxDirector.cs, IsoCameraRig.cs, InputReader.cs
+  Editor/        Godzilla.Editor.asmdef
+    FormAssetRebuilder.cs, ScreenshotDiffWindow.cs, BuildScript.cs
+  Tests/EditMode/ Godzilla.Tests.EditMode.asmdef ── refs Core only (headless, CI in seconds)
+```
+
+**The Core asmdef MUST NOT reference `UnityEngine`.** This is the single load-bearing convention of the entire migration — it is what makes `KaijuSim`/`TraumaModel`/`IsoMath` NUnit-testable headless and the port mechanical rather than a rewrite. Verify it by *deleting* the `UnityEngine` reference in the inspector and confirming Core still compiles. If it can't, the seam is wrong.
+
+**Numeric types (carry into `CLAUDE.md`):** `double` (or `long` for integer money/HP) everywhere in Core — **never `float`/`int`**. `ROW_HP` reaches 1e9 and `WORLD2_COST` 12e9; `float` corrupts payouts above 16.7M. The `mulberry32`/`crc32`/GZS1 codec are **bit-exact** ports (already test-gated on the JS side).
+
+**Repo hygiene (day 1):**
+- `.gitignore`: `Library/ Temp/ Logs/ Build/ obj/ *.csproj *.sln` (Unity regenerates these). **Commit `Packages/manifest.json` and `ProjectSettings/`** so MCP `add_package` calls and URP-asset edits show as reviewable diffs.
+- **Git LFS from commit 1** — `git lfs track "*.png" "*.psb" "*.tga" "*.spriteatlas" "*.wav" "*.mp3"`, commit `.gitattributes` first. Retrofitting LFS after the binaries land is painful.
+- **`CLAUDE.md` at the Unity project root** pinning: the no-`UnityEngine`-in-Core rule, the `double`/`long` rule, the two ported-verbatim formulas (below), "MCP = verification not authoring," and the reference-spec pointers (live PWA + `js/config.js`).
+
+**The two ported-verbatim formulas (do NOT "improve" — both are bug fixes, repo-verified):**
+```csharp
+// Godzilla.Core/Iso/IsoMath.cs — pure, no UnityEngine    [iso.js:265]
+public static double DepthKey(double wx, double wy, double wz, double depthBias)
+    => (wx + wy) * 1024 + wz * 4 + depthBias;   // kaiju depthBias +1, ground-FX -1
+
+// Godzilla.Core/Iso/TraumaModel.cs — pure              [iso.js:36-37,138,156]
+trauma = Math.Min(trauma + mag * (1.0/85.0), 1.0);  // CLAMP-on-add — kills the autofire quake bug
+trauma *= Math.Pow(0.02, dt);                       // exponential decay, half-life ~0.18s
+float offsetPx = 12f * (float)trauma;               // peak 12px (tablet-safe clamp)
+```
+
+### 9.2 MCP + Claude dev-loop wiring
+
+Install **IvanMurzak/Unity-MCP** (Apache-2.0; ~52 tools incl. Screenshot / Console / Tests / `editor-application-set-state` play-mode; pin-check the version on install — it ships fast) as primary, **CoplayDev/unity-mcp** alongside as a zero-conflict fallback. This is the Unity analog of the web build's composite-screenshot verify loop.
+
+**The L1/L2/L3 gate Claude runs itself between every task:**
+- **L1 compile** — read the console for compile errors after each edit (fast, catches most regressions).
+- **L2 runtime** — `editor-application-set-state` → enter Play Mode briefly, read console for exceptions.
+- **L3 visual** — screenshot the Game View; for the gate, run the graphics-test screenshot-diff (§9.5).
+
+**Phase-0 DoD smoke test:** from Claude Code, *"list the GameObjects in the open scene"* returns a real answer (bridge live), then *"run the EditMode tests"* returns green (loop closed end-to-end).
+
+**Security:** localhost-only transport, **no `0.0.0.0` binding**, and **`git commit` before every agent session** — MCP has unconfirmed write access, so one `git reset` undoes a bad batch. `Library/` gitignored keeps package/asset diffs reviewable.
+
+### 9.3 The vertical slice (build in this order; each step independently verifiable)
+
+One kaiju + one building on the ortho-iso plane, with the ported sort, one atomic-breath beam, the live additive glow, floating damage text, and trauma-shake.
+
+- **Form choice:** use **`supernova` (a wyrm)** — it exercises the *maximum* FX surface (`aura`, `selfIllum`, `fissures:1.0`, `cosmic` motes, plate-glow, breath-charge). If supernova's FX holds the overdraw budget, every other form does. (If a simpler first-light is wanted, author **`gz2014`** first and add the supernova *skin* via Sprite Library swap — that swap itself validates the "4 rigs + 20 skins" thesis cheaply.)
+
+1. **Scene + camera** — orthographic camera down the iso angle; world on a flat XY plane with the sort axis doing depth (simpler than XZ for Phase 1; `DepthKey` handles ordering). Match the web zoom from `config.js GRID` — **TILE_W 56 / TILE_H 28 (2:1) / WZ_PX 40** → set ortho size to the same on-screen tile ratio. **Cinemachine 3.1** vcam (`PositionComposer` damped follow + `CinemachineConfiner2D` origin clamp) deletes ~60 LOC of hand-rolled camera.
+2. **The ported depthKey sort** (first-class task) — two layers: **coarse** = URP 2D Renderer → Transparency Sort Mode = **Custom Axis** `(1,1,0)`; **fine/tie-break** = drive each dynamic actor's `SpriteRenderer.sortingOrder` from `RoundToInt(DepthKey(...))` to reproduce the `wz*4`/`depthBias` painter's tie-break the axis alone can't. *Caveat (verify in the spike): a Jan-2026 Unity thread reports Transparency-Sort-Axis quirks in 6.3 — the per-entity `sortingOrder` path is the proven fallback if the axis misbehaves.* **Put all additive FX on a single dedicated "FX" sort layer rendered AFTER the entity layer**, NOT interleaved into the depth sort — this prevents glow brightening *through* a building it's behind, and preserves the single-material batching the budget depends on (adversarial seam 4).
+3. **The kaiju rig** — re-author the **wyrm** silhouette as ONE **Unity 2D Animation** rig (free, in-engine, bundled — recommended over Spine for a solo first-Unity-project; decide Spine only if the wyrm/flyer organic motion can't sell to Mike's eye at the gate, and pre-register **the hydra's 3 necks vs Unity 2D IK** as the *actual* Spine-escalation trigger, not the wyrm). Source the rig by running the existing JS baker **once** (`A.buildWyrm` on a scratch canvas, the documented preview pattern) to emit a frame-0 reference PNG; **hand-trace + split** to a layered PSB (torso, head, neck, tail, near/far leg, near/far arm — the exact `buildWyrm` part list) — do NOT auto-vectorize the gradient torso (it over-segments into bands you'll merge; tracing from the 7-curve code coordinates is faster). Bone-skin via auto-geo + auto-weight, then hand-fix the dorsal row + tail. **Three clips** driven by the sim's existing `fsm`: `idle` (the `bob` term), `walk` (the `legSwing` cycle), `attack` (the `atk` mouth-open + arm-reach). **Set pivot to `(0.5, 0.86)`** to honor `ANCHOR_X/Y`. **Phase-0 facing cut: author S, SE, E only** (mirror covers the other side) — proves rig + sort + pivot with 40% less authoring; add N/NE in Phase-2 only if they read poorly.
+4. **The building** — one mid-tier generic prism as a baked static sprite (buildings are low-risk atlas bakes), with a silhouette **`PolygonCollider2D`** (not a box) so tap-targeting hits the tower's crown. `BuildingFsm` + `DamageRouter` (single-damage-entry `hitBuilding`) live in **Core**; `BuildingView` swaps the sprite on the **standing → crumbling → rubble** stage-change events.
+5. **The atomic-breath beam + live additive glow (THE make-or-break)** — re-author natively as **URP additive sprites/particles**, ONE shared material, **bloom OFF**:
+   - **Use a screen-equivalent "soft-additive" blend, NOT plain `One/One`** (adversarial seam 1, the load-bearing correction): Canvas2D `screen` = `1−(1−s)(1−d)` self-limits over bright regions; plain additive `s+d` blows pale sky/buildings to neon white. Author the glow material as a Shader Graph with **`Blend OneMinusDstColor One`** (the faithful screen match — *same per-pixel cost* as plain additive) on **pre-baked soft-radial textures** (cheap texture read vs a per-pixel gradient shader). NovaShader (CyberAgent, free) is a drop-in if hand-authoring the material stalls.
+   - **Glow layer** = a **ParticleSystem (Shuriken, NOT VFX Graph** — mobile fill-rate) for eye/plate shimmer, the `cosmic` motes, and breath-charge; the ~77 `globalAlpha` pulses become emission/alpha-over-lifetime curves. Per-form color comes from `FormDefinition.palette` via `MaterialPropertyBlock` (no per-form material → batching intact).
+   - **The beam** = a **pooled stretched additive quad** muzzle→target with **shader-faked jitter** (UV-scroll / vertex sine), **NOT** a LineRenderer (adversarial seam 2): `strokeJagged` re-randomizes every vertex every frame and `fireBeam` autofires at the 0.11s gate floor, so per-frame `SetPositions` allocation triggers GC stutter on exactly the hold-to-blast moment. The pooled quad is zero-alloc. **Preserve the muzzle-matches-glow invariant** — parent the beam origin AND the breath-charge emitter to ONE `MuzzleSocket` transform on the head bone (never compute the muzzle twice; that's the "beam leaves the back" bug the original code was written to prevent).
+   - **White kill-flash** = a brief URP fullscreen pass (or a screen-space white UI Image), alpha-driven by the ported `FX.flashAmount()` decay — **not** routed through bloom.
+6. **Damage text + trauma-shake** — pooled world-space TMP "+$" label fired from `DamageRouter.Destroy()` (mirror the web's `spawnRewardText` from `destroy()` so DoT/AoE kills show it too). Trauma-shake feeds **`CinemachineBasicMultiChannelPerlin` amplitude** from the ported `offsetPx` (do NOT adopt Cinemachine Impulse — different feel). Hit-stop = `Time.timeScale = 0` ~50ms via an unscaled coroutine, max-wins, no-op under reduced-motion.
+
+**Device checklist for the spike (adversarial seam 3):** **Graphics Jobs OFF** (or verified) on the Android build — a 2021 Vulkan/Graphics-Jobs particle bug was Mali/Adreno-specific and its failure mode (silent missing particles) would *fake* a fidelity NO-GO. **Bloom OFF on the mobile tier** (broken on Android in Unity 6.3 per a confirmed Dec-2025 thread, and the most expensive post pass anyway) — the soft-additive layer already brightens correctly without it; reserve bloom *halo spill* as a desktop/high-end-only toggle.
+
+### 9.4 The entities.js sim/draw split (proven on this slice)
+
+This slice is the *structural* proof of the hardest dissection in the migration. Cut the minimal path:
+- **`KaijuSim` (Core, no UnityEngine):** position, velocity, facing (8-facing model via `FACING_MAP`), `attackPower`, the **re-fire gate decoupled from animation** (gate = `clamp(cooldown·0.42, 0.11, 0.20)`, level-triggered on `intent.attack && atkCooldown<=0`, NOT gated on the attack anim finishing — this is what makes autofire responsive and smashes interruptible), targeting (`acquireTargets` priority: explicit → faced → nearest), and one `AttackBeam` kind. Pumped from `KaijuView.FixedUpdate()`.
+- **`KaijuView` (Presentation):** reads the `KaijuSim` snapshot, lerps `prevPos→pos` by the FixedUpdate alpha (the two-lane bridge for smooth non-Rigidbody motion), drives the Animator (`fsm`→state, `walkPhase`/`attackFrame`→float params), maps `facing`→sprite flip, and **drains a typed `FxEvent` queue** the sim emits (`BeamFired{muzzleWorld, targetWorld, palette}`, `Shake(mag)`, `DamageDealt`). **No sim math in the MonoBehaviour; the sim never references `ctx`/Canvas/Unity.** The fire event carries the **already-resolved** muzzle world point (computed *after* `facingTo(target)`), never a "compute it later" reference — otherwise a facing change between emit and render desyncs the beam origin.
+
+The `fireBeam` tangle splits cleanly: **CORE** = `dealDamage(b, floor(power))` + compute muzzle/target world points + emit `Shake`; **PRESENT** = receive `BeamFired` → spawn the additive quad + endpoint sparks. **Acceptance test** (the §9.5 Gate 4 hardest test): one beam tap deals `floor(power)` to the faced building and queues exactly one `BeamFired` + one `Shake` + one `DamageDealt`, **with zero `UnityEngine` types touched**, headless under NUnit.
+
+### 9.5 Acceptance criteria — the GO/NO-GO gate
+
+Phase 0/1 **PASSES only if every gate below is met.** Each is a hard, observable test, not a vibe.
+
+**Gate 1 — Toolchain proven (binary):**
+- [ ] `git clone` → CI runs an EditMode test green AND produces an Android AAB **unattended**.
+- [ ] Claude reads the Editor console + enters Play Mode + screenshots + runs tests over MCP (L1/L2/L3 loop closed).
+- [ ] `FormAssetRebuilder` emits the supernova `FormDefinition.asset` from `forms.json` in both `[MenuItem]` and batchmode.
+- [ ] **Unity Personal license activates headlessly with a real token on Mike's Mac runner** — done by hand once before any CI YAML (the #1 silent CI failure; Mike's own live-spike lesson: a real token beats mock confidence).
+
+**Gate 2 — FX fidelity (the make-or-break; Mike's subjective sign-off + a hard floor):**
+- [ ] All **5 named additive effects render** (aura, plate/eye glow, beam, cosmic motes, breath-charge + kill-flash) and read as *additive/incandescent*, not flat alpha — and do NOT read **neon/blown-out** over the sky/pale buildings (the soft-additive blend is correct, not plain `One/One`).
+- [ ] **Screenshot-diff vs the live PWA** at a matched camera/pose/frame (same form, facing E, attack mid-frame) — captured via `com.unity.testframework.graphics` `ImageAssert.AreEqual` with `ImageComparisonSettings.AverageCorrectnessThreshold`. **Primary gate = Mike judges it faithful-in-spirit side-by-side** (the one judgment that cannot be delegated); **floor = SSIM ≥ ~0.85 on the silhouette region** + dominant body/plate/breath colors within a small ΔE of the `config.js` palette. **NOT pixel-identity.**
+- [ ] The muzzle-flash stays **coupled to the mouth bone** through the attack animation (muzzle-matches-glow invariant).
+
+**Gate 3 — On-device performance (the overdraw budget — the real failure mode):**
+- [ ] On a **real low-end Android device** (Mike supplies a ~2020-era budget phone, NOT the Editor, NOT a flagship): the full supernova FX layer + one body + one building holds **≥ 55 fps sustained** (30 fps hard floor only if visibly smooth), no thermal throttle in 5 min.
+- [ ] **Overdraw profiled** (Android GPU overdraw view / Unity Frame Debugger) — the additive FX layer stays **out of the red (≤ ~3× average)**. The **web's particle cap quality tier is ported and honored** (320 desktop / 90 reduced-motion); aura sprite size-capped to the silhouette bbox (fill-rate scales with area, not just count).
+
+**Gate 4 — Sim/draw separation proven (de-risks the entities.js tangle):**
+- [ ] `KaijuSim`/`TraumaModel`/`IsoMath` **compile with NO `UnityEngine` reference** and an EditMode test ticks them headless and passes.
+- [ ] The **re-fire gate is decoupled from the attack animation** (NUnit-asserted: gate is `clamp(...)`, not "wait for the anim"); one beam tap queues exactly `{BeamFired, Shake, DamageDealt}` and deals `floor(power)`.
+- [ ] The **trauma clamp-on-add + exp-decay** matches the web scalar within float tolerance and drives Cinemachine noise without the compounding quake.
+
+**Gate 5 — The full beat fires end-to-end:**
+- [ ] tap building → `attackPower` damage → FSM crumble → destroy → "+$" text → money up → hit-stop + trauma-shake, AND the kaiju **correctly occludes / is occluded by** the building as it walks around it (the depthKey sort works — a center-pivot sort fails this).
+
+**GO (start Phase 2) iff ALL five gates pass.** **NO-GO triggers are NAMED and CONTAINED — none kills S3** (the PWA stays live):
+- **FX fidelity fails (Gate 2)** → first re-check it isn't the *wrong blend mode / wrong beam tool / Graphics-Jobs-on* (the three spec typos that *fake* a NO-GO); if genuinely flat after the corrected spec, the only residual gap is true bloom *halo spill* → re-introduce as a desktop-only toggle, accept faithful-in-spirit-minus-halo on low-end (Mike pre-authorized).
+- **Overdraw blows the budget (Gate 3)** → reduced-motion tier becomes the low-end default; cap particle size/count harder.
+- **Sim/draw cut leaks engine types (Gate 4)** → re-plan the entities.js dissection before Phase 1 proper (the "do this first" warning).
+- **Transparency-Sort-Axis 6.3 quirk** → fall back to per-entity `sortingOrder` (already the fine-layer plan).
+- **Bone-only rig can't sell organic motion** → escalate wyrm/flyer to Spine, keep Unity 2D for mecha.
+- **Headless license activation can't work on Personal tier** → cloud Mac-minutes CI fallback.
+
+### 9.6 Day-by-day (first ~2 weeks) + ownership
+
+**Phase 0 — Toolchain (days 1–4):**
+- **D1** — *Mike:* install Unity 6.3 LTS + URP 2D, create project, register the self-hosted macOS CI runner, **headless-activate the license with a real token by hand.** *Claude:* asmdef skeleton, `CLAUDE.md`, `.gitignore`/LFS, one trivial passing EditMode test.
+- **D2** — *Mike:* install IvanMurzak + CoplayDev MCP, smoke-test "list GameObjects" + "run the tests." *Claude:* `BuildScript.cs` (batchmode iOS/Android), GameCI YAML, prove `git clone → CI green → AAB` unattended.
+- **D3** — *Claude:* **build the soft-additive (`OneMinusDstColor One`) screen-blend Shader Graph FIRST** (before any body) on pre-baked soft-radial textures + a ParticleSystem glow + the pooled additive-quad beam + white kill-flash, parameterized off the supernova palette. *Mike:* on-device feel judgment on the low-end Android.
+- **D4 — the FX gate:** does the additive layer read convincingly on the device, bloom-OFF, Graphics-Jobs-OFF? **If no → stop and revisit the FX idiom before touching bodies.** (This is the single highest-risk check; doing the glow first means the rig in D7–8 is authored against a *correct* glow, not re-judged as "dead" PNGs.)
+
+**Phase 1 — Vertical slice (days 5–12):**
+- **D5–D6** — *Claude:* port `IsoMath.DepthKey` + `TraumaModel` (verbatim, tested) to Core; ortho camera + Cinemachine vcam + confiner; Transparency-Sort-Axis config + per-entity `sortingOrder` fallback; the dedicated FX sort layer. *Mike:* camera-angle judgment vs the web zoom.
+- **D7–D8** — *Mike:* hand-trace the wyrm silhouette from the one-shot JS reference PNG into a PSB (3 facings: S/SE/E), bone-skin the rig (the taste/composition work). *Claude:* `KaijuSim` (locomotion + re-fire gate + one AttackBeam + targeting) + `KaijuView` adapter + headless sim test. **Decide Unity-2D-vs-Spine here on this one rig.**
+- **D9** — *Claude:* `BuildingFsm`/`DamageRouter` (single-damage-entry) in Core, `BuildingView` stage-swap, silhouette `PolygonCollider2D` + `OverlapPoint` tap-pick, "+$" text from `Destroy()`.
+- **D10** — *Claude:* wire the beam to the `MuzzleSocket` (muzzle-matches-glow), trauma-shake → Cinemachine Perlin amplitude, hit-stop pulse. *Mike:* feel pass.
+- **D11** — *Claude:* `ScreenshotDiffWindow` + `ImageAssert` harness; capture the matched PWA reference; run the diff + SSIM floor. *Mike:* supply the low-end Android, run the on-device overdraw profile.
+- **D12 — THE GATE:** side-by-side fidelity verdict (Mike) + the §9.5 five-gate checklist (automatable parts green via MCP). **GO → Phase 2; else re-scope per the named NO-GO triggers.**
+
+**Ownership split (holds for the whole port):** *Claude owns* all Core C# + tests, the FX material/particles, the node-canvas/Puppeteer ref-baker, editor scripts, CI/build glue, the diff harness, and the L1/L2/L3 verify loop. *Mike owns* the Unity install + runner + one-time license activation, the rig tracing/skinning (composition), the on-device test, and **every subjective feel/fidelity verdict — above all the FX-glow eyeball call and the Spine-vs-Unity-2D decision.** The "is this too complex?" iteration-discipline gate applies: if a feel call iterates 3–4× without converging, escalate or cut — don't re-iterate.
+
+**Keep, don't retire, the reference baker:** sever the JS *runtime* dependency, but keep the Puppeteer/node-canvas `tools/bake-refs` harness **permanently** (3 JS files + ~40 lines) — it's the only executable spec for the 20 palettes + ~30 shape knobs, needed any time a future form/skin change must re-emit a reference PNG. Retiring the *reference tool* (vs the runtime generator) would turn a faithful port into a faithful *snapshot that can never be re-checked*.
+
 ---
 
 ## Appendix A — Current-app inventory (migration source of truth)
