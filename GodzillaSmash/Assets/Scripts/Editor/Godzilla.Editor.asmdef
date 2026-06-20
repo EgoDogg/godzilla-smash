@@ -1,1 +1,1 @@
-{ "name": "Godzilla.Editor", "references": ["Godzilla.Core", "Godzilla.Data"], "includePlatforms": ["Editor"], "autoReferenced": false }
+{ "name": "Godzilla.Editor", "references": ["Godzilla.Core", "Godzilla.Data", "Godzilla.Presentation", "Unity.RenderPipelines.Universal.Runtime", "Unity.RenderPipelines.Universal.2D.Runtime"], "includePlatforms": ["Editor"], "autoReferenced": false }

@@ -1,2 +1,6 @@
 .claude/
 .DS_Store
+
+# P0-FXSPIKE gate(c) reference-bake tool — node deps + regenerated web-FX refs (bake.js/package*.json/check.py are tracked)
+tools/fx-ref-bake/node_modules/
+tools/fx-ref-bake/ref-glow-*.png

@@ -1,0 +1,9 @@
+{
+  "name": "fx-ref-bake",
+  "private": true,
+  "type": "commonjs",
+  "description": "Puppeteer (headless Blink/Skia) bake of the REAL web supernova drawGlow FX as the ground-truth reference for the P0-FXSPIKE gate (c) SSIM cross-check. Blink-Skia (NOT node-canvas/Cairo) so the quadraticCurveTo/radialGradient AA matches the live PWA.",
+  "dependencies": {
+    "puppeteer": "^23"
+  }
+}

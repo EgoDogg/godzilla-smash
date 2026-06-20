@@ -31,8 +31,13 @@ Shader "Godzilla/FXSoftAdditive"
 
             TEXTURE2D(_MainTex);
             SAMPLER(sampler_MainTex);
+            // SRP Batcher: ALL per-material uniforms must live in UnityPerMaterial (texture/sampler stay outside).
+            // This is what makes the vertex-color-tint design (correction #14) actually batch — without it the shader
+            // is SRP-Batcher INCOMPATIBLE and the whole "no MPB so batching stays on" rationale is moot.
+            CBUFFER_START(UnityPerMaterial)
             float4 _Color;
             float4 _MainTex_ST;
+            CBUFFER_END
 
             Varyings vert (Attributes IN)
             {
