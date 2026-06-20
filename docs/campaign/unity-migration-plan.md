@@ -289,7 +289,7 @@ Two layered paths — **do path 1 by default, add path 2 when you want live-Edit
 
 This section is the engineering backbone of the migration. It defines the Unity project skeleton, the assembly-definition (`.asmdef`) layering that keeps game logic out of `MonoBehaviour`s, and a subsystem-by-subsystem map from each of the 15 web modules to its concrete Unity target — package, type/API, whether it **carries as design/data** or is **rebuilt**, and the risk that lives in that cell. It closes with the procedural-art port treated as its own engineering track, because it is the single largest risk in the plan.
 
-**Target platform baseline (locked from research):** Unity **6.3 LTS** (6000.3, released Dec 2025), **URP 2D Renderer**, **Input System 1.14+**, **Cinemachine 3.1.x**, IL2CPP + ARM64 for both stores, **Unity Personal** (free, no splash, under the $200k cap). Unity 6.3 specifically is the floor because it ships the **"Sort 3D As 2D" Sorting-Group option + Transparency Sort Axis** — which is exactly the mechanism that makes the locked 2.5D-sprite/iso depth model native instead of hand-rolled (this was the dimension decision's flagged-unconfirmed risk; **confirmed resolved** as of Unity 6.3, Dec 2025 — see sources).
+**Target platform baseline (locked from research):** Unity **6000.5.0f1** (the Tech-Stream release Mike has installed — NEWER than the 6.3 LTS and a superset of its features below; **verify/pin a 6.x LTS minor before final store submission**, §5/Phase 6), **URP 2D Renderer** (the Hub **Universal 2D** template), **Input System 1.14+**, **Cinemachine 3.1.x**, IL2CPP + ARM64 for both stores, **Unity Personal** (free, no splash, under the $200k cap). Unity 6.3 specifically is the floor because it ships the **"Sort 3D As 2D" Sorting-Group option + Transparency Sort Axis** — which is exactly the mechanism that makes the locked 2.5D-sprite/iso depth model native instead of hand-rolled (this was the dimension decision's flagged-unconfirmed risk; **confirmed resolved** as of Unity 6.3, Dec 2025 — see sources).
 
 ### 3.1 Guiding architectural principle — *logic out of MonoBehaviours*
 
@@ -302,7 +302,7 @@ This mirrors Mike's existing Swift/Flutter MVVM discipline, keeps the verify-loo
 ### 3.2 Recommended Unity project layout
 
 ```
-GodzillaSmash/                         (Unity 6.3 LTS project root, git)
+GodzillaSmash/                         (Unity 6000.5.0f1 project root — Hub Universal 2D template, git)
 ├─ Assets/
 │  ├─ Scripts/
 │  │  ├─ Core/                Godzilla.Core.asmdef        — NO UnityEngine ref
@@ -742,7 +742,7 @@ So the production matrix is: **4 rigs × 5 authored facings × (idle, walk, atta
 
 ### 8.1 Rig tool — **Unity built-in 2D Animation, NOT Spine** (decided)
 
-For a solo first-Unity-project dev with a Swift/Flutter MVVM background and **4 rigs** (not dozens of characters), Unity's built-in **2D Animation package** (`com.unity.2d.animation` 10.x on Unity 6.3, free) beats Spine:
+For a solo first-Unity-project dev with a Swift/Flutter MVVM background and **4 rigs** (not dozens of characters), Unity's built-in **2D Animation package** (`com.unity.2d.animation` on Unity 6000.5, free) beats Spine:
 
 - **Free, in-engine, no second tool / license / runtime coupling.** Spine is a $369 Pro license + a separate authoring app + a runtime whose version you babysit in lockstep with both Spine and Unity (the `spine-unity 4.3` / `6000.x` / separate-URP-shaders-UPM coupling is three moving parts). The whole S3 thesis is "a Unity codebase that *is* Unity" — Spine reintroduces the cross-toolchain tax S3 deletes.
 - **Skin-swap IS the native sweet spot.** "4 rigs + 20 skins" is *exactly* the **Sprite Library Asset + Sprite Resolver** use case — one rig prefab, a Sprite Library per skin, runtime swap by assigning the library asset. This maps 1:1 onto the JS `pal`/`shape` swap. Same mechanism does **facing** (Category = facing).
@@ -875,7 +875,7 @@ The serial human bottleneck is **the ~15 days of genuine hand-rig craft** (the i
 
 ## 9. Phase 0/1 de-risk spec & kickoff
 
-This is the **first buildable slice** of the S3 Hybrid port — a single checkable GO/NO-GO gate that Mike (or a future build session) can execute directly. It proves the *three things S3 leaves under-specified and highest-risk* before any parallel build is committed: **(1)** the toolchain (Unity 6.3 LTS + URP 2D + MCP + CI) round-trips end-to-end; **(2)** the **additive-glow FX layer** — ~40% of the look, the one piece with no atlas equivalent — reaches faithful-in-spirit fidelity *within a low-end Android overdraw budget*; **(3)** the `entities.js` **sim/draw tangle** (288 `ctx.` calls woven through 1,672 LOC) actually cuts along a clean `KaijuSim`(Core, no `UnityEngine`) / `KaijuView`(Presentation adapter) seam. Because the PWA (gz-v32) stays live throughout, a **NO-GO costs only this ~2-week spike** and never threatens the shipping game.
+This is the **first buildable slice** of the S3 Hybrid port — a single checkable GO/NO-GO gate that Mike (or a future build session) can execute directly. It proves the *three things S3 leaves under-specified and highest-risk* before any parallel build is committed: **(1)** the toolchain (Unity 6000.5.0f1 + URP 2D + MCP + CI) round-trips end-to-end; **(2)** the **additive-glow FX layer** — ~40% of the look, the one piece with no atlas equivalent — reaches faithful-in-spirit fidelity *within a low-end Android overdraw budget*; **(3)** the `entities.js` **sim/draw tangle** (288 `ctx.` calls woven through 1,672 LOC) actually cuts along a clean `KaijuSim`(Core, no `UnityEngine`) / `KaijuView`(Presentation adapter) seam. Because the PWA (gz-v32) stays live throughout, a **NO-GO costs only this ~2-week spike** and never threatens the shipping game.
 
 > **One decision Mike must make before D1:** the **screenshot-diff pass threshold** (plan open-question #3). Recommendation locked below in §9.5 Gate 2 — *"Mike judges it faithful-in-spirit side-by-side"* as the primary authority, with an **SSIM ≥ ~0.85 on the silhouette region** as an automatable sanity floor (NOT pixel-identity — additive bloom will never pixel-match Canvas2D `screen` and must not be required to). His sign-off on that number is what gives the FX gate a clear pass/fail.
 
@@ -998,7 +998,7 @@ Phase 0/1 **PASSES only if every gate below is met.** Each is a hard, observable
 ### 9.6 Day-by-day (first ~2 weeks) + ownership
 
 **Phase 0 — Toolchain (days 1–4):**
-- **D1** — *Mike:* install Unity 6.3 LTS + URP 2D, create project, register the self-hosted macOS CI runner, **headless-activate the license with a real token by hand.** *Claude:* asmdef skeleton, `CLAUDE.md`, `.gitignore`/LFS, one trivial passing EditMode test.
+- **D1** — *Mike:* create the **Universal 2D** project (6000.5.0f1) via the Hub at `GodzillaSmash/`, register the self-hosted macOS CI runner, **headless-activate the license with a real token by hand.** *Claude:* asmdef skeleton, `CLAUDE.md`, `.gitignore`/LFS, one trivial passing EditMode test.
 - **D2** — *Mike:* install IvanMurzak + CoplayDev MCP, smoke-test "list GameObjects" + "run the tests." *Claude:* `BuildScript.cs` (batchmode iOS/Android), GameCI YAML, prove `git clone → CI green → AAB` unattended.
 - **D3** — *Claude:* **build the soft-additive (`OneMinusDstColor One`) screen-blend Shader Graph FIRST** (before any body) on pre-baked soft-radial textures + a ParticleSystem glow + the pooled additive-quad beam + white kill-flash, parameterized off the supernova palette. *Mike:* on-device feel judgment on the low-end Android.
 - **D4 — the FX gate:** does the additive layer read convincingly on the device, bloom-OFF, Graphics-Jobs-OFF? **If no → stop and revisit the FX idiom before touching bodies.** (This is the single highest-risk check; doing the glow first means the rig in D7–8 is authored against a *correct* glow, not re-judged as "dead" PNGs.)

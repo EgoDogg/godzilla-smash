@@ -1,0 +1,14 @@
+{
+  "scopedRegistries": [
+    {
+      "name": "OpenUPM",
+      "url": "https://package.openupm.com",
+      "scopes": [
+        "com.ivanmurzak",
+        "com.cysharp",
+        "extensions.unity",
+        "com.openupm"
+      ]
+    }
+  ]
+}
