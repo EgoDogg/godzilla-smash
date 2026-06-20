@@ -18,6 +18,7 @@ Ledger: `docs/campaign/unity-campaign-progress.json` (42 units · all default-FA
 8. Echo a 3-line summary: phase/unit · last tag · next action.
 
 ## MIKE GATE QUEUE (async · the run NEVER idles on a gate while un-gated work exists)
+> 📋 **Step-by-step gate-closure runbooks (current as of June 2026): `docs/campaign/gate-closure/`** — do `G0a` (repo rename) first, then `G0`→`G1`→`G2`→`G3` (the unblockers); G4–G7 are outlines. The critical path = G2+G3 (flip `P0-FXGATE`).
 | # | Gate | Human does | Unblocks | Run does meanwhile | Status |
 |---|------|-----------|----------|--------------------|--------|
 | G0 | Unity project + MCP bridge | (created ✓) | The loop | **🟢 CLEARED:** Rosetta + Personal license + **`GodzillaSmash/` Universal-2D project (6000.5.0f1) created + skeleton integrated + compiles 0-errors (Core no-UnityEngine), verified by the live Editor.** URP 2D + 2D Animation + Input + Test present. Remaining: Cinemachine (P1, loop) + the Unity-MCP bridge (Editor open, for visual gates). | 🟢 cleared |
