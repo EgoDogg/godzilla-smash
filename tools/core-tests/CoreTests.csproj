@@ -1,0 +1,25 @@
+<!-- Editor-independent bit-exact gate for Godzilla.Core.
+     Compiles the SAME Core .cs that Unity compiles (single source of truth) under plain .NET 8,
+     which by construction proves the no-UnityEngine seam. Network-free console runner (exit code 1 on
+     any divergence) so it doubles as the fast CI Core-leg (no Unity license needed).
+     Run with the Unity-bundled dotnet: run -c Release on this csproj. -->
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>disable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <LangVersion>latest</LangVersion>
+    <AssemblyName>CoreTests</AssemblyName>
+    <RootNamespace>Godzilla.CoreTests</RootNamespace>
+    <!-- include sources explicitly so stale obj/bin generated .cs are never globbed -->
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="Program.cs" />
+    <!-- the real Core sources, verbatim — if any references UnityEngine this build FAILS, which is the seam test -->
+    <Compile Include="../../GodzillaSmash/Assets/Scripts/Core/**/*.cs" />
+    <!-- the REAL node-generated ground-truth vectors, copied next to the dll for the runner to round-trip -->
+    <None Include="vectors.json"><CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory></None>
+  </ItemGroup>
+</Project>

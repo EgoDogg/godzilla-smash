@@ -116,14 +116,14 @@
    "title": "Toolchain, MCP, project skeleton + the FX de-risk spike (section 9.1-9.2, 9.6 D1-D4)",
    "units": {
     "P0-SKELETON": {
-     "passes": false,
-     "evidence": null,
-     "tag": null,
+     "passes": true,
+     "evidence": "SHIPPED uz-P0-SKELETON (2026-06-20). Ported 7 Godzilla.Core/Math primitives bit-exact from the IMMUTABLE js/utils.js: Clamp, Lerp, Fmt, Hash32, Mulberry32, Utf8, Crc32, Base64Url \u2014 pure C#, NO UnityEngine (seam proven BY CONSTRUCTION: they compile under plain .NET 8). Ground truth = the REAL utils.js executed in node -> tools/core-tests/vectors.json (live-spike, not mock). TWO independent gates GREEN: (1) standalone bundled-.NET-8 harness (tools/core-tests, Editor-independent, also the license-free CI Core-leg) round-trips 144/144 vectors, 0 fail; (2) canonical Unity batchmode -runTests EditMode = 10/10 passed, 0 fail, clean compile, metas generated. Fmt uses the adversarially-blessed hand-assembled-tenths form (avoids the double.ToString shortest-roundtrip divergence) incl. band-crossing 1000B/10B/100B. Ultracode 3-lens adversarial verify (encoding/integer/numeric) = 0 HIGH, 0 MED, 2 LOW non-divergences (Hash32 diff-tested 2.14M inputs = 0 diffs; Lerp/Clamp exact-form choices empirically validated). Re-ground resolved an Editor-open scare: the live Editor was on a DIFFERENT project (ArcadeFootball); GodzillaSmash had no lockfile, so batchmode ran freely.",
+     "tag": "uz-P0-SKELETON",
      "commit": null,
      "depends_on": [
       "G0"
      ],
-     "note": "TARGET Unity 6000.5.0f1 (Hub Universal-2D template). The 6.3 CLI stopgap was retired; the reusable skeleton (6 asmdefs incl. Core no-UnityEngine, CLAUDE.md, gitignore/LFS, SetupPackages.cs, OpenUPM registry) is preserved in docs/campaign/unity-skeleton/ \u2014 compile-verified 0-errors under 6.3, re-verify under 6.5. Mike creates the Hub project (GodzillaSmash/), then Claude integrates skeleton+packages+MCP and completes the remainder (BuildScript + GameCI + Puppeteer ref-baker + Core bit-exact ports + NUnit tests) before flipping."
+     "note": "TARGET Unity 6000.5.0f1 (Hub Universal-2D template). Skeleton (6 asmdefs incl. Core no-UnityEngine, CLAUDE.md, gitignore/LFS, OpenUPM) integrated in commit 548b908. RE-SCOPE (2026-06-20 re-ground gate): the flippable P0-SKELETON core = the Core/Math bit-exact ports + NUnit tests (the seam proof + round-trip discipline, fully autonomous-verifiable now). BuildScript.cs + GameCI YAML + Fastfile MOVED to P0-MCP-CI (their CI-green / AAB-unattended DoD is Mike-runner-gated); the Puppeteer ref-baker MOVED to a P1-WYRM-RIG prerequisite (its consumer is the G4 hand-rig art). DepthKey/TraumaModel stay in their dedicated P1 units; crc32/b64u are consumed by P4-GZS1-CODEC."
     },
     "P0-MCP-CI": {
      "passes": false,
