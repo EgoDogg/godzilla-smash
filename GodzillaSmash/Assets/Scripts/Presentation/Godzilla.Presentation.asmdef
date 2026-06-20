@@ -1,0 +1,1 @@
+{ "name": "Godzilla.Presentation", "references": ["Godzilla.Core", "Godzilla.Data"], "autoReferenced": true }
