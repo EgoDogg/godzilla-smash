@@ -7,8 +7,88 @@
 >
 > **The two delegated calls, adversarially verified and LOCKED:**
 > - **Dimension → 2.5D sprites in a 3D scene** (orthographic iso camera + billboards + a ported `depthKey` sort). Confidence 88%.
-> - **Art → bake the existing JS generators to Unity sprite atlases** (pixel-identical, zero runtime cost); keep the JS generator as an offline authoring tool; the live additive-glow FX layer is the real risk → a dedicated Phase-0 spike. Confidence 88%.
+> - **Art → [REVISED in §0 — see Strategy Revision] ~~bake the existing JS generators to Unity sprite atlases~~ → RE-AUTHOR natively (Spine / Unity 2D Animation), HTML+config.js as reference spec** (pixel-identical, zero runtime cost); keep the JS generator as an offline authoring tool; the live additive-glow FX layer is the real risk → a dedicated Phase-0 spike. Confidence 88%.
 > - **The one load-bearing gate:** a one-form vertical-slice spike (one kaiju + one building + the `'screen'`-blend glow re-authored as URP additive, screenshot-diffed vs the live build, profiled on a low-end Android) decides hard-GO vs re-scope. Because the PWA stays live, a NO-GO costs only the spike, not the product.
+
+---
+
+## 0. STRATEGY REVISION (Fleet 2 · 2026-06-15) — Hybrid: PORT the logic, REBUILD the art natively
+
+> **This supersedes the §7 art decision (atlas-bake) below.** A second 13-agent adversarial fleet (wf_33517289-7db) re-examined the strategy for **long-term Unity development** (Mike's question: port, or rebuild assets/sprites natively with the HTML as reference?). Verdict below; the §1–§5 plan and §6 dimension decision still stand, but the art pipeline flips from *bake-to-atlas* to *re-author-natively*. **Confidence 82% → ~93% once Mike confirms exact-pixel-fidelity to gz-v32 is not a hard requirement** (his own question implies it isn't).
+
+### 1. Recommendation
+
+**Strategy S3 (Hybrid) — port the proven logic, natively re-author the presentation. Confidence: 82%.**
+
+**Direct answer to Mike's question:** It is **neither a pure port nor a pure native rebuild — it is both, split along a seam that already exists in your code.** You should **port** the pure, engine-free, invariant-bearing logic (economy, save, world FSM, the math) as cleaned-and-tested C#, and you should **rebuild the assets/sprites and all presentation natively in Unity, using the HTML version as a reference spec** — *not* atlas-bake them from the JS generator. So your instinct in the question ("rebuild the assets and sprites using the HTML version as reference, starting a native build in Unity") is **correct for the art** and is the right long-term call. The first fleet's "bake the procedural generators to atlases" is the one piece you should drop. But you should *not* extend that rebuild instinct to the gameplay logic — that code is your single biggest reusable asset and it should be ported, not re-derived.
+
+The one-line mental model: **rebuild what's coupled to the engine and will keep evolving (art, render, input, UI, audio, FX); port what's pure, proven, and done (economy, save, FSM, invariants).**
+
+### 2. Why — the decisive factors
+
+1. **It aligns the migration boundary with the codebase's actual fault line** (maintainability axis winner: S3, 9/10). Your web modules already separate pure logic (IIFE + private state + public API, already `double`/`long`-shaped) from Canvas2D-coupled presentation (the §1.6 bake guardrails are immediate-mode *workarounds*, not portable logic). S3 cuts exactly there; S1 drags the whole thing across, S2 throws the whole thing away.
+
+2. **It captures the genuine port value without S1's permanent tax** (time/risk axis winner: S3). The first fleet's atlas plan keeps a ~3,100-LOC Canvas2D **JavaScript-on-Node generator alive forever** as your art tool — two languages, two renderers, a cross-toolchain ritual on every art change, and it can only ever bake the *static* `frame=0` pose. S3 severs that. Net cost over S1: ~2–4 front-loaded days for cleaner, tested logic.
+
+3. **The art is already static, so native re-authoring loses nothing and unlocks everything** (art-extensibility: S3 tied at ceiling, 9/10). Ground truth: `archetypes.js` §1.6 bakes `frame=0` only — your bodies *don't animate today*; only the additive glow layer moves, and **that layer is re-authored natively in every strategy regardless**. Native re-author doesn't sacrifice motion you have — it adds skeletal/IK motion you never had, and it collapses to **4 family rigs + ~20 palette/proportion skins**, with `config.js` as a pixel-precise free spec.
+
+4. **It is the best learning-per-hour vehicle for the driver you ranked** (learning axis winner: S3, 9/10). S1 bakes the art and so routes you *around* the richest Unity-2D skill (you'd author art in JavaScript forever — 3/10, "ship without learning Unity"). S3 forces the full native curriculum (SpriteRenderer/atlas, URP additive particles, Input System, UI Toolkit, Cinemachine, AudioMixer) while the logic port *teaches* the asmdef/ScriptableObject/NUnit discipline — and lands 1:1 on the **Swift/Flutter MVVM you already run**.
+
+5. **It doesn't re-derive battle-tested correctness** (the decisive edge over S2). The cancel-invariant (`clawsCost === CLAWS_MULT × attackPower`, why there's *no save migration ever*), the trauma anti-quake clamp, single-damage-entry, `sanitizeGame`'s allowlist, the GZS1 byte format, `ΣFORM_BONUS===63` — each was won through real campaign iteration. S2 re-implements them from a spec (silent-regression risk in the least-visible layer, for zero Unity-learning upside). S3 ports them *behind tests written first*, so correctness carries by construction.
+
+### 3. Per-subsystem treatment table
+
+| Subsystem | Treatment | Notes |
+|---|---|---|
+| **data / config** (`config.js`: FORMS×20, ROW_HP, FORM_BONUS, CLAWS_MULT, balance scalars) | **CARRY-AS-DATA** | FORMS → ScriptableObjects (hold future Sprite/Material refs); scalars → `balance.json` → POCO. Keeps Core `UnityEngine`-free. Never rebuild proven balance. |
+| **economy / combo / power** (cancel-invariant, collectionMult, combo, bankDestroy, CAP_HP, canFinale) | **PORT** | Highest-value port. `double` math → C# IEEE-754 parity exact. Encode cancel-invariant + `ΣFORM_BONUS===63` + bounded ceiling as NUnit tests *and* boot asserts. |
+| **save container (v4)** | **PORT (logic) / REBUILD (backend only)** | Schema, slot CRUD, `rev`-newer-wins conflict model port verbatim. Swap `localStorage`→temp-file+`File.Replace` in `persistentDataPath`; `System.Text.Json` (never `JsonUtility`/`PlayerPrefs`). Flush on `OnApplicationPause/Focus`. **Drop the v3→v4 migration branch** — the only deletion. |
+| **sanitizeGame allowlist** | **PORT (verbatim — security boundary)** | Attacker-controllable input gate (GZS1 codes, cloud blobs). Port clamp-for-clamp; each clamp is a test case. Do not re-author from spec. |
+| **GZS1 export codec** (crc32 0xEDB88320 + base64url-of-UTF-8 + framing) | **PORT (BIT-EXACT — hard requirement)** | The *only* web→app save bridge. C# `uint` logical `>>`, `Encoding.UTF8` (emoji must survive — not `btoa(JSON)`). Acceptance test: round-trip a real live-PWA code through the C# decoder. Watch absence-semantics (`formAxisSeen` defaults true on *missing* field). |
+| **world gen + lifecycle FSM + single-damage-entry** (`world.js`) | **PORT (logic) / REBUILD (picking)** | FSM, single-damage-entry discipline, off-screen-respawn gate, rare-spawn roll → Core. Carry `Math.floor`-not-`\|0` (HP 1e9 needs `long`). Rebuild only `pickBuildingAtScreen` → `Physics2D.OverlapPoint`. |
+| **deterministic RNG** (mulberry32 + hash, WORLD_SEED) | **PORT (bit-exact — Mike's one explicit choice)** | Recommend bit-exact (`uint`, `>>>0`) → identical city = identity. Nearly free once crc32 forces correct `uint` semantics. Flag to Mike if he'd accept a fresh-but-deterministic city. |
+| **entities — locomotion / targeting / 5 attacks / finisher / DoT** (`entities.js`) | **PORT (sim) / REBUILD (FX pool + body-draw)** | ⚠ **Hardest dissection in the migration.** This 1,672-LOC file weaves sim with **288 `ctx.` draw calls** + 10 sibling refs. Function-level cut: sim algorithms → `KaijuSim` in Core (pump from `FixedUpdate`); the 320-particle ring-buffer and all `ctx.` draws → rebuild (`ParticleSystem`/pools). Carry the re-fire-gate-decoupled-from-animation design. **Do this first** — it's the real first hard problem, not the economy. |
+| **art / sprites** (`archetypes.js` builders, assets.js, sprites_special.js) | **REBUILD-NATIVE** (reference spec = HTML + `config.js`) | **Do NOT atlas-bake.** Re-author as ~4 skeletal rigs (wyrm/flyer/hydra/mecha) + ~20 palette/proportion skins via Unity 2D Animation or Spine. Run the JS bakers **once** to emit reference PNGs to trace/rig against, then **retire the generator**. The `shape` knobs *are* rig parameters. |
+| **render / iso projection + depth-sort** (`iso.js` algebra, `render.js` painter loop) | **PORT (algebra) / REBUILD (renderer binding)** | `worldToScreen`/`depthKey` formula → per-entity sorting offset config; flyer altitude depth-bias re-derives from it. Painter's insertion-sort deleted (Unity native Transparency Sort Axis + Sorting Groups). |
+| **trauma-shake / hit-stop feel** (`iso.js`) | **PORT (scalar math VERBATIM) / REBUILD (binding)** | ⚠ Not a "re-author." Port `trauma = min(trauma+mag·K, 1)` clamp-on-add + `*= pow(DECAY,dt)` exp-decay **verbatim** (it's the anti-quake bug fix). Feed into `CinemachineBasicMultiChannelPerlin` amplitude — do **not** adopt Cinemachine Impulse's default model. |
+| **input** (`input.js` Pointer Events, sprite-hitbox targeting) | **REBUILD-NATIVE** | Input System + EnhancedTouch; gamepad comes free. Target-priority *logic* (click→faced→nearest, airborne-prefers-flying) ports as sim logic; the picking surface rebuilds. |
+| **audio** (procedural WebAudio) | **REBUILD-NATIVE** | AudioMixer + clips/synthesis. Web implementation worthless across the boundary; only the sound-design contract carries. |
+| **UI / shop** (`ui.js`, economy.js shop DOM ~450 LOC) | **REBUILD-NATIVE** | UI Toolkit. The 5-tab shop incl. Saves tab is a from-scratch native build; only the data + the economy *logic* behind it ports. |
+| **FX / glow layer** (`'screen'`-blend additive, ~40% of identity) | **REBUILD-NATIVE** | URP 2D additive particles/material, parameterized off the same palette data. Re-authored natively in *every* strategy — the **Phase-0 spike gates the whole migration** (can the additive look reach budget?). |
+| **fixed-step loop + hit-stop + boot asserts** (`game.js`) | **PORT (feel + asserts) / REBUILD (accumulator)** | Loop → `FixedUpdate` + Maximum Allowed Timestep. Port hit-stop (`timeScale=0` ~50ms, max-wins) and boot asserts. ⚠ **Audit the ms-vs-s split** (`WINDOW_MS:3250` vs locomotion in seconds) — `fixedDeltaTime` is seconds; a ms-timer fed seconds is a silent 1000× bug. |
+
+### 4. What this changes vs. the first fleet's plan
+
+The first fleet locked **"2.5D sprites in orthographic 3D" + "bake the JS procedural generators → Unity sprite atlases (keep the JS generator as a live offline tool)" + carry logic as C#.** This recommendation:
+
+- **OVERTURNS the atlas-bake for art.** Do **not** bake the generators and do **not** keep the JS generator alive as a runtime-feeding tool. Re-author art natively (Spine / Unity 2D Animation), using the HTML build + `config.js` as a reference spec, and run the bakers exactly **once** to emit onion-skin reference PNGs before retiring the generator. *Rationale: the bake pipeline is a permanent cross-language toolchain tax that can only ever reproduce the static `frame=0` ceiling — it forecloses the very animation/cosmetics future that justifies going to Unity at all.*
+- **KEEPS** the "2.5D sprites in orthographic 3D scene" dimension and the "carry the pure logic as C#" instinct — those were right.
+- **REFINES "carry logic as C#"** into a graded, test-gated discipline: bit-exact ports for the GZS1 codec and (recommended) mulberry32; verbatim security-boundary port for `sanitizeGame`; verbatim *scalar* port for trauma-shake (the fleet mislabeled this a "re-author" — porting the math preserves the anti-quake fix by construction); schema-port-but-backend-rebuild for save; and **drop** the v3→v4 migration branch.
+- **RE-SEQUENCES the hard part.** The first hard problem is **not** the economy port — it's the function-level dissection of the sim/draw-tangled `entities.js` (288 `ctx.` calls, 10 sibling refs). Put the Phase-0 FX-additive spike *and* an `entities.js` sim/draw-separation spike on the critical path before committing.
+
+### 5. The honest tradeoff Mike is accepting
+
+**What you give up:** (a) **pixel-identity to gz-v32** — the native art will be faithful-in-spirit, not byte-identical. (b) **More up-front art work** — ~4 rigs + 20 skins re-authored natively (the +effort over S1's bake; roughly S2-scale art cost, ~50–75 focused days total vs S1's ~48–71). (c) A **disciplined port** you must hold to — the one real risk (below).
+
+**What you gain:** a Unity codebase that *is* Unity with no foreign mental model underneath; **no permanent JS toolchain**; art that can finally **animate** (skeletal necks, wing-flap, secondary motion the web never had) and a first-class tunable particle FX layer; the cheap-cosmetics pipeline your bounded economy *needs* for monetization; the full native-Unity skillset learned for real against a proven ground-truth reference; and your hard-won invariants carried as tested C#. Critically, **the live PWA stays up**, so anyone wanting the exact original look still has it — which is *why* giving up pixel-identity costs almost nothing.
+
+**The ONE thing that would flip the recommendation:** if **fidelity-to-the-exact-current-look is actually a top priority for Mike** (not the un-ranked factor it appears to be) — e.g. the gz-v32 art *is* the brand and any drift is unacceptable — then S1 (atlas-bake) becomes correct, because pixel-parity is the single axis S1 wins and the only one S3 concedes. Nothing else flips it: S3 ties or beats both other strategies on every other long-term axis.
+
+(A secondary, weaker flip: if Mike decided the *economy/balance itself* should be redesigned from scratch, the "port the logic" rationale weakens and S2 gains — but the campaign treats the economy as solved and shipped, so this isn't in evidence.)
+
+### 6. Confidence check
+
+**82% — just below the 90% bar.** The gap is not analytical (S3 wins or ties every long-term axis); it's a **genuine preference I can't resolve by research.** The S3-vs-S1 decision hinges entirely on **how much Mike weights exact-visual-fidelity to gz-v32** — a factor he did *not* rank, which the analysis treats as low-priority but which only he can confirm. If fidelity is low/medium priority → S3 at high confidence. If it's secretly top priority → S1.
+
+**The single question for Mike (a real preference, not researchable):**
+
+> "Is reproducing the *exact* gz-v32 pixel look in Unity a hard requirement — or are you fine with art that's faithful in spirit and palette but re-authored natively (which is what unlocks real animation, cheap cosmetics, and a clean single-engine pipeline), given the original look stays live forever on the PWA?"
+
+If he answers "faithful in spirit is fine" (which his own question — *"rebuilding the assets and sprites… starting a native build"* — strongly implies), confidence in **S3 jumps to ~93%.** If he answers "pixel-exact is non-negotiable," switch to **S1.**
+
+---
+
+**Bottom line:** Go with **S3 — port the proven logic, rebuild the assets and presentation natively with the HTML build as your reference spec.** Your instinct in the question is right about the art (rebuild, don't port) and you should simply *not* extend it to the gameplay logic (port, don't rebuild). Drop the first fleet's atlas-bake; keep its 2.5D-sprites-in-ortho-3D framing; enforce "clean" with invariant-tests-written-first behind the asmdef seam; and tackle the `entities.js` sim/draw split first, not the economy.
 
 ---
 
