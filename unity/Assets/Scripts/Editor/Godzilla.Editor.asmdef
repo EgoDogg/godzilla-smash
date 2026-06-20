@@ -1,0 +1,1 @@
+{ "name": "Godzilla.Editor", "references": ["Godzilla.Core", "Godzilla.Data"], "includePlatforms": ["Editor"], "autoReferenced": false }
