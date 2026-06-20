@@ -1,0 +1,334 @@
+{
+  "_schema_version": "1.0",
+  "_purpose": "Default-FAIL evidence contract for the Godzilla Smash -> Unity (S3 Hybrid) migration autonomous campaign. Every unit starts passes:false. NEVER flip passes:true without ALL THREE of a verifiable evidence string + a real git tag + a real commit SHA, written in the commit AFTER the work lands (atomic ship). Human-gated units (Mike-only: art-rig craft, on-device perf, subjective FX/feel verdicts, Unity GUI install/license/MCP click-through) are flagged human_gate:true and QUEUE via the gate table — the autonomous loop drives all un-gated work around them and never blocks.",
+  "_master_plan": "docs/campaign/unity-migration-plan.md",
+  "_campaign_folder": "docs/campaign/",
+  "_branch": "unity-port (NEW branch off main; the web PWA gz-v32 stays live on main, untouched)",
+  "_pre_campaign_anchor_tag": "gz-v32",
+  "_pre_campaign_anchor_commit": "729d36d40bed7afc1b3be598dd830544a891aa68",
+  "_resume_ritual": "docs/campaign/UNITY-CAMPAIGN-BOOT.md SESSION-START RITUAL",
+  "_operating_mode": "ONE session model exclusively (claude-opus-4-8[1m]); every agent() inherits it, no pins, no downgrade. FULL ULTRACODE POOLS per non-trivial unit: re-ground -> design -> 3-lens adversarial verify ALWAYS -> 3-vote -> implement -> per-commit gate -> tag + flip JSON + push; capstone loops til 2 dry (cap 4). Cleanup of dead/duplicated code is AUTHORIZED requested work. Effort = session-global Ultracode dial, not per-leg. The L1/L2/L3 (compile/play-mode/screenshot) MCP loop is the Unity analog of the web composite-screenshot verify.",
+  "_confidence_calibration": "<90% -> BLOCKERS + pivot to the next independent un-gated unit; 90-96% -> proceed + note the alternative in the commit; >=97% -> proceed. Human-locked picks immutable (S3 Hybrid, 2.5D-in-ortho-3D, Unity 2D Animation not Spine, no-IAP-v1, faithful-in-spirit art) -> if one looks wrong, BLOCKERS HIGH + pivot, never override.",
+  "_per_commit_gate": [
+    "1. dotnet/Unity compile clean: read the Editor console via MCP for compile errors (L1). Core asmdef must compile with NO UnityEngine reference (verify by deleting the ref).",
+    "2. EditMode NUnit tests green (headless, CI in seconds) for any Core/logic unit; for the bit-exact ports (mulberry32/crc32/GZS1/depthKey/trauma) the test asserts byte/float parity vs a real web-PWA vector.",
+    "3. L2 runtime: enter Play Mode via MCP, read console for exceptions; L3 visual: screenshot the Game View to docs/campaign/shots/unity/ for visual/FX units.",
+    "4. regression: named no-change checks (cross-subsystem invariants nothing may lose: single-damage-entry, cancel-invariant, FORM_BONUS===63, trauma-clamp, off-screen-respawn, muzzle-matches-glow, authored-5-mirror-3 facing).",
+    "5. drift/hygiene (build-affecting units): Library/Temp/obj gitignored; Packages/manifest.json + ProjectSettings committed; Git LFS tracks binaries; unity-campaign-progress.json + UNITY-CAMPAIGN-BOOT.md updated in the ship commit. Doc-only commits may skip 1-4 with a justification line."
+  ],
+  "_updated_at": "2026-06-20T00:00:00Z",
+  "_halt": null,
+  "_run_policy": {
+    "_locked": "S3 HYBRID LOCKED ~93% (Mike confirmed 2026-06-15: faithful-in-spirit art is fine; STEER 2026-06-15 PIVOT). Build source = unity-migration-plan.md sections 0/3/4/5/8/9 + Appendix A (the AUTHORITATIVE S3 sections; section 1/7 atlas-bake language is FIRST-FLEET RESIDUE explicitly SUPERSEDED by section 0 and section 8 native re-author). Web PWA (gz-v32) stays LIVE on main throughout; the web save-system campaign (unity-campaign-progress.json's sibling, campaign-progress.json) is SUSPENDED — do not touch it. Cutover is a SINGLE step at the end of P6. NOTE: 'passes:true' on a human_gate unit requires Mike's recorded verdict/artifact, not Claude self-sign-off.",
+    "mode": "delegated-autonomous",
+    "auto_fix_ceiling": "trivial/low @>=0.95 freely; medium @>=0.97 + verify; defer high-risk / <0.90 / net-new / any subjective-feel call to BLOCKERS or the gate queue.",
+    "lean_before_add": "Port don't re-derive: lift proven logic (economy/save/world-FSM/RNG/codec/trauma) to tested C# behind invariant-tests-written-first. Reuse one shared FX material + MaterialPropertyBlock, one bake harness, one FormAssetRebuilder. Keep the Puppeteer reference-baker forever (it is the only executable spec for 20 palettes + ~30 shape knobs).",
+    "halt_only_on": [
+      "HIGH security finding (sanitizeGame allowlist bypass / GZS1 attacker-blob injection / cloud-blob trust)",
+      "a human-locked pick that looks wrong (S3, dimension, Unity-2D-vs-Spine default, no-IAP)",
+      "budget/quota near-exhausted (park at clean tag)",
+      "a Phase-0/1 GO/NO-GO gate fails after the corrected-spec re-check (section 9.5)",
+      "final pre-ship review before P6 store submission"
+    ],
+    "halt_mechanism": "append a BLOCKERS envelope, set _halt to its id, send ONE consolidated PushNotification, pivot to the next un-gated unit.",
+    "delegated_no_halt": "Everything Claude can do via generate-C#-to-disk + the Unity-MCP verify loop runs without halt: all Core logic + NUnit tests, data SOs, FX materials/shaders/particle setup, building/city system, sim/view split, editor tooling (FormAssetRebuilder, ScreenshotDiff), CI/build scripts, the reference-bake harness, store-metadata drafts.",
+    "reground_gate": "MANDATORY before any resumed unit: an inherit-session-model re-ground refutes the unit's plan scope vs current Unity HEAD (anchors drift as units land). The web source (js/*.js + config.js) is the IMMUTABLE reference spec — re-read the relevant module before porting.",
+    "sequence": [
+      "P0-SKELETON", "P0-MCP-CI", "P0-FXSPIKE-BUILD", "P0-FXGATE",
+      "P1-ISO-DEPTHKEY", "P1-TRAUMA-FEEL", "P1-WYRM-RIG", "P1-KAIJUSIM-SPLIT", "P1-BUILDING-FSM", "P1-BEAM-MUZZLE", "P1-DIFF-HARNESS", "P1-PERF-DEVICE", "P1-GATE",
+      "P2-BAKE-HARNESS", "P2-SKIN-SOS", "P2-RIGS-3X", "P2-DATASKINS-16", "P2-FX-PERFORM", "P2-BUILDINGS-SPECIALS", "P2-FIDELITY-VERIFY",
+      "P3-CITYGEN-RNG", "P3-FSM-DAMAGE", "P3-LOCO-TARGET", "P3-ATTACKS-FINISHER", "P3-FX-POOL",
+      "P4-ECONOMY-CORE", "P4-SAVE-CONTAINER", "P4-GZS1-CODEC", "P4-FORMS-SOS", "P4-SHOP-UI", "P4-CLOUD-SAVE",
+      "P5-INPUT", "P5-AUDIO-HAPTICS", "P5-HUD-CHROME", "P5-DAYNIGHT", "P5-REDUCED-MOTION", "P5-FEEL-PARITY",
+      "P6-PRESHIP-REVIEW", "P6-IOS-PIPELINE", "P6-ANDROID-PIPELINE", "P6-STORE-COMPLIANCE", "P6-SUBMIT-CUTOVER"
+    ],
+    "verify_intensity": {
+      "default": "FULL ULTRACODE POOLS: 3-lens adversarial verify ALWAYS + 3-vote on findings.",
+      "bit_exact_ports": "P1-ISO-DEPTHKEY, P1-TRAUMA-FEEL, P3-CITYGEN-RNG, P4-GZS1-CODEC, P4-SAVE-CONTAINER round-trip a REAL live-PWA vector through the C# code (the live-spike-beats-mock lesson); float/byte parity is the test, not a vibe.",
+      "high_stakes_panel": "P0-FXGATE, P1-GATE, P4-SAVE-CONTAINER (security boundary = sanitizeGame allowlist), P4-GZS1-CODEC (attacker-controllable input), P6-PRESHIP-REVIEW get the full audit panel.",
+      "human_gate_verify": "human_gate units flip true ONLY on Mike's recorded artifact (a feel verdict in STEER, an on-device fps/overdraw number, a license-activation success, a side-by-side fidelity sign-off). Claude prepares everything around them and stages the exact ask."
+    },
+    "finish_line": "All 5 Phase-0/1 gates pass (GO) -> all 23 parity-checklist rows green (section 4) -> both store binaries accepted -> single cutover. A NO-GO at P0/P1 costs only the ~2-week spike (PWA stays live) and is a CONTAINED re-scope, not a campaign failure.",
+    "self_heal": {
+      "FM-1": "agent overload -> inherit-model ladder (tighten schema / reduce parallel width / backoff-retry on SAME model) -> abort+restart. NEVER downgrade. <2 landed votes -> orchestrator code-read self-verify (never trust '0 findings = clean').",
+      "FM-2": "per-commit gate RED after apply -> git reset --hard <prev unit tag>, move to BLOCKERS, continue. Never fix-forward from broken.",
+      "FM-3": "ambiguous canon -> 'I don't see this in the plan' -> BLOCKERS + pivot. Section 1/7 atlas-bake claims are SUPERSEDED — cite section 0/8 instead."
+    },
+    "session_policy": "CONTINUOUS",
+    "gate_queue_mode": "SELF-WAKE: human gates (G1-G7 below) are async; the run never idles on a gate while un-gated Core/data/FX/CI/editor-tooling work exists. ScheduleWakeup long-fallback (~1800-3600s) carries the resume prompt; each wake probes the gate table + re-reads STEER/BLOCKERS; resume the instant a gate clears. SUSPEND self-wake while quota near-exhausted.",
+    "true_stop_conditions": [
+      "1. All un-gated work exhausted AND blocked only on a Mike gate AND a self-wake is pending (park).",
+      "2. HIGH security finding (allowlist/codec/cloud-trust).",
+      "3. A human-locked pick that looks wrong (BLOCKERS HIGH + pivot, never override).",
+      "4. A Phase-0/1 GO/NO-GO gate genuinely fails after the corrected-spec re-check (section 9.5 named-and-contained NO-GO triggers) -> stage the re-scope decision for Mike.",
+      "5. Budget/quota near-exhausted -> park at a clean tag boundary.",
+      "6. Final pre-ship review before P6 submission.",
+      "Nothing outside this list stops the run. Each session summary carries a one-line stoppage audit."
+    ],
+    "human_gate_queue": {
+      "G0": "Unity Hub/GUI install + Personal license activation + IvanMurzak/CoplayDev MCP click-through + self-hosted Mac runner registration (Mike, P0 D1-D2). Unblocks the whole loop. Claude has everything else staged (asmdef skeleton, CLAUDE.md, BuildScript, GameCI YAML) to apply the instant the bridge is live. STATUS: open (Mike logged into Unity, ready).",
+      "G1": "Headless Personal license activation with a REAL token by hand on the Mac runner, ONCE, before any CI YAML is trusted (the #1 silent CI failure; Mike's own live-spike lesson). Unblocks P0-MCP-CI green. Mike + hardware. STATUS: open.",
+      "G2": "Subjective FX-glow / feel / fidelity VERDICTS (the eye call that cannot be delegated): the P0 additive-glow on-device read, every per-form fidelity sign-off, the trauma-shake side-by-side, the P1 GO/NO-GO faithful-in-spirit verdict. Claude stages the exact side-by-side + the automatable SSIM>=0.85 floor; Mike eyeballs. STATUS: recurring, async.",
+      "G3": "On-device perf/overdraw test on a real low-end ~2020 Android (Gate 3): >=55fps sustained, overdraw <=~3x, no 5-min thermal throttle. Mike + hardware. Claude ports the particle-cap quality tier + size-cap and stages the profile checklist. STATUS: open (Mike supplies the phone).",
+      "G4": "The hand-rig ART CRAFT — trace silhouettes + bone-skin + weight-paint the 4 rigs (creative composition, the irreducible ~15 human days, the Unity skill Mike is here to learn). Claude writes the reference-baker, the skin SOs, the FormAssetRebuilder, all plumbing AROUND it. STATUS: open, the serial human bottleneck.",
+      "G5": "Unity-2D-Animation-vs-Spine decision on rig #1 (P1-WYRM-RIG / P2-RIGS-3X) and the hydra-3-neck Spine-escalation trigger — decided on a failure, not abstractly. Mike's eye on whether bone-only organic motion sells. STATUS: pre-registered, fires in P1/P2.",
+      "G6": "Camera-angle/zoom judgment vs the web look (P1-ISO-DEPTHKEY); shop layout/taste (P4-SHOP-UI). Minor taste calls. STATUS: async.",
+      "G7": "Apple/Play account agreements + tax/banking + first-time provisioning/cert/keystore + the age/privacy questionnaires + the two store submissions + review round-trips (P6). Mike. Claude owns BuildScript/Fastfile/GH-Actions/metadata-drafts end-to-end. STATUS: opens at P6."
+    }
+  },
+  "phases": {
+    "P0": {
+      "title": "Toolchain, MCP, project skeleton + the FX de-risk spike (section 9.1-9.2, 9.6 D1-D4)",
+      "units": {
+        "P0-SKELETON": {
+          "passes": false, "evidence": null, "tag": null, "commit": null,
+          "depends_on": ["G0"],
+          "note": "5 asmdefs on day 1 (Core[NO UnityEngine] <- Data <- Presentation <- App; Editor->Data,Core; Tests.EditMode->Core only). CLAUDE.md pinning the no-UnityEngine-in-Core rule + double/long rule + the two ported-verbatim formulas (DepthKey iso.js:265, TraumaModel iso.js:36-37). .gitignore (Library/Temp/Logs/Build/obj/csproj/sln); commit Packages/manifest.json + ProjectSettings; Git LFS from commit 1 (.gitattributes first). One trivial passing EditMode test. CLAUDE owns; Mike does the Unity install (G0)."
+        },
+        "P0-MCP-CI": {
+          "passes": false, "evidence": null, "tag": null, "commit": null,
+          "depends_on": ["P0-SKELETON", "G0", "G1"],
+          "note": "IvanMurzak/Unity-MCP (Apache-2.0, ~52 tools, auto-Skills) primary + CoplayDev/unity-mcp (MIT) fallback, localhost-only, no 0.0.0.0, commit-before-session. BuildScript.cs ([MenuItem]-mirrored PerformiOS/AndroidBuild, batchmode) + GameCI YAML + Fastfile stub. DoD: git clone -> CI runs EditMode green + produces an Android AAB unattended; Claude reads console + enters Play Mode + runs tests over MCP. PIN-CHECK the MCP version on install (ships weekly). Mike does the click-through (G0) + the headless license activation (G1)."
+        },
+        "P0-FXSPIKE-BUILD": {
+          "passes": false, "evidence": null, "tag": null, "commit": null,
+          "depends_on": ["P0-SKELETON"],
+          "note": "THE make-or-break, built BEFORE any body (D3). The soft-additive screen-blend Shader Graph (Blend OneMinusDstColor One — NOT plain One/One; the load-bearing correction so it self-limits like Canvas2D screen=1-(1-s)(1-d) and never blows to neon) on pre-baked soft-radial textures + a Shuriken ParticleSystem (NOT VFX Graph) glow/cosmic-motes/breath-charge + the pooled stretched additive-quad beam with shader-faked jitter (NOT a per-frame LineRenderer — strokeJagged re-randomizes every vertex and autofire ~9/s -> GC stutter) + the white kill-flash, all parameterized off the supernova palette, bloom OFF, on a dedicated FX sort layer drawn last. CLAUDE builds 100%."
+        },
+        "P0-FXGATE": {
+          "passes": false, "evidence": null, "tag": null, "commit": null,
+          "depends_on": ["P0-FXSPIKE-BUILD", "G2", "G3"],
+          "human_gate": true,
+          "note": "THE single highest-risk check (D4). Does the additive layer read convincingly on a real low-end Android, bloom-OFF, Graphics-Jobs-OFF? Mike's eye (G2) + on-device overdraw profile (G3). If NO -> first re-check it isn't the 3 spec typos that FAKE a NO-GO (wrong blend mode / LineRenderer beam / Graphics-Jobs-on); if genuinely flat after the corrected spec, the only residual is true bloom halo-spill -> desktop-only toggle, accept faithful-in-spirit-minus-halo on low-end (Mike pre-authorized). None of this kills S3. Flip true ONLY on Mike's recorded verdict."
+        }
+      }
+    },
+    "P1": {
+      "title": "Vertical slice: supernova wyrm + one building, the 5-gate GO/NO-GO (section 9.3-9.6 D5-D12)",
+      "units": {
+        "P1-ISO-DEPTHKEY": {
+          "passes": false, "evidence": null, "tag": null, "commit": null,
+          "depends_on": ["P0-FXGATE"],
+          "note": "IsoMath.DepthKey ported VERBATIM ((wx+wy)*1024 + wz*4 + depthBias; iso.js:264) to Core (no UnityEngine, NUnit-tested). Ortho camera at the iso angle matching config.js GRID (TILE_W 56/TILE_H 28 2:1/WZ_PX 40). Cinemachine 3.1 vcam (PositionComposer damped follow + Confiner2D origin clamp; deletes ~60 LOC). Coarse sort = URP Transparency Sort Axis (1,1,0); fine tie-break = SpriteRenderer.sortingOrder from RoundToInt(DepthKey). Per-entity sortingOrder is the PROVEN FALLBACK if the 6.3 axis misbehaves (Jan-2026 thread). All additive FX on the FX sort layer drawn AFTER entities. Mike: camera-angle judgment (G6)."
+        },
+        "P1-TRAUMA-FEEL": {
+          "passes": false, "evidence": null, "tag": null, "commit": null,
+          "depends_on": ["P0-FXGATE"],
+          "note": "TraumaModel ported VERBATIM (it is a bug fix, not a re-author): trauma=min(trauma+mag*(1/85),1) CLAMP-on-add (kills the autofire quake) + trauma*=pow(0.02,dt) exp-decay (half-life ~0.18s) + offsetPx=12*trauma; iso.js:36-37,138-140. Feeds CinemachineBasicMultiChannelPerlin amplitude — do NOT adopt Cinemachine Impulse defaults. FixedUpdate 1/60 replaces the hand-rolled accumulator; hit-stop = Time.timeScale=0 ~50ms unscaled coroutine, max-wins, no-op under reduced-motion. NUnit: clamp+decay matches the web scalar within float tolerance. Mike: feel pass (G2)."
+        },
+        "P1-WYRM-RIG": {
+          "passes": false, "evidence": null, "tag": null, "commit": null,
+          "depends_on": ["P0-FXGATE", "G4", "G5"],
+          "human_gate": true,
+          "note": "Rig #1 = the learning tax (budget 1.5-2 weeks, NOT 3-5 days). The wyrm silhouette re-authored as ONE Unity 2D Animation rig (PSD Importer + Skinning Editor; NOT Spine). Source from the JS baker run ONCE (A.buildWyrm on a scratch canvas -> frame-0 reference PNG); hand-trace + part-split to a PSB (torso/head/neck/tail/near+far leg/near+far arm — do NOT auto-vectorize the gradient torso). Bone-skin auto-geo+auto-weight, hand-fix dorsal+tail. 3 clips (idle/walk/attack) driven by sim fsm. Pivot (0.5,0.86) honors ANCHOR_X/Y. Phase-0 facing cut: author S/SE/E only (mirror the rest). G5: decide Unity-2D-vs-Spine HERE on this one rig. CLAUDE writes the baker + all plumbing; MIKE does the trace/skin craft."
+        },
+        "P1-KAIJUSIM-SPLIT": {
+          "passes": false, "evidence": null, "tag": null, "commit": null,
+          "depends_on": ["P1-ISO-DEPTHKEY"],
+          "note": "The structural proof of the HARDEST dissection (225 ctx. calls in 1672 LOC). KaijuSim (Core, no UnityEngine): pos/vel/facing(FACING_MAP)/attackPower + the re-fire gate DECOUPLED from animation (gate=clamp(cooldown*0.42,0.11,0.20), level-triggered on intent.attack && atkCooldown<=0, NOT on anim-finish) + targeting priority (explicit->faced->nearest) + one AttackBeam. KaijuView (Presentation): lerps prevPos->pos by FixedUpdate alpha, drives the Animator, maps facing->flipX, drains a typed FxEvent queue (BeamFired{muzzleWorld RESOLVED at emit,targetWorld,palette}/Shake/DamageDealt). NUnit (Gate 4): one beam tap deals floor(power) + queues exactly {BeamFired,Shake,DamageDealt} with ZERO UnityEngine types touched."
+        },
+        "P1-BUILDING-FSM": {
+          "passes": false, "evidence": null, "tag": null, "commit": null,
+          "depends_on": ["P1-KAIJUSIM-SPLIT"],
+          "note": "One mid-tier prism as a baked static sprite + silhouette PolygonCollider2D (NOT a box, so tap hits the tower crown via Physics2D.OverlapPoint). BuildingFsm + DamageRouter (single-damage-entry hitBuilding) in Core; BuildingView swaps sprite on standing->crumbling->rubble events. Math.floor not |0 (big HP). +$ text fired from DamageRouter.Destroy() (mirror spawnRewardText so DoT/AoE kills show it too)."
+        },
+        "P1-BEAM-MUZZLE": {
+          "passes": false, "evidence": null, "tag": null, "commit": null,
+          "depends_on": ["P0-FXSPIKE-BUILD", "P1-WYRM-RIG", "P1-KAIJUSIM-SPLIT"],
+          "note": "Wire the P0 beam/glow (the P0-FXSPIKE-BUILD material/particles, reused) to ONE MuzzleSocket transform on the head bone (the muzzle-matches-glow invariant — never compute the muzzle twice; that is the 'beam leaves the back' bug the original guarded against). Beam origin AND breath-charge emitter share the socket. Mike: feel pass (G2)."
+        },
+        "P1-DIFF-HARNESS": {
+          "passes": false, "evidence": null, "tag": null, "commit": null,
+          "depends_on": ["P1-BEAM-MUZZLE"],
+          "note": "ScreenshotDiffWindow + com.unity.testframework.graphics ImageAssert harness; capture the matched live-PWA reference (same form, facing E, attack mid-frame); run the diff. Floor = SSIM >= ~0.85 on the silhouette region + dominant colors within a small dE of config.js palette. NOT pixel-identity (additive bloom never pixel-matches Canvas2D screen). CLAUDE owns the harness; the verdict is Mike's (Gate 2)."
+        },
+        "P1-PERF-DEVICE": {
+          "passes": false, "evidence": null, "tag": null, "commit": null,
+          "depends_on": ["P1-BEAM-MUZZLE", "G3"],
+          "human_gate": true,
+          "note": "Gate 3 on a real low-end ~2020 Android (NOT Editor, NOT flagship): full supernova FX + one body + one building holds >=55fps sustained (30 hard floor only if visibly smooth), no 5-min thermal throttle; overdraw profiled out of the red (<=~3x avg); the web particle-cap quality tier ported + honored (320 desktop / 90 reduced-motion); aura size-capped to the silhouette bbox. CLAUDE ports caps + stages the profile; MIKE supplies the phone + runs it (G3)."
+        },
+        "P1-GATE": {
+          "passes": false, "evidence": null, "tag": null, "commit": null,
+          "depends_on": ["P1-TRAUMA-FEEL", "P1-WYRM-RIG", "P1-BUILDING-FSM", "P1-DIFF-HARNESS", "P1-PERF-DEVICE", "G2"],
+          "human_gate": true,
+          "note": "THE GO/NO-GO for the entire parallel build (section 9.5). PASSES iff all 5 gates green: (1) toolchain proven, (2) FX fidelity = Mike faithful-in-spirit side-by-side + SSIM>=0.85 floor + muzzle stays coupled, (3) on-device perf/overdraw, (4) sim/draw separation (Core compiles no-UnityEngine + re-fire-gate decoupled + trauma clamp matches), (5) full beat fires end-to-end AND the kaiju correctly occludes/is-occluded-by the building (center-pivot sort fails this). GO -> P2. NO-GO triggers are NAMED+CONTAINED — none kills S3 (PWA stays live). Flip true ONLY on Mike's recorded GO."
+        }
+      }
+    },
+    "P2": {
+      "title": "Art system: 4 rigs + 20 data-skins + FX production + buildings/specials (section 8, section 4 Phase 2)",
+      "units": {
+        "P2-BAKE-HARNESS": {
+          "passes": false, "evidence": null, "tag": null, "commit": null,
+          "depends_on": ["P1-GATE"],
+          "note": "tools/bake-refs: a Puppeteer (headless Chrome/Blink-Skia, NOT node-canvas — Cairo AAs the quadraticCurveTo curves differently) harness loading utils.js+config.js+archetypes.js, window.bakeForm(formId,base,fsm,frame)->toDataURL, bake at 4x (600x672), ~300 PNGs in <1 min. KEEP THIS FOREVER (the only executable spec for 20 palettes + ~30 shape knobs). CLAUDE writes it cold (~0.5 day)."
+        },
+        "P2-SKIN-SOS": {
+          "passes": false, "evidence": null, "tag": null, "commit": null,
+          "depends_on": ["P2-BAKE-HARNESS"],
+          "note": "config.js -> 20 skin definitions: palette{} -> FormDefinition tint set + material params; shape{} (plates/bulk/tail/wingSpan/heads/neckSpread/spineSize/leanPose...) -> bone-scale table + part-enable toggles. forms.json manifest = the text source of truth. CLAUDE owns (~0.5 day)."
+        },
+        "P2-RIGS-3X": {
+          "passes": false, "evidence": null, "tag": null, "commit": null,
+          "depends_on": ["P1-GATE", "G4", "G5"],
+          "human_gate": true,
+          "note": "The 3 remaining master rigs (flyer/hydra/mecha) — rigs 2-4 hit a 3-5-day pace after the rig-#1 learning tax. flyer: one rig spans moth<->pterano (Rodan zeroes the hind-wing bone), wing-flap clip the web never had. hydra: 3 neck chains x3 bones, center neck sorts on top via Sorting Group, void=body-hidden skin; THE Spine-escalation trigger (hydra only) if 2D IK fights the 3 necks (G5). mecha: wyrm topology + attachment bones (cannon/backpack/drill/lead-fin enable per skin). Author 5 facings (mirror 3). MIKE does the hand-craft (G4); CLAUDE scaffolds."
+        },
+        "P2-DATASKINS-16": {
+          "passes": false, "evidence": null, "tag": null, "commit": null,
+          "depends_on": ["P2-RIGS-3X", "P2-SKIN-SOS"],
+          "note": "The other 16 forms skinned by DATA (palette + proportion swaps on the 4 existing rigs via Sprite Library Asset + Sprite Resolver). FormAssetRebuilder regenerates all 20 SOs from forms.json (MenuItem + batchmode). CAVEAT (the genuine-risk callout): 'fast/cheap data' is true ONLY for low-glow forms — for supernova/void/gxk the SKIN IDENTITY IS THE GLOW (rimGlow re-strokes the whole outline, fissures define the chest, aura = the gestalt), so those lean on the FX layer not the skin. ~8-11 days CLAUDE-scaffolded, Mike reviews (G2)."
+        },
+        "P2-FX-PERFORM": {
+          "passes": false, "evidence": null, "tag": null, "commit": null,
+          "depends_on": ["P1-GATE"],
+          "note": "Scale the P0 spike to all 5 named effects x 20 forms: plate/eye/aura glow (Glow Shader Graph emissive, sin _Phase shimmer), beam/bolts/breath (pooled additive quads), motes (one additive Shuriken prefab per fxMotes key), breath-charge muzzle flash (parented to MuzzleSocket), kill-flash. ONE shared FX material, per-form color via MaterialPropertyBlock (batching intact). Port the 320/90 particle caps as a quality tier; cap glow-sprite SIZE not just count; all on the FX sort layer drawn last. Mike judges feel per-form (G2)."
+        },
+        "P2-BUILDINGS-SPECIALS": {
+          "passes": false, "evidence": null, "tag": null, "commit": null,
+          "depends_on": ["P1-GATE"],
+          "note": "Lowest-risk track (no live screen composite — baked gradients, appearance changes only on damage-stage flip). ~12 authored prism shell sprites (5 bands x {flat/pitch} x {1x1,2x1}); 3 damage stages = overlay sprites swapped on stage-change; window grids = seeded Shader Graph (_Seed via MPB, fed the same hash(tier*97+stage*13+7) -> deterministic-faithful). Ground = the ONE Isometric Tilemap (cell (1,0.5,1), chunk mode, one draw call, sorting below everything). 8 static specials (statue/pyramid/field/sandpile/plane/gold/rainbow/diamond) = hand-authored hero sprites (the one place a single img2img pass per static prop is fine). CLAUDE + light cleanup."
+        },
+        "P2-FIDELITY-VERIFY": {
+          "passes": false, "evidence": null, "tag": null, "commit": null,
+          "depends_on": ["P2-DATASKINS-16", "P2-FX-PERFORM", "P2-BUILDINGS-SPECIALS", "G2"],
+          "human_gate": true,
+          "note": "Per-form bake-fidelity: composite each form vs the web render via the P1 diff harness (cross-engine). The wz*WZ-as-screen-Y flyer-constant-size-at-altitude invariant carried as a TESTED property. Muzzle-matches-glow preserved. On-device overdraw budget re-profiled for the full transparent-FX layer (G3). Mike signs off per-form (G2). Exit: all 20 forms + all building styles + specials render at sign-off fidelity, flyers hold constant screen-size (tested), overdraw passes."
+        }
+      }
+    },
+    "P3": {
+      "title": "Full city: world gen, lifecycle FSM, targeting, full locomotion/attacks (section 4 Phase 3, section 8.6)",
+      "units": {
+        "P3-CITYGEN-RNG": {
+          "passes": false, "evidence": null, "tag": null, "commit": null,
+          "depends_on": ["P2-FIDELITY-VERIFY"],
+          "note": "Bit-exact mulberry32 (>>>0) + integer hash ported so the WORLD_SEED=0x9E3779B1 city is byte-identical (nearly free since the GZS1 codec already forces correct uint/>>>0). CityGenerator = spawnCity (21x58, block/street tier banding, special placement, sparse grid + occupancy). NUnit: a known seed reproduces a known cell ladder. FALLBACK flagged: accept a different-but-deterministic layout if bit-exact fights (acceptable per section 3.3). buildings/kaiju stay billboard sprites with depthKey; ground is the Tilemap."
+        },
+        "P3-FSM-DAMAGE": {
+          "passes": false, "evidence": null, "tag": null, "commit": null,
+          "depends_on": ["P3-CITYGEN-RNG"],
+          "note": "The full 4-state lifecycle FSM (standing->crumbling->rubble->respawning), single-damage-entry hitBuilding (every direct/AoE/DoT converges so bank/FX/audio fire EXACTLY once), off-screen respawn gate (clearToRespawn vs camera cull AABB + margin; headless=ungated, testable), rare-spawn roll (gold/rainbow/diamond) on respawn, triggerFinale, flyer drift+wrap. Standing footprints SOLID, crumbling/rubble PASSABLE. NUnit: FSM transitions + single-damage-entry counts."
+        },
+        "P3-LOCO-TARGET": {
+          "passes": false, "evidence": null, "tag": null, "commit": null,
+          "depends_on": ["P3-FSM-DAMAGE"],
+          "note": "Full locomotion: accel/friction integration, AABB collision vs standing footprints (World.footprintsNear), jump kinematics (pos.z/velZ, Config.JUMP) for ground kaiju; flyers (Mothra/Rodan) HOVER at FLYER_ALTITUDE, never jump, pass OVER buildings (skip collision) + altitude depth-bias (pushPlayer z*WZ/HH capped 3 -> renders over not through; planes/buildings untouched). Target acquisition: explicit click -> faced -> nearest-standing, airborne-prefers-flying; pickFlyer altitude-aware. Sprite-hitbox pick via OverlapPoint on silhouette colliders (tall buildings, planes)."
+        },
+        "P3-ATTACKS-FINISHER": {
+          "passes": false, "evidence": null, "tag": null, "commit": null,
+          "depends_on": ["P3-LOCO-TARGET"],
+          "note": "All 5 data-driven attack kinds (beam/bolts/cloud/dive/volley, dispatched from form.attack.kind, each its own FX) + Nova-Slam finisher (charge 0->1, AoE falloff, PARALLEL to autofire, NEVER touches the re-fire gate) + Mothra DoT (cloud, applied via the single damage entry). All sim in Core; FX events drained by the View."
+        },
+        "P3-FX-POOL": {
+          "passes": false, "evidence": null, "tag": null, "commit": null,
+          "depends_on": ["P3-ATTACKS-FINISHER"],
+          "note": "The 320-particle ring buffer -> Unity ParticleSystem object pools (Shuriken self-pools; per-kind VFX prefabs); the reduced-motion cap (90) as a quality tier. Do NOT port the Canvas2D draw or the hand-rolled ring buffer. Exit (Phase 3 DoD): roam the full city; FSM cycles; rare spawns appear; flyers pass over; all 5 attacks + Nova fire with correct FX; deterministic-gen + single-damage-entry tests green. Mike: play-feel spot-check vs PWA (G2)."
+        }
+      }
+    },
+    "P4": {
+      "title": "Economy, forms, save, shop UI, cloud save (section 4 Phase 4, section 3.4)",
+      "units": {
+        "P4-ECONOMY-CORE": {
+          "passes": false, "evidence": null, "tag": null, "commit": null,
+          "depends_on": ["P2-FIDELITY-VERIFY"],
+          "note": "PowerCalculator/EconomyService/ComboTracker in Core (double/long, IEEE-754 parity). The cancel-invariant clawsCost===CLAWS_MULT*attackPower at EVERY collection multiplier (economy.js:198-201, shared _collMult cancels) -> NUnit across all power-sets. FORM_BONUS-sums-to-63 (game.js:62-63) -> test + Debug.Assert. Bounded CAP_HP ceiling (one-shot the strongest building hard-stops claws). atk/move/finisher tracks; combo (tickCombo/bumpCombo WINDOW_MS 3250 — audit the ms-vs-s split, fixedDeltaTime is SECONDS, a ms-timer fed seconds is a silent 1000x bug); canFinale/markFinale (free World 2); win-finale. This is INDEPENDENT of P3 and can run in parallel."
+        },
+        "P4-SAVE-CONTAINER": {
+          "passes": false, "evidence": null, "tag": null, "commit": null,
+          "depends_on": ["P4-ECONOMY-CORE"],
+          "note": "v4 atomic single-key container ported VERBATIM (schema + slot CRUD + rev-newer-wins). Backend swap: localStorage -> ONE JSON file in Application.persistentDataPath, temp-file-then-File.Replace for atomicity. System.Text.Json/Newtonsoft NOT JsonUtility (drops Dictionary, can't distinguish missing-vs-default). sanitizeGame allowlist (15 fields, economy.js:449) ported CLAMP-FOR-CLAMP = the security boundary, each clamp a test case (SECURITY-CRITICAL; HIGH-stakes panel). Dirty-flag + 2s flush + OnApplicationPause(true)/Focus(false) flush (NOT OnApplicationQuit). DROP the v3->v4 migration branch + maybeReapV3 (the only deletion — Unity starts fresh at v4). NUnit: persists across restart + survives a mid-write kill."
+        },
+        "P4-GZS1-CODEC": {
+          "passes": false, "evidence": null, "tag": null, "commit": null,
+          "depends_on": ["P4-SAVE-CONTAINER"],
+          "note": "GZS1 export codec ported BIT-EXACT (the ONLY web->app save bridge). 'GZS1:'+b64u.enc(payload)+'.'+crc32hex (economy.js:774). C# uint logical >> (crc32 ^0xffffffff >>>0), Encoding.UTF8 (emoji must survive — NOT btoa(JSON)), base64url. GUIUtility.systemCopyBuffer for clipboard. Watch absence-semantics (formAxisSeen defaults true on a MISSING field). ACCEPTANCE TEST (the live-spike-beats-mock lesson): round-trip a REAL code exported from the live PWA through the C# decoder -> identical game. Attacker-controllable input -> HIGH-stakes panel. Mike confirms a real code imports (G6-adjacent)."
+        },
+        "P4-FORMS-SOS": {
+          "passes": false, "evidence": null, "tag": null, "commit": null,
+          "depends_on": ["P4-ECONOMY-CORE", "P2-SKIN-SOS"],
+          "note": "FORMS -> 20 FormDefinition ScriptableObjects + FormDatabase (hold Sprite/Material refs — the data<->asset seam). balance scalars -> balance.json -> BalanceConfig POCO (keeps Core UnityEngine-free, clean git diffs on retunes). Authored via the forms.json manifest -> Godzilla->Rebuild Form Assets editor command (text-source, deterministic regen, sidesteps SO YAML-merge), optionally live via MCP. SoToCoreAdapter bridges Data->Core."
+        },
+        "P4-SHOP-UI": {
+          "passes": false, "evidence": null, "tag": null, "commit": null,
+          "depends_on": ["P4-ECONOMY-CORE", "P4-FORMS-SOS", "G6"],
+          "note": "The ~450-600 LOC shop DOM (5 tabs Upgrades/Evolutions/Characters/Worlds/Saves) = the ONLY true UI rewrite, rebuilt as Unity UI (UI Toolkit/UGUI), event-driven off OnMoneyChanged/OnPowerChanged (replace the hudDirty poll). Only the data + the economy logic behind it ports. Mike: shop layout/taste (G6)."
+        },
+        "P4-CLOUD-SAVE": {
+          "passes": false, "evidence": null, "tag": null, "commit": null,
+          "depends_on": ["P4-SAVE-CONTAINER"],
+          "note": "Native cloud layered OVER the local file, keyed on the existing rev field (newer-wins): iCloud KVS + Play Games Saved Games via one wrapper (gilzoide/unity-cloud-save). GZS1 = the universal manual fallback + the only web->app path (separate sandboxes). Document IAP hooks behind an IPurchaseGate (cosmetics/remove-ads only — DO NOT build IAP this round; the bounded economy forbids selling the power track). Exit (Phase 4 DoD): full purchase loop; combo/finale/World-2 correct; cost==2x power + FORM_BONUS==63 tests green; saves survive restart + mid-write kill; a real PWA GZS1 imports cleanly."
+        }
+      }
+    },
+    "P5": {
+      "title": "Input, audio, HUD, day/night, reduced-motion, the feel-parity pass (section 4 Phase 5)",
+      "units": {
+        "P5-INPUT": {
+          "passes": false, "evidence": null, "tag": null, "commit": null,
+          "depends_on": ["P3-FX-POOL"],
+          "note": "Input System 1.14+ InputReader -> the same Intent struct. Floating joystick (On-Screen Stick + custom deadzone-rescale), multi-thumb SMASH/JUMP/NOVA discs, NOVA hold-charge/release, Screen.safeArea disc layout, desktop WASD/mouse/keyboard via control schemes. The screen->world relabel ported VERBATIM (up=forward is a design choice, NOT the geometric inverse). OnApplicationFocus(false) clears held state. RISK: multi-thumb On-Screen controls historically funnel one virtual pointer -> VERIFY stick+SMASH+JUMP simultaneous on a real device week 1 (G3); EnhancedTouch + manual touchId routing is the proven near-1:1 fallback. Gamepad comes free."
+        },
+        "P5-AUDIO-HAPTICS": {
+          "passes": false, "evidence": null, "tag": null, "commit": null,
+          "depends_on": ["P3-FX-POOL"],
+          "note": "DELETE the entire iOS WebAudio keepalive apparatus (Unity native audio has no idle-suspension — confirmed unnecessary). SFX baked to clips + parametric pitch/lowpass scaling (tier-scaled crumble, +-pitch/level jitter ported). AudioMixer master/mute keyed on Economy.muted; OS-interruption handling via OnApplicationFocus. NEW capability: haptics (Nice Vibrations) on smash/crumble/Nova/buy/deny, gated on the reduced-motion/settings toggle. Mike: haptic-weight feel (G2)."
+        },
+        "P5-HUD-CHROME": {
+          "passes": false, "evidence": null, "tag": null, "commit": null,
+          "depends_on": ["P4-SHOP-UI"],
+          "note": "UI Toolkit/UGUI: money, the 'Power N/19' true-progression meter (count of ROW_HP rungs attackPower one-shots; 19/19 <=> canFinale), target-HP boss-bar (fast fill + lagging white chip-ghost, snaps on switch), combo pip ring (gold->red), green +$ popups, finale beacon (pulsing on-screen ring / clamped edge-arrow -> statue, gated on canFinale), pause ownership, win card, toast/announce fanfares. Dirty-flag refresh -> C# events. Mike: HUD taste (G6)."
+        },
+        "P5-DAYNIGHT": {
+          "passes": false, "evidence": null, "tag": null, "commit": null,
+          "depends_on": ["P3-FX-POOL"],
+          "note": "Env.phase() curve (smoothstep dayness over ENV.dayLengthMs=120s) -> a global URP 2D Light + layered-sprite/skybox sky + parallax skyline (was the dpr-crisp 3-layer parallax). Clean logic port driving native light/sky."
+        },
+        "P5-REDUCED-MOTION": {
+          "passes": false, "evidence": null, "tag": null, "commit": null,
+          "depends_on": ["P5-HUD-CHROME"],
+          "note": "A reduced-motion MASTER setting gating shake/hit-stop/flash/particle-caps (default read from the OS flag). Honored throughout (the 90-particle tier, no-op trauma, no-op hit-stop)."
+        },
+        "P5-FEEL-PARITY": {
+          "passes": false, "evidence": null, "tag": null, "commit": null,
+          "depends_on": ["P5-INPUT", "P5-AUDIO-HAPTICS", "P5-HUD-CHROME", "P5-DAYNIGHT", "P5-REDUCED-MOTION", "G2", "G3"],
+          "human_gate": true,
+          "note": "The feel-tuning pass: trauma-shake side-by-side vs the live PWA (G2), haptic weight, joystick deadzone curve, multi-thumb device test (G3). Apply the 'is this too complex?' iteration-discipline gate at iteration 3-4 (escalate or cut, do not re-iterate). Exit (Phase 5 DoD = FUNCTIONAL PARITY): every web control + HUD + audio cue has a working Unity equivalent; multi-thumb verified on device; trauma matches the web feel side-by-side; reduced-motion honored. ALL 23 parity-checklist rows (section 4) green before P6. Flip true ONLY on Mike's recorded parity verdict."
+        }
+      }
+    },
+    "P6": {
+      "title": "Store submission: iOS + Android, single cutover (section 4 Phase 6, section 5)",
+      "units": {
+        "P6-PRESHIP-REVIEW": {
+          "passes": false, "evidence": null, "tag": null, "commit": null,
+          "depends_on": ["P5-FEEL-PARITY"],
+          "note": "Final pre-ship review (true-stop #6): full audit panel over the at-parity Unity build (the 10 cross-cutting invariants nothing may lose; security re-pass on sanitizeGame + GZS1 + cloud-trust; the ms-vs-s timer audit; the flyer-constant-size tested property). Stage findings -> fix -> re-verify before any submission."
+        },
+        "P6-IOS-PIPELINE": {
+          "passes": false, "evidence": null, "tag": null, "commit": null,
+          "depends_on": ["P6-PRESHIP-REVIEW", "G1", "G7"],
+          "note": "Bundle ID + Player Settings, IL2CPP/ARM64 (forced on iOS), Team 83T4PJ5UV6, Xcode archive -> TestFlight -> ASC via Fastlane gym/pilot. PLAN the Apr-28-2026 SDK floor: the Unity 6 minor must ship a Xcode-26/iOS-26-SDK-compatible toolchain by submission (verify the Unity<->Xcode-26 mapping at port time). CLAUDE owns BuildScript/Fastfile/GH-Actions; MIKE owns first-time provisioning/cert (G7) + the headless-license prerequisite (G1)."
+        },
+        "P6-ANDROID-PIPELINE": {
+          "passes": false, "evidence": null, "tag": null, "commit": null,
+          "depends_on": ["P6-PRESHIP-REVIEW", "G7"],
+          "note": "AAB (NOT APK) via Gradle, release keystore + Play App Signing (keystore password via CI env var — Unity does not persist it), Target API 35+, IL2CPP/ARM64, internal-test track -> production via Fastlane supply. CLAUDE owns the automation; MIKE owns the keystore/account (G7)."
+        },
+        "P6-STORE-COMPLIANCE": {
+          "passes": false, "evidence": null, "tag": null, "commit": null,
+          "depends_on": ["P6-PRESHIP-REVIEW", "G7"],
+          "note": "Apple age-rating questionnaire answered honestly (cartoon kaiju violence ~9+/E10+; new app answers the current questionnaire at submission) + a 2-min check Mike's existing iOS apps cleared the Jan-31-2026 deadline. 'Data Not Collected' (true — on-device saves, no accounts/analytics/ads) + Android Data Safety match. Ship v1 with NO real-money IAP (all currency earned -> sidesteps Guideline 3.1.1). Two listings (screenshots, descriptions). Run the app-store-prep checklist. CLAUDE drafts metadata; MIKE answers the questionnaires (G7)."
+        },
+        "P6-SUBMIT-CUTOVER": {
+          "passes": false, "evidence": null, "tag": null, "commit": null,
+          "depends_on": ["P6-IOS-PIPELINE", "P6-ANDROID-PIPELINE", "P6-STORE-COMPLIANCE", "G7"],
+          "human_gate": true,
+          "note": "Both builds submitted -> review round-trips (Apple 24-48h/cycle, expect 1-2) -> both accepted + live. The web PWA stays live until BOTH are accepted (the single cutover); then retire-or-keep-as-free-web-channel is Mike's call. Hard cash ~$124 (Apple $99/yr + Google $25 one-time); Unity $0; CI $0. CAMPAIGN COMPLETE on both-accepted. Flip true ONLY on store-acceptance evidence + Mike's cutover decision."
+        }
+      }
+    }
+  }
+}

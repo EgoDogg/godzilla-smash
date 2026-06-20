@@ -1,5 +1,8 @@
 # CAMPAIGN-BOOT · Godzilla Smash — gz-v14→v22 campaign (CLOSED) + POST-QA phase gz-v23→v28 (LIVE)
 
+> ⚠️ **ACTIVE CANONICAL CAMPAIGN = the UNITY MIGRATION** → read **`docs/campaign/UNITY-CAMPAIGN-BOOT.md`** (S3 Hybrid, 42-unit ledger `unity-campaign-progress.json`, ready to launch). **THIS web save-system campaign is SUSPENDED** (save Phases 1-4 committed, P5-6 deferred; the web PWA gz-v32 stays LIVE on `main`). Resume this web campaign only if Mike explicitly un-suspends it.
+
+
 **The "where am I?" doc. Read first on every session boot.** ≤130 lines.
 Plan: `docs/next-run-execution-plan.md` · Branch: `main` · Anchor: `3a81b40` (pre-campaign tip).
 Repo: `/Users/MGitk/Projects/Godzilla Game/` · Live: https://egodogg.github.io/godzilla-smash/ · `EgoDogg/godzilla-smash`.
