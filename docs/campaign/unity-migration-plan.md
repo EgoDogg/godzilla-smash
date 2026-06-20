@@ -14,7 +14,7 @@
 
 ## 0. STRATEGY REVISION (Fleet 2 · 2026-06-15) — Hybrid: PORT the logic, REBUILD the art natively
 
-> **This supersedes the §7 art decision (atlas-bake) below.** A second 13-agent adversarial fleet (wf_33517289-7db) re-examined the strategy for **long-term Unity development** (Mike's question: port, or rebuild assets/sprites natively with the HTML as reference?). Verdict below; the §1–§5 plan and §6 dimension decision still stand, but the art pipeline flips from *bake-to-atlas* to *re-author-natively*. **Confidence 82% → ~93% once Mike confirms exact-pixel-fidelity to gz-v32 is not a hard requirement** (his own question implies it isn't).
+> **This supersedes the §7 art decision (atlas-bake) below.** A second 13-agent adversarial fleet (wf_33517289-7db) re-examined the strategy for **long-term Unity development** (Mike's question: port, or rebuild assets/sprites natively with the HTML as reference?). Verdict below; the §1–§5 plan and §6 dimension decision still stand, but the art pipeline flips from *bake-to-atlas* to *re-author-natively*. **Confidence ~93% — Mike CONFIRMED 2026-06-15 that faithful-in-spirit (not pixel-exact) art is fine, so S3 Hybrid is LOCKED.** A third fleet is detailing the native art-authoring pipeline + a concrete Phase-0 de-risk spec.
 
 ### 1. Recommendation
 
