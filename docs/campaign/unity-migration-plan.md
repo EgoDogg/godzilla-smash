@@ -94,6 +94,8 @@ If he answers "faithful in spirit is fine" (which his own question — *"rebuild
 
 ## 1. Executive summary & recommended path
 
+> ⚠️ **PARTIALLY SUPERSEDED by §0 / §8 (S3 Hybrid, LOCKED 2026-06-15).** The **art-pipeline** recommendation below — *pre-baked sprite atlases exported from the JS generator* — is FIRST-FLEET RESIDUE and was OVERTURNED: the authoritative art treatment is **re-author natively in Unity** (§8), with the JS bakers kept only as a reference/spec tool. The **dimension/renderer (2.5D + ported `depthKey`), the logic-port seam, and §2–§5** still stand. Do NOT implement atlas-bake.
+
 **Recommendation.** Port Godzilla Smash to Unity 6 LTS as a **2.5D sprite game in an orthographic 3D scene** (textured billboards on an XZ plane, depth driven by a custom per-entity sort key ported from `iso.js`'s `depthKey` — not Unity's default center-pivot sort), with art shipped as **pre-baked sprite atlases exported from the existing JS procedural generator** (the generator stays alive as an offline authoring tool; a native C#/Painter2D port is demoted to an optional, post-ship R&D spike that never blocks the critical path). The signature live additive-FX layer (`screen`-blend glow/beams/motes) is re-authored as **URP 2D additive sprites/particles** — its own first-class track, independent of the body-art pipeline. Keep the web PWA **live and shipping in parallel**, build Unity to parity, and migrate once — nothing thrown away mid-flight — gated by a mandatory **one-form vertical-slice spike** (walk + attack + one beam + live glow + damage text, atlas-baked, under the ported sort key, screenshot-diffed against the live build) **before** committing to the full parallel build. The web `GZS1:` export code remains byte-compatible so it doubles as the "bring your save to the app" bridge; there is otherwise no automatic web→app data migration (separate storage sandboxes, confirmed).
 
 ### Decisions
@@ -706,6 +708,8 @@ Top migration risks across the whole plan, scored for a solo dev building his fi
 - **On-device profiling shows the transparent-FX overdraw actually janks** on Mike's target device classes (not expected — the game isn't perf-bound — but it's the one place the "cheap renderer" claim could break) → add FX-layer overdraw reduction (atlas trim, fewer stacked alpha passes) as a hard task rather than a budget.
 
 ## 7. Locked decision — Art pipeline (adversarially verified)
+
+> ⚠️ **SUPERSEDED IN FULL by §0 / §8 (S3 Hybrid, LOCKED 2026-06-15).** This entire section is the FIRST-FLEET art decision (*export the JS bakers to Unity sprite atlases — "B-as-destination"*). A later 13-agent fleet OVERTURNED it: the shipping art pipeline is **re-author natively in Unity 2D Animation** (4 family rigs × ~20 data-skins), keeping the JS bakers ONLY as a reference/spec + ref-baking tool. Read §8 for the authoritative pipeline. Retained below for historical context — do NOT implement atlas-bake.
 
 ### ART-PIPELINE DECISION — LOCKED
 

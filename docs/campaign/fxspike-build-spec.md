@@ -1,5 +1,7 @@
 # P0-FXSPIKE-BUILD — Supernova FX Body Build Sheet
 
+> ✅ **SHIPPED — reference only** (`uz-P0-FXSPIKE`, commit `ac7dd6f`, 2026-06-20). Built + verified on 5 gates + a 4-lens adversarial verify. **Implementation deviations from this sheet (recorded in the ledger evidence):** KillFlash `dt` clamp is **0.05** not 0.1 (entities.js:954); the sorting layer is added via **SerializedObject** (the spec's `InternalEditorUtility.AddSortingLayer` is gone in 6000.5); the "File 2" `Godzilla.Core.csproj` edit is **moot** (Unity-generated + gitignored); cosmic-mote/halo centers are **Y-flipped** (the spec's Step-7 constant omitted the flip); a **PrefabValidity** gate (b2) was added. This sheet is retained as the FX spec of record; consult the shipped code + ledger for the as-built truth.
+
 Build source for the post-clear autonomous run. Ordered, each step carries the concrete C#/shader/editor-API recipe, the exact web numbers, and the verify command. Builds on the LOCKED foundation (P0-SKELETON + FXSPIKE gate(a) green @ commit 7530d50). Do **not** re-derive proven facts or re-introduce fixed bugs.
 
 ## Corrections applied (folded into the recipes below)

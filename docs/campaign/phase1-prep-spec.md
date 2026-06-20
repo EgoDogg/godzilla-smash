@@ -1,5 +1,7 @@
 # Phase-1 Vertical Slice — Build-Ready Spec (Post-FXSPIKE Run)
 
+> 🟡 **PARTIALLY SHIPPED.** Steps 1–2 (the **IsoMath** depthKey/worldToScreen/GRID + **TraumaModel** Core ports) are DONE + dual-gate green (`uz-P1-COREPORTS`, commit `d74f720`). **As-built deviations:** the gen-vectors trauma vectors are a faithful node mirror (V8↔.NET parity); the spec's "File 2" `Godzilla.Core.csproj` edit is **moot** (Unity-generated/gitignored — the asmdef + CoreTests glob auto-include); TraumaModel's `else Trauma=0` is a documented normalization (sub-floor is unreachable at frame boundaries). Steps 3–7 (iso camera + Cinemachine + sort + sim/view seam + building FSM) are **NOT built** — gated on P0-FXGATE; pin Cinemachine `@3.1.4` and run the Step-3a pre-flight API grep before writing `IsoCameraRig.cs`.
+
 **Scope:** the §9.3 / §9.4 vertical slice — depthKey + trauma bit-exact ports, iso ortho camera + Cinemachine rig, depthKey painter sort, fixed-step FixedUpdate loop + sim/view seam, building lifecycle FSM + tap targeting. Execute this **only after P0-FXSPIKE passes** (blend foundation already SHIPPED, gate(a) green at commit `7530d50`).
 
 **Pattern:** every Core port follows the PROVEN P0-SKELETON dual gate — node ground-truth → `tools/core-tests/vectors.json` → license-free standalone dotnet round-trip (Leg A, CI core-bitexact, currently 144/144) **and** in-Unity NUnit EditMode (Leg B). Both green before tag/flip.

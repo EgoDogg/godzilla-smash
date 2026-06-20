@@ -1,9 +1,12 @@
 // Ground-truth vector generator: load the REAL web utils.js, dump bit-exact outputs.
+// Paths are RELATIVE to this file (tools/core-tests/ -> ../../js/) so the repo can be renamed/moved freely.
+const path = require('path');
+const JS = (f) => path.resolve(__dirname, '../../js', f);
 global.window = global; // utils.js attaches to window.GAME
-require('/Users/MGitk/Projects/Godzilla Game/js/utils.js');
+require(JS('utils.js'));
 const U = global.GAME.Utils;
-require('/Users/MGitk/Projects/Godzilla Game/js/config.js'); // iso.js dep: Config.GRID — MUST load before iso.js
-require('/Users/MGitk/Projects/Godzilla Game/js/iso.js');    // attaches GAME.iso
+require(JS('config.js')); // iso.js dep: Config.GRID — MUST load before iso.js
+require(JS('iso.js'));     // attaches GAME.iso
 const ISO = global.GAME.iso;
 
 const out = {};

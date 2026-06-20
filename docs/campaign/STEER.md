@@ -1,5 +1,7 @@
 # STEER · human override channel
 
+> **ACTIVE CAMPAIGN = Unity (S3 Hybrid)** — ledger `unity-campaign-progress.json`, boot `UNITY-CAMPAIGN-BOOT.md`. This file is SHARED with the SUSPENDED web save-system campaign; the entries dated **before 2026-06-15** are web-era context (the web PWA gz-v32 stays live on `main`, that campaign is paused). New Unity-campaign directives + Mike's G0–G7 gate verdicts go below, newest at the bottom.
+
 Append directives here; the run honors unprocessed ones at the next session-start ritual (and self-wake probes). Format: `## YYYY-MM-DD · PAUSE|SKIP|PIVOT|DEFER|NOTE · <target>` + body. Mark `[processed]` when folded in.
 
 Use **NOTE** for feel feedback after a live deploy (G1) — e.g. "Nova Slam charge feels too slow." It queues here, non-blocking, and is folded into a tuning pass at the next version boundary.
