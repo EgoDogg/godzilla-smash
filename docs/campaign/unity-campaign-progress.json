@@ -3,7 +3,7 @@
  "_purpose": "Default-FAIL evidence contract for the Godzilla Smash -> Unity (S3 Hybrid) migration autonomous campaign. Every unit starts passes:false. NEVER flip passes:true without ALL THREE of a verifiable evidence string + a real git tag + a real commit SHA, written in the commit AFTER the work lands (atomic ship). Human-gated units (Mike-only: art-rig craft, on-device perf, subjective FX/feel verdicts, Unity GUI install/license/MCP click-through) are flagged human_gate:true and QUEUE via the gate table \u2014 the autonomous loop drives all un-gated work around them and never blocks.",
  "_master_plan": "docs/campaign/unity-migration-plan.md",
  "_campaign_folder": "docs/campaign/",
- "_branch": "unity-port (NEW branch off main; the web PWA gz-v32 stays live on main, untouched)",
+ "_branch": "unity-port (off main; Unity project GodzillaSmash/ created via Hub Universal-2D, 6000.5.0f1)",
  "_pre_campaign_anchor_tag": "gz-v32",
  "_pre_campaign_anchor_commit": "729d36d40bed7afc1b3be598dd830544a891aa68",
  "_resume_ritual": "docs/campaign/UNITY-CAMPAIGN-BOOT.md SESSION-START RITUAL",
@@ -123,7 +123,7 @@
      "depends_on": [
       "G0"
      ],
-     "note": "G0 CLEARED via CLI 2026-06-20: Unity 6.3 project unity/ created+licensed+packaged (URP/Input/Cinemachine/2D-Animation/Test), 6-asmdef skeleton compiles 0-errors (Core no-UnityEngine). REMAINING before flip: BuildScript.cs + GameCI YAML + Puppeteer ref-baker + Core bit-exact ports + NUnit tests. Loop re-grounds, completes these, verifies, flips."
+     "note": "TARGET Unity 6000.5.0f1 (Hub Universal-2D template). The 6.3 CLI stopgap was retired; the reusable skeleton (6 asmdefs incl. Core no-UnityEngine, CLAUDE.md, gitignore/LFS, SetupPackages.cs, OpenUPM registry) is preserved in docs/campaign/unity-skeleton/ \u2014 compile-verified 0-errors under 6.3, re-verify under 6.5. Mike creates the Hub project (GodzillaSmash/), then Claude integrates skeleton+packages+MCP and completes the remainder (BuildScript + GameCI + Puppeteer ref-baker + Core bit-exact ports + NUnit tests) before flipping."
     },
     "P0-MCP-CI": {
      "passes": false,
