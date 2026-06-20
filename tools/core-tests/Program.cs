@@ -117,6 +117,67 @@ static class Program
             Check($"b64u.dec({inp})", Base64Url.Decode(inp) == exp, $"got '{Base64Url.Decode(inp)}' exp '{exp}'");
         }
 
+        // ---- iso constants ----
+        var ic = root.GetProperty("isoConst");
+        Check("iso.HW", IsoMath.HW == ic.GetProperty("HW").GetDouble());
+        Check("iso.HH", IsoMath.HH == ic.GetProperty("HH").GetDouble());
+        Check("iso.WZ", IsoMath.WZ == ic.GetProperty("WZ").GetDouble());
+        Check("iso.COLS", IsoMath.COLS == ic.GetProperty("COLS").GetInt32());
+        Check("iso.ROWS", IsoMath.ROWS == ic.GetProperty("ROWS").GetInt32());
+
+        // ---- worldToScreen ---- (wz omitted in JS -> JSON null -> 0)
+        foreach (var c in root.GetProperty("worldToScreen").EnumerateArray())
+        {
+            var a = c.GetProperty("in");
+            double wx = a[0].GetDouble(), wy = a[1].GetDouble();
+            double wz = a[2].ValueKind == JsonValueKind.Null ? 0.0 : a[2].GetDouble();
+            var (gx, gy) = IsoMath.WorldToScreen(wx, wy, wz);
+            double ex = c.GetProperty("x").GetDouble(), ey = c.GetProperty("y").GetDouble();
+            Check($"w2s({wx},{wy},{wz})", gx == ex && gy == ey, $"got ({gx:R},{gy:R}) exp ({ex:R},{ey:R})");
+        }
+        // ---- depthKey ---- (wz/depthBias omitted -> 0)
+        foreach (var c in root.GetProperty("depthKey").EnumerateArray())
+        {
+            var e = c.GetProperty("in");
+            double wx = e.GetProperty("wx").GetDouble(), wy = e.GetProperty("wy").GetDouble();
+            double wz = e.TryGetProperty("wz", out var wzp) ? wzp.GetDouble() : 0.0;
+            double db = e.TryGetProperty("depthBias", out var dbp) ? dbp.GetDouble() : 0.0;
+            double got = IsoMath.DepthKey(wx, wy, wz, db), exp = c.GetProperty("out").GetDouble();
+            Check($"depthKey({wx},{wy},{wz},{db})", got == exp, $"got {got:R} exp {exp:R}");
+        }
+        // ---- trauma add / decay / offset / seq ---- (V8<->.NET parity; exact ==, never loosen Math.pow)
+        foreach (var c in root.GetProperty("trauma_add").EnumerateArray())
+        {
+            double t = c.GetProperty("t").GetDouble(), mag = c.GetProperty("mag").GetDouble(), exp = c.GetProperty("out").GetDouble();
+            var m = new TraumaModel { Trauma = t }; m.Add(mag);
+            Check($"trauma.add({t},{mag})", m.Trauma == exp, $"got {m.Trauma:R} exp {exp:R}");
+        }
+        foreach (var c in root.GetProperty("trauma_decay").EnumerateArray())
+        {
+            double t = c.GetProperty("t").GetDouble(), dt = c.GetProperty("dt").GetDouble(), exp = c.GetProperty("out").GetDouble();
+            var m = new TraumaModel { Trauma = t }; m.Decay(dt);
+            Check($"trauma.decay({t},{dt})", m.Trauma == exp, $"got {m.Trauma:R} exp {exp:R}");
+        }
+        foreach (var c in root.GetProperty("trauma_offset").EnumerateArray())
+        {
+            double t = c.GetProperty("t").GetDouble(), exp = c.GetProperty("out").GetDouble();
+            var m = new TraumaModel { Trauma = t };
+            Check($"trauma.offset({t})", m.OffsetPx == exp, $"got {m.OffsetPx:R} exp {exp:R}");
+        }
+        {
+            var sq = root.GetProperty("trauma_seq");
+            double add = sq.GetProperty("add").GetDouble(), dt = sq.GetProperty("dt").GetDouble();
+            int steps = sq.GetProperty("steps").GetInt32();
+            var vals = sq.GetProperty("vals");
+            var m = new TraumaModel(); m.Add(add);
+            Check("trauma.seq[0]", m.Trauma == vals[0].GetDouble(), $"got {m.Trauma:R} exp {vals[0].GetDouble():R}");
+            for (int i = 0; i < steps; i++)
+            {
+                m.Decay(dt);
+                Check($"trauma.seq[{i + 1}]", m.Trauma == vals[i + 1].GetDouble(), $"got {m.Trauma:R} exp {vals[i + 1].GetDouble():R}");
+            }
+        }
+
         Console.WriteLine($"\nCore/Math bit-exact: {_pass} passed, {_fail} failed.");
         return _fail == 0 ? 0 : 1;
     }

@@ -167,7 +167,7 @@
    "units": {
     "P1-ISO-DEPTHKEY": {
      "passes": false,
-     "evidence": null,
+     "evidence": "PARTIAL (Core port shipped at uz-P1-COREPORTS, unit NOT flipped — the Scene/camera parts remain, gated on P0-FXGATE/G6). IsoMath.cs (Godzilla.Core/Iso, NO UnityEngine) ported VERBATIM from js/iso.js: GRID consts (HW28/HH14/WZ40/COLS21/ROWS58, config.js:15), WorldToScreen ((wx-wy)*HW,(wx+wy)*HH-wz*WZ, iso.js:217), DepthKey ((wx+wy)*1024+wz*4+depthBias, iso.js:264) returning DOUBLE (the load-bearing decision: (0.1,0,0,0)=102.4). DUAL-GATE GREEN: Leg A (bundled .NET 8 tools/core-tests) round-trips the REAL ISO.worldToScreen/ISO.depthKey V8 outputs exact == (224 passed, up from 144); Leg B (Unity batchmode EditMode) 28 passed incl. Iso_constants/WorldToScreen/DepthKey. Seam proven by construction (Leg A compiles Core under plain .NET 8). REMAINING: iso ortho camera + Cinemachine 3.1 vcam + Transparency-Sort-Axis/sortingOrder painter sort + ScreenToWorld (phase1-prep-spec.md Steps 3-4) — Scene-dependent, sequenced after P0-FXGATE; G6 camera-angle taste is async.",
      "tag": null,
      "commit": null,
      "depends_on": [
@@ -177,7 +177,7 @@
     },
     "P1-TRAUMA-FEEL": {
      "passes": false,
-     "evidence": null,
+     "evidence": "PARTIAL (Core port shipped at uz-P1-COREPORTS, unit NOT flipped — the Cinemachine adapter + G2 feel verdict remain). TraumaModel.cs (Godzilla.Core/Iso struct, NO UnityEngine, double) ported VERBATIM from js/iso.js: clamp-on-add min(t+mag/85,1) (camera.shake :154-156, the anti-quake fix), exp-decay t*=pow(0.02,max(0,dt)) with the 0.004 floor (:137-140), OffsetPx=12*t. DUAL-GATE GREEN with EXACT == (the V8<->.NET Math.pow parity, the one divergence risk, never loosened): Leg A trauma_add/decay/offset/seq + Leg B Trauma_add/decay/offset_and_seq. Re-ground caught + CLEARED a subtlety: the web decay has NO else (sub-floor SKIPPED), TraumaModel uses else-zero — IDENTICAL in real operation since sub-floor (0,0.004] is unreachable at frame boundaries (every write lands in {0} U (0.004,1]: add>=0.0059, decay zeroes on crossing); documented in-file. REMAINING (gated on P0-FXGATE/G2 + P5-FEEL-PARITY): the CinemachineBasicMultiChannelPerlin adapter (TraumaModel in a FIELD, reducedMotion gate, AmplitudeGain mapping, NOT Impulse) + hit-stop + the side-by-side feel verdict.",
      "tag": null,
      "commit": null,
      "depends_on": [

@@ -114,5 +114,62 @@ namespace Godzilla.Tests.EditMode
             Assert.That(Base64Url.Decode("8J-mlg"), Is.EqualTo("\U0001F996"));
             Assert.That(Base64Url.Decode("aGVsbG8"), Is.EqualTo("hello"));
         }
+
+        // ---- iso (Phase-1 P1-ISO-DEPTHKEY Core port) ----
+        [Test] public void Iso_constants_match_grid()
+        {
+            Assert.That(IsoMath.HW, Is.EqualTo(28.0));   Assert.That(IsoMath.HH, Is.EqualTo(14.0));
+            Assert.That(IsoMath.WZ, Is.EqualTo(40.0));   Assert.That(IsoMath.COLS, Is.EqualTo(21));
+            Assert.That(IsoMath.ROWS, Is.EqualTo(58));
+        }
+        [Test] public void WorldToScreen_matches_js()
+        {
+            Assert.That(IsoMath.WorldToScreen(1, 0, 0),         Is.EqualTo((28.0, 14.0)));
+            Assert.That(IsoMath.WorldToScreen(0, 1, 0),         Is.EqualTo((-28.0, 14.0)));
+            Assert.That(IsoMath.WorldToScreen(10, 20, 0),       Is.EqualTo((-280.0, 420.0)));
+            Assert.That(IsoMath.WorldToScreen(0, 0, 4),         Is.EqualTo((0.0, -160.0)));    // statue lift
+            Assert.That(IsoMath.WorldToScreen(3.5, 9.25, 1.75), Is.EqualTo((-161.0, 108.5)));  // flyer
+            Assert.That(IsoMath.WorldToScreen(20, 57, 0),       Is.EqualTo((-1036.0, 1078.0)));// far corner
+            Assert.That(IsoMath.WorldToScreen(10, 20),          Is.EqualTo((-280.0, 420.0)));  // wz default 0
+        }
+        [Test] public void DepthKey_matches_js()
+        {
+            Assert.That(IsoMath.DepthKey(0, 0, 0, 0),          Is.EqualTo(0.0));
+            Assert.That(IsoMath.DepthKey(0, 0, 0, 1),          Is.EqualTo(1.0));       // player +1
+            Assert.That(IsoMath.DepthKey(10, 20, 0, 0),        Is.EqualTo(30720.0));   // building
+            Assert.That(IsoMath.DepthKey(10, 20, 0, 1),        Is.EqualTo(30721.0));
+            Assert.That(IsoMath.DepthKey(10.5, 20.5, 1.75, 1), Is.EqualTo(31752.0));   // flyer center
+            Assert.That(IsoMath.DepthKey(5, 5, 2, 3073),       Is.EqualTo(13321.0));   // lifted flyer big bias
+            Assert.That(IsoMath.DepthKey(20, 57, 0, 0),        Is.EqualTo(78848.0));   // far row
+            Assert.That(IsoMath.DepthKey(0, 0, 4, 0),          Is.EqualTo(16.0));      // wz*4 statue
+            Assert.That(IsoMath.DepthKey(2, 2, 0.5, 0),        Is.EqualTo(4098.0));    // fractional wz
+            Assert.That(IsoMath.DepthKey(0.1, 0, 0, 0),        Is.EqualTo(102.4));     // FLOATING-POINT proof
+        }
+
+        // ---- trauma (Phase-1 P1-TRAUMA-FEEL Core port) — exact ==, never loosen Math.pow ----
+        [Test] public void Trauma_add_clamps_and_noops()
+        {
+            var a = new TraumaModel(); a.Add(3);  Assert.That(a.Trauma, Is.EqualTo(0.03529411764705882));
+            var b = new TraumaModel(); b.Add(14); Assert.That(b.Trauma, Is.EqualTo(0.16470588235294117)); // FINISHER.SHAKE
+            var c = new TraumaModel { Trauma = 0.9 }; c.Add(14); Assert.That(c.Trauma, Is.EqualTo(1.0));   // clamp
+            var d = new TraumaModel { Trauma = 0.5 }; d.Add(-3); Assert.That(d.Trauma, Is.EqualTo(0.5));   // no-op
+        }
+        [Test] public void Trauma_decay_exp_and_floor_snap()
+        {
+            var a = new TraumaModel { Trauma = 1 }; a.Decay(1.0 / 60); Assert.That(a.Trauma, Is.EqualTo(0.9368797094027784));
+            var b = new TraumaModel { Trauma = 0.0041 }; b.Decay(1.0 / 60); Assert.That(b.Trauma, Is.EqualTo(0.0)); // falls below floor
+            var c = new TraumaModel { Trauma = 0.004 }; c.Decay(1.0 / 60); Assert.That(c.Trauma, Is.EqualTo(0.0));  // ==floor -> not > -> 0
+            var d = new TraumaModel { Trauma = 0.003 }; d.Decay(1.0 / 60); Assert.That(d.Trauma, Is.EqualTo(0.0));  // below floor -> 0
+        }
+        [Test] public void Trauma_offset_and_seq()
+        {
+            Assert.That(new TraumaModel { Trauma = 0.5 }.OffsetPx, Is.EqualTo(6.0));
+            Assert.That(new TraumaModel { Trauma = 1 }.OffsetPx, Is.EqualTo(12.0));
+            Assert.That(new TraumaModel { Trauma = 0.153 }.OffsetPx, Is.EqualTo(1.8359999999999999));
+            var m = new TraumaModel(); m.Add(13);                 // 0.15294117647058825
+            Assert.That(m.Trauma, Is.EqualTo(0.15294117647058825));
+            for (int i = 0; i < 30; i++) m.Decay(1.0 / 60);
+            Assert.That(m.Trauma, Is.EqualTo(0.021629148601000295)); // seq[30]
+        }
     }
 }

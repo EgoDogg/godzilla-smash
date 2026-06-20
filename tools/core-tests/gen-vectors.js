@@ -2,6 +2,9 @@
 global.window = global; // utils.js attaches to window.GAME
 require('/Users/MGitk/Projects/Godzilla Game/js/utils.js');
 const U = global.GAME.Utils;
+require('/Users/MGitk/Projects/Godzilla Game/js/config.js'); // iso.js dep: Config.GRID — MUST load before iso.js
+require('/Users/MGitk/Projects/Godzilla Game/js/iso.js');    // attaches GAME.iso
+const ISO = global.GAME.iso;
 
 const out = {};
 // --- clamp / lerp ---
@@ -58,5 +61,32 @@ out.b64u = Object.entries(b64Inputs).map(([k,s])=>{
 });
 // decode-only of known url-safe inputs
 out.b64u_dec_only = ["aGVsbG8","8J-mlg","5pel5pys6Kqe"].map(s=>({in:s,out:U.b64u.dec(s)}));
+
+// --- iso.worldToScreen --- integer tiles, fractional centers, statue lift z=4, flyer altitude, corners, wz-omitted.
+const wtsIn = [[0,0,0],[1,0,0],[0,1,0],[10,20,0],[20,57,0],[0.5,0.5,0],[10.5,20.5,0],
+               [0,0,4],[5,5,2],[3.5,9.25,1.75],[0,57,0],[20,0,0],[10,20,undefined]];
+out.worldToScreen = wtsIn.map(a=>{ const p=ISO.worldToScreen(a[0],a[1],a[2]); return {in:a,x:p.x,y:p.y}; });
+
+// --- iso.depthKey --- building bias0, player +1, flyer alt+bias, lifted-flyer big bias, statue z=4, omitted fields.
+const dkIn = [
+  {wx:0,wy:0,wz:0,depthBias:0},{wx:0,wy:0,wz:0,depthBias:1},
+  {wx:10,wy:20,wz:0,depthBias:0},{wx:10,wy:20,wz:0,depthBias:1},
+  {wx:10.5,wy:20.5,wz:1.75,depthBias:1},
+  {wx:5,wy:5,wz:2,depthBias:1+Math.ceil(Math.min(3,2*ISO.WZ/ISO.HH))*1024},
+  {wx:3,wy:40,wz:0,depthBias:0},{wx:20,wy:57,wz:0,depthBias:0},
+  {wx:0,wy:0,wz:4,depthBias:0},{wx:0,wy:0},{wx:2,wy:2,wz:0.5,depthBias:0}];
+out.depthKey = dkIn.map(e=>({in:e,out:ISO.depthKey(e)}));
+out.isoConst = {HW:ISO.HW,HH:ISO.HH,WZ:ISO.WZ,COLS:ISO.COLS,ROWS:ISO.ROWS};
+
+// --- trauma --- faithful node mirror of iso.js camera.shake (:154-156 add) / camera.update (:137-140 decay) / (:140 offset),
+// computed in V8 so the C# checks are a real V8<->.NET parity gate (the Math.pow ULP risk the spec flags).
+const SHAKE_DECAY=0.02, SHAKE_TRAUMA_K=1/85, SHAKE_MAX=12, FLOOR=0.004;
+const tAdd  = (t,mag)=> (mag>0) ? Math.min(t + mag*SHAKE_TRAUMA_K, 1) : t;
+const tDecay= (t,dt)=> { if(t>FLOOR){ let e=dt>0?dt:0; t*=Math.pow(SHAKE_DECAY,e); if(t<FLOOR)t=0; } else t=0; return t; };
+out.trauma_add = [[0,3],[0,9],[0,13],[0,14],[0.9,14],[0,0.5],[0.5,-3]].map(([t,m])=>({t,mag:m,out:tAdd(t,m)}));
+out.trauma_decay = [[1,1/60],[1,1/30],[0.5,1/60],[0.0041,1/60],[0.004,1/60],[0.003,1/60],[0.106,0.1]].map(([t,dt])=>({t,dt,out:tDecay(t,dt)}));
+out.trauma_offset = [0,0.0035,0.106,0.153,0.5,1].map(t=>({t,out:SHAKE_MAX*t}));
+const seq=[]; let ts=tAdd(0,13); seq.push(ts); for(let i=0;i<30;i++){ ts=tDecay(ts,1/60); seq.push(ts); }
+out.trauma_seq = {add:13, steps:30, dt:1/60, vals:seq};
 
 process.stdout.write(JSON.stringify(out,null,1));
