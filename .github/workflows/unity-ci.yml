@@ -1,0 +1,76 @@
+# Unity CI for the Godzilla Smash S3-Hybrid port (plan §5.5, §9.5 Gate 1).
+# Three legs, increasing in gatedness:
+#   1. core-bitexact  — LICENSE-FREE, runs on a stock GitHub Linux runner. Round-trips the REAL js/utils.js
+#                       vectors against Godzilla.Core (which compiles with NO UnityEngine). This is the fast
+#                       gate that needs no Unity at all — green here proves the bit-exact ports + the seam.
+#   2. unity-editmode — Unity EditMode tests via game-ci. Needs the UNITY_LICENSE secret (G1) + Actions enabled.
+#   3. android-aab    — produces an Android App Bundle via our BuildScript. Needs UNITY_LICENSE (+ the Android
+#                       module in the game-ci image). The iOS leg stays on a self-hosted macOS runner (IL2CPP+Xcode),
+#                       wired with Fastlane at P6.
+# Mike's async unblock (G0/G1): add repo secrets UNITY_LICENSE / UNITY_EMAIL / UNITY_PASSWORD (the manual-activation
+# .ulf for Personal), and enable Actions. Until then, leg 1 runs and legs 2-3 are skipped/fail-soft.
+name: unity-ci
+
+on:
+  push:
+    branches: [unity-port]
+  pull_request:
+    branches: [unity-port, main]
+  workflow_dispatch: {}
+
+jobs:
+  core-bitexact:
+    name: Core bit-exact (license-free)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+      - name: Round-trip the REAL PWA vectors against Godzilla.Core
+        run: dotnet run -c Release --project tools/core-tests/CoreTests.csproj
+
+  unity-editmode:
+    name: Unity EditMode tests
+    needs: core-bitexact
+    runs-on: ubuntu-latest
+    # Skips cleanly until Mike adds the license secret (G1).
+    if: ${{ false }}  # FLIP to: ${{ secrets.UNITY_LICENSE != '' }} once the secret exists
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          lfs: true
+      - uses: game-ci/unity-test-runner@v4
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+        with:
+          projectPath: GodzillaSmash
+          testMode: editmode
+          unityVersion: 6000.5.0f1
+
+  android-aab:
+    name: Android AAB (unattended)
+    needs: unity-editmode
+    runs-on: ubuntu-latest
+    if: ${{ false }}  # FLIP once UNITY_LICENSE + the keystore secrets exist (G0/G1)
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          lfs: true
+      - uses: game-ci/unity-builder@v4
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+          ANDROID_KEYSTORE_PASS: ${{ secrets.ANDROID_KEYSTORE_PASS }}
+        with:
+          projectPath: GodzillaSmash
+          targetPlatform: Android
+          unityVersion: 6000.5.0f1
+          buildMethod: Godzilla.Editor.BuildScript.PerformAndroidBuild
+      - uses: actions/upload-artifact@v4
+        with:
+          name: godzilla-aab
+          path: GodzillaSmash/Builds/Android

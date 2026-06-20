@@ -1,0 +1,33 @@
+# Fastfile — STORE-LEG STUB (plan §5.5, §5.2/5.3). Exercised at P6 with real Apple/Play creds (G7).
+# The store legs reuse the SAME BuildScript entry points as CI/MCP, so there is one build path everywhere.
+# Secrets arrive via env / App Store Connect API key — never committed. This file is intentionally a scaffold:
+# the iOS/Android lanes are wired but unrunnable until provisioning + keystore + store accounts exist (P6).
+
+default_platform(:ios)
+
+# Unity batchmode invocation shared by both platforms.
+def unity_build(method)
+  unity_editor = ENV["UNITY_PATH"] || "/Applications/Unity/Hub/Editor/6000.5.0f1/Unity.app/Contents/MacOS/Unity"
+  sh("'#{unity_editor}' -quit -batchmode -nographics " \
+     "-projectPath '#{File.expand_path("..", __dir__)}' " \
+     "-executeMethod Godzilla.Editor.BuildScript.#{method} -logFile -")
+end
+
+platform :ios do
+  desc "Build the Unity Xcode project, then archive + upload to TestFlight"
+  lane :beta do
+    unity_build("PerformiOSBuild")           # emits GodzillaSmash/Builds/iOS (Xcode project)
+    # gym(project: "Builds/iOS/Unity-iPhone.xcodeproj", scheme: "Unity-iPhone")  # Team 83T4PJ5UV6
+    # pilot(skip_waiting_for_build_processing: true)                              # TestFlight upload
+    UI.message("iOS lane is a P6 stub — uncomment gym/pilot once certs + ASC API key exist (G7).")
+  end
+end
+
+platform :android do
+  desc "Build the AAB, then upload to the Play internal-test track"
+  lane :beta do
+    unity_build("PerformAndroidBuild")        # emits GodzillaSmash/Builds/Android/GodzillaSmash.aab
+    # supply(aab: "Builds/Android/GodzillaSmash.aab", track: "internal")          # Play upload
+    UI.message("Android lane is a P6 stub — uncomment supply once the Play service-account JSON exists (G7).")
+  end
+end
