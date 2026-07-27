@@ -1,11 +1,15 @@
-/* GAME.Economy — money, claws, active-unit power, combo, save v3, shop DOM.
+/* GAME.Economy — money, smash power, active-unit power, combo, save v5 container, shop DOM.
  * Deps: GAME.Config (Config.FORMS + all balance/costs), GAME.Utils (fmt/safeSave/safeLoad/clamp),
  *       GAME.Audio (buy/evolve/recruit/deny SFX + mute), existing #shop DOM in index.html.
  *
- * v3 changes (contract §0 + §3):
- *   - attackPower() = activeForm.base × CLAWS_MULT^clawsLevel  (UNIVERSAL claws — every form)
+ * W0.1 KAIJU RESCALE (the current contract):
+ *   - attackPower() = Config.SMASH.POWER[smashLevel] × formMult(activeFormId)
+ *   - smashCost()   = round(SMASH.COST_K × SMASH.POWER[smashLevel+1] × formMult(activeFormId))
+ *     → cost ∝ the power the buy grants, so with HP === payout the cost:income ratio is flat and
+ *       formMult CANCELS: unlocking or switching a form never re-prices the track.
+ *   - Save container v5 ('kaiju-save-v5'), FRESH START — no migration from v4/v3, no notice. The
+ *     old keys are LEFT IN PLACE (a player's own backup); we simply never read them again.
  *   - activeUnit() / shop built from Config.FORMS grouped by family
- *   - Save key 'godzilla-save-v3' (FRESH — no migration from v2)
  *   - Default save: money 0, ownedFormIds ['gz2014'], activeFormId 'gz2014'
  *   - Shop: Evolutions tab = wyrm (Godzilla) forms gated in tier order
  *           Characters tab = the 4 Titan families (buy base form to unlock character,
@@ -20,8 +24,12 @@ window.GAME = window.GAME || {};
 
   // Bounded-economy ceiling (research-2026-06c): the game is finite — once attack power can
   // one-shot the strongest building, the damage upgrade hard-stops and the win-finale is in
-  // reach. Data-derived from the HP ladder so it survives ROW_HP retuning (currently 1e9).
+  // reach. Data-derived from the HP ladder so it survives ROW_HP retuning (currently 95, and
+  // deliberately === the last SMASH.POWER rung === the statue's hp).
   var CAP_HP = Math.max.apply(null, Cfg.ROW_HP);
+
+  // Highest buyable index into SMASH.POWER (the track's last rung).
+  function maxSmashLevel() { return Cfg.SMASH.POWER.length - 1; }
 
   // ---- FORMS helpers -------------------------------------------------------------------------
   // formDef(id) — look up a form by id in Config.FORMS.
@@ -63,12 +71,12 @@ window.GAME = window.GAME || {};
     { k: 'money', def: 0,
       san: function (v) { return (typeof v === 'number' && isFinite(v)) ? Math.max(0, v) : 0; } },
 
-    // Stronger-Claws purchases (each ×CLAWS_MULT = ×2 by default).
-    { k: 'clawsLevel', def: 0,
-      san: function (v) { return U.clamp(v | 0, 0, 64); } },   // normal ceiling ~28; 64 keeps attackPower finite
-
-    { k: 'atkSpeedLevel', def: 0,                              // Attack-Speed track (Config.ATKSPD)
-      san: function (v) { return U.clamp(v | 0, 0, Cfg.ATKSPD.LEVELS); } },
+    // Smash Power purchases — an INDEX into Config.SMASH.POWER, so the clamp MUST be the array's
+    // last index. (The pre-rescale row clamped to 0..64, an exponent bound; against an indexed
+    // ladder that let a corrupt save hold e.g. 40 → POWER[40] === undefined → NaN attackPower,
+    // which silently poisons every damage/cost/HUD read. Clamp to the data, never to a literal.)
+    { k: 'smashLevel', def: 0,
+      san: function (v) { return U.clamp(v | 0, 0, Cfg.SMASH.POWER.length - 1); } },
 
     { k: 'moveSpeedLevel', def: 0,                             // Move-Speed track (Config.MOVESPD)
       san: function (v) { return U.clamp(v | 0, 0, Cfg.MOVESPD.LEVELS); } },
@@ -114,11 +122,6 @@ window.GAME = window.GAME || {};
     { k: 'maxPowerSeen', def: false,                           // one-time "find the Statue" toast fired
       san: function (v) { return !!v; } },
 
-    // Always true: a fresh player never sees the gz-v26 rebalance toast. A pre-formula save LACKS
-    // the key entirely, which is what fireRebalanceToast() detects — it reads RAW, not sanitized.
-    { k: 'formAxisSeen', def: true,
-      san: function () { return true; } },
-
     { k: 'peakCombo', def: 1,                                  // highest combo this save (win-card stat)
       san: function (v) { return (typeof v === 'number' && v >= 1) ? v : 1; } }
   ];
@@ -163,29 +166,31 @@ window.GAME = window.GAME || {};
   function sfxDeny() { if (G.Audio && typeof G.Audio.deny === 'function') audio('deny'); }
 
   // ===========================================================================================
-  // Power  (contract §0 — UNIVERSAL claws)
-  // attackPower() = activeForm.base × CLAWS_MULT^clawsLevel
+  // Power  (W0.1 KAIJU RESCALE)
+  // attackPower() = SMASH.POWER[smashLevel] × formMult(activeFormId)
   // ===========================================================================================
-  // Forms-as-axis (Collection Multiplier + Option B): 1 + Σ FORM_BONUS[owned] + FORM_BONUS[active].
-  // Memoized — recomputed on every ownedFormIds OR activeFormId change (afterPurchase covers
-  // buyForm/switchForm/buyClaws; load recomputes at boot). NEVER persisted (derives from state).
-  var _collMult = 1;
-  function formBonusOf(id) { var m = Cfg.FORM_BONUS; return (m && m[id]) || 0; }
-  function recomputeCollMult() {
-    var s = 0, ids = state.ownedFormIds, i;
-    for (i = 0; i < ids.length; i++) s += formBonusOf(ids[i]);
-    if (Cfg.ACTIVE_DOUBLE_COUNT) s += formBonusOf(state.activeFormId);   // Option B felt-switch
-    _collMult = 1 + s;
-    return _collMult;
+  // formMult(id) — the ACTIVE form's damage multiplier, DERIVED from its roster tier:
+  //   1 + tier × (0.6 / 19)  → 1.0 at tier 0, 1.6 at tier 19 (the last form), 3 dp.
+  // This replaces the old collection multiplier (1 + Σ FORM_BONUS[owned] + FORM_BONUS[active]),
+  // which grew to ×64 and was a second exponential axis on top of the claws curve — exactly the
+  // thing the rescale exists to remove. Only the ACTIVE form counts now: switching is the choice,
+  // hoarding is not a stat. Nothing is memoized because the value is a pure function of one field.
+  // NOTE: this derivation is a STOPGAP for the current 20-form roster. When the dino roster lands,
+  // each form carries an explicit `mult` in Config.FORMS and this reads f.mult directly.
+  function formMult(id) {
+    var f = formDef(id);
+    var tier = (f && typeof f.tier === 'number') ? f.tier : 0;
+    return Math.round((1 + tier * (0.6 / 19)) * 1000) / 1000;
   }
-  function collectionMult() { return _collMult; }
+
+  // Shop sub-line for a form row: what wielding it does to your damage.
   function formContribLabel(f) {
-    var b = formBonusOf(f && f.id);
-    return b > 0 ? ('+' + b + ' collection power · permanent') : 'Starter form';
+    var m = formMult(f && f.id);
+    return m > 1 ? ('×' + m.toFixed(2) + ' damage while active') : 'Starter form · ×1.00 damage';
   }
 
   function attackPower() {
-    return Cfg.START_ATTACK * Math.pow(Cfg.CLAWS_MULT, state.clawsLevel) * _collMult;
+    return Cfg.SMASH.POWER[state.smashLevel] * formMult(state.activeFormId);
   }
 
   // activeUnit() → {kind, formId, family, signature, base, attack}
@@ -252,18 +257,16 @@ window.GAME = window.GAME || {};
   // ===========================================================================================
   function canAfford(n) { return state.money >= n; }
 
-  // Bounded-economy pricing (research-2026-06c): cost = the NEW TOTAL attack power the buy
-  // grants = base × CLAWS_MULT^(level+1). With HP===payout, the building worth D funds the
-  // upgrade that makes you deal D. Replaces the old round(CLAWS_BASE×CLAWS_GROWTH^level) curve
-  // (which outran income ~5000× by the finale). Back-compat: gz2014 L0 = round(6×2^1)=12 == old.
-  function clawsCost() {
-    // Carries the SAME collection multiplier as attackPower so it cancels in the cost:income
-    // ratio — the bounded invariant (clawsCost === CLAWS_MULT × attackPower) holds at every mult.
-    return Math.round(Cfg.START_ATTACK * Math.pow(Cfg.CLAWS_MULT, state.clawsLevel + 1) * _collMult);
-  }
-
-  function atkSpeedCost() {
-    return Math.round(Cfg.ATKSPD.BASE * Math.pow(Cfg.ATKSPD.GROWTH, state.atkSpeedLevel));
+  // Bounded-economy pricing, rescaled (W0.1): cost = COST_K × the power the NEXT rung grants,
+  // carrying the SAME formMult attackPower carries so it CANCELS in the cost:income ratio — the
+  // real content of the old "clawsCost === CLAWS_MULT × attackPower" invariant. With HP === payout
+  // that keeps the price of a rung a flat multiple of what the buildings it unlocks pay out, at
+  // every form multiplier, with no re-pricing when a form is bought or switched.
+  // At the LAST rung there is nothing to buy: return Infinity so canAfford() is false on every
+  // path (rather than indexing POWER[length] → undefined → NaN, which compares false silently).
+  function smashCost() {
+    if (state.smashLevel >= maxSmashLevel()) return Infinity;
+    return Math.round(Cfg.SMASH.COST_K * Cfg.SMASH.POWER[state.smashLevel + 1] * formMult(state.activeFormId));
   }
 
   // ---- Win-finale (research-2026-06c) --------------------------------------------------------
@@ -282,28 +285,15 @@ window.GAME = window.GAME || {};
       formsOwned:  state.ownedFormIds.length,
       formsTotal:  (Cfg.FORMS ? Cfg.FORMS.length : 20),
       attackPower: attackPower(),
-      clawsLevel:  state.clawsLevel,
+      smashLevel:  state.smashLevel,
       money:       state.money,
       peakCombo:   state.peakCombo
     };
   }
 
-  // Re-fire gate (seconds) for the ACTIVE form at a given attack-speed level — display only.
-  // Mirrors entities.js attackGateFor (the engine is authoritative); kept here for the shop
-  // rate label since economy has no kaiju handle. NOTE: duplicated gate math — consolidation
-  // candidate if a shared Config-driven helper is later extracted.
-  function atkGateForLevel(level) {
-    var f  = formDef(state.activeFormId);
-    var cd = (f && f.attack && typeof f.attack.cooldown === 'number') ? f.attack.cooldown : 0.30;
-    var g  = cd * (Cfg.COOLDOWN_SCALE != null ? Cfg.COOLDOWN_SCALE : 0.42);
-    var lo = (Cfg.COOLDOWN_FLOOR != null) ? Cfg.COOLDOWN_FLOOR : 0.11;
-    var hi = (Cfg.COOLDOWN_CAP != null) ? Cfg.COOLDOWN_CAP : 0.20;
-    if (g < lo) g = lo;
-    if (g > hi) g = hi;
-    var A = Cfg.ATKSPD;
-    if (A && level > 0) g = A.FLOOR + (g - A.FLOOR) * Math.pow(A.DECAY, level);
-    return g;
-  }
+  // (atkGateForLevel lived here — a display-only mirror of entities.js attackGateFor for the
+  //  Attack-Speed shop row's attacks/sec label. Both the track and the row are gone in W0.1;
+  //  entities.js attackGateFor remains the single, now level-free authority on the firing gate.)
 
   // ===========================================================================================
   // Ownership helpers
@@ -328,30 +318,23 @@ window.GAME = window.GAME || {};
   // Purchases
   // ===========================================================================================
 
-  function buyClaws() {
+  function buySmash() {
+    if (state.smashLevel >= maxSmashLevel()) { sfxDeny(); return false; }      // track exhausted
     if (attackPower() >= CAP_HP) { sfxDeny(); return false; } // bounded: already one-shots the strongest
-    var cost = clawsCost();
+    var cost = smashCost();
     if (!canAfford(cost)) { sfxDeny(); return false; }
     state.money -= cost;
-    state.clawsLevel += 1;
+    state.smashLevel += 1;
     sfxBuy();
     afterPurchase();
     return true;
   }
 
-  function buyAtkSpeed() {
-    if (state.atkSpeedLevel >= Cfg.ATKSPD.LEVELS) { sfxDeny(); return false; } // capped track
-    var cost = atkSpeedCost();
-    if (!canAfford(cost)) { sfxDeny(); return false; }
-    state.money -= cost;
-    state.atkSpeedLevel += 1;
-    sfxBuy();
-    afterPurchase();
-    return true;
-  }
-
+  // Explicit cost ladder (Config.MOVESPD.COSTS) — COSTS[level] prices the NEXT level. Guarded so a
+  // LEVELS/COSTS length mismatch can't hand canAfford an undefined.
   function moveSpeedCost() {
-    return Math.round(Cfg.MOVESPD.BASE * Math.pow(Cfg.MOVESPD.GROWTH, state.moveSpeedLevel));
+    var c = Cfg.MOVESPD.COSTS[state.moveSpeedLevel];
+    return (typeof c === 'number') ? c : Infinity;
   }
 
   function buyMoveSpeed() {
@@ -452,7 +435,7 @@ window.GAME = window.GAME || {};
   }
 
   function afterPurchase() {
-    recomputeCollMult();   // forms-as-axis: refresh the memoized multiplier before any power read
+    // (No multiplier memo to refresh: formMult is a pure function of the active form's tier.)
     // First time the player can one-shot the strongest building, point them at the win — the
     // finale statue is otherwise undiscoverable (Mike: TASTE-1B). One-time toast; the render
     // beacon then keeps guiding them until they smash it.
@@ -469,22 +452,26 @@ window.GAME = window.GAME || {};
   }
 
   // ===========================================================================================
-  // Save / Load  (v4 multi-slot container — docs/campaign/save-system-plan.md, Phase 1)
+  // Save / Load  (v5 multi-slot container — docs/campaign/save-system-plan.md, Phase 1)
   //
   // ONE localStorage key holds the WHOLE container, written as a single atomic setItem so slots
   // can never cross-corrupt and quota is all-or-nothing. The container is the synchronous source
-  // of truth, read once at boot. A legacy v3 (single flat) save is migrated into a v4 container
-  // with one slot, CRASH-SAFELY: the v3 key is KEPT as a safety net and only reaped on a LATER
-  // boot that re-parsed a well-formed v4 (never deleting the only good copy after a failed write).
+  // of truth, read once at boot.
   //
-  //   v4 = { v:4, rev, activeSlot:<id>, migratedFrom?, slots:[ {id,name,createdAt,lastPlayed,
-  //          lastBackupAt,backupPromptSeen,prestige, game:{<the 15 flat fields>} } ] }
+  // W0.1 KAIJU RESCALE — FRESH START, NO MIGRATION: the v4→v5 bump crosses a ~7-orders-of-
+  // magnitude economy rescale, so there is no honest conversion of an old money/level pair (any
+  // mapping would either erase or trivialize the run). v5 therefore reads ONLY its own key; the
+  // v4 and v3 keys are left in localStorage UNTOUCHED — deleting a player's data is never our
+  // call, and an old key is the only copy of their old game. (The v3→v4 migration branch and its
+  // crash-safe reaper lived here; both are deleted along with the gz-v26 rebalance toast.)
+  //
+  //   v5 = { v:5, rev, activeSlot:<id>, migratedFrom?, slots:[ {id,name,createdAt,lastPlayed,
+  //          lastBackupAt,backupPromptSeen,prestige, game:{<the flat FIELDS>} } ] }
   // ===========================================================================================
   var SAVE      = Cfg.SAVE || {};
-  var KEY_V4    = SAVE.KEY_V4 || 'godzilla-save-v4';
-  var V3_KEY    = SAVE.V3_KEY || 'godzilla-save-v3';
+  var KEY_V5    = SAVE.KEY_V5 || 'kaiju-save-v5';
 
-  var container      = null;    // the live v4 container = the in-memory source of truth (set in load())
+  var container      = null;    // the live v5 container = the in-memory source of truth (set in load())
   var _saveWarnShown = false;   // surface a save failure (quota / private mode) once
 
   // String slot ids (never an array index, so delete/switch can't alias a stale slot).
@@ -534,13 +521,14 @@ window.GAME = window.GAME || {};
   function freshContainer(game) {
     var now = (typeof Date !== 'undefined' && Date.now) ? Date.now() : 0;
     var slot = makeSlot('Slot 1', game, now);
-    return { v: 4, rev: 0, activeSlot: slot.id, migratedFrom: null, slots: [slot] };
+    return { v: 5, rev: 0, activeSlot: slot.id, migratedFrom: null, slots: [slot] };
   }
 
-  // readContainer() → a structurally-valid v4 container, or null.
+  // readContainer() → a structurally-valid v5 container, or null. STRICT on v: an older container
+  // read under the v5 key (or a hand-edited one) is rejected outright rather than half-applied.
   function readContainer() {
-    var c = U.safeLoad(KEY_V4);
-    if (!c || c.v !== 4 || !Array.isArray(c.slots) || c.slots.length < 1) return null;
+    var c = U.safeLoad(KEY_V5);
+    if (!c || c.v !== 5 || !Array.isArray(c.slots) || c.slots.length < 1) return null;
     return c;
   }
 
@@ -555,7 +543,7 @@ window.GAME = window.GAME || {};
   // immune to clock skew — used by the Phase-5 IDB mirror to decide which copy is newer).
   function writeContainer(c) {
     c.rev = (c.rev | 0) + 1;
-    var ok = U.safeSave(KEY_V4, c);
+    var ok = U.safeSave(KEY_V5, c);
     // safeSave returns false on quota / private-mode / ITP eviction — tell the player ONCE rather
     // than silently losing progress. (G.UI.toast does not exist — use Env.announce.)
     if (!ok && !_saveWarnShown) {
@@ -568,40 +556,16 @@ window.GAME = window.GAME || {};
   }
 
   // applySlotToState(game) → sanitize the slot's game, assign into live `state`, recompute the
-  // memoized multipliers. ALWAYS sanitizes, so no apply path can install a state a load couldn't.
+  // memoized move multiplier. ALWAYS sanitizes, so no apply path can install a state a load
+  // couldn't. (attackPower's form multiplier is derived on read — nothing to recompute here.)
   function applySlotToState(game) {
     var g = sanitizeGame(game), i, k;
     for (i = 0; i < FIELDS.length; i++) { k = FIELDS[i].k; state[k] = g[k]; }
     recalcMoveMult();
-    recomputeCollMult();
     hudDirty = true;
   }
 
-  // The forms-as-axis "power rebalanced, progress intact" toast (gz-v26) — fires ONCE for a save
-  // that PREDATES the formula (formAxisSeen absent). Preserved across the v4 migration: a pre-
-  // formula v3 toasts at migration, then the v4 slot.game carries formAxisSeen:true forever.
-  function fireRebalanceToast() {
-    if (typeof setTimeout !== 'function') return;
-    setTimeout(function () {
-      if (G.Env && typeof G.Env.announce === 'function') {
-        G.Env.announce('Power rebalanced — your claws and collection are intact; every monster you own now permanently boosts your damage.');
-      }
-    }, 1600);
-  }
-
-  // maybeReapV3(c) — once a well-formed v4 (migrated from v3) has been RE-READ on a later boot,
-  // the v3 safety-net is provably redundant → remove it. Idempotent (guards on getItem) and never
-  // runs on the migrating boot itself (that boot takes the migrate branch, not readContainer).
-  function maybeReapV3(c) {
-    if (c.migratedFrom !== 'v3') return;
-    try {
-      if (typeof localStorage !== 'undefined' && localStorage.getItem(V3_KEY) !== null) {
-        localStorage.removeItem(V3_KEY);
-      }
-    } catch (e) { /* private mode / blocked — leave the net in place */ }
-  }
-
-  // save() — persist live state into the active slot of the v4 container, atomically.
+  // save() — persist live state into the active slot of the v5 container, atomically.
   function save() {
     if (!container) container = freshContainer(freshGame());   // safety: load() normally runs first
     state.lastSeen = (typeof Date !== 'undefined' && Date.now) ? Date.now() : 0;
@@ -611,30 +575,23 @@ window.GAME = window.GAME || {};
     writeContainer(container);
   }
 
-  // load() → bool (an existing save was found). Establishes the in-memory container (reading v4,
-  // else migrating a v3 save, else seeding a fresh one), points at the active slot, applies it.
+  // load() → bool (an existing v5 save was found). Establishes the in-memory container (reading
+  // v5, else seeding a fresh one), points at the active slot, applies it.
+  // W0.1: there is NO migration path. A player with only a v4/v3 key starts fresh and is NOT
+  // notified — the rescale makes their old numbers meaningless, and a "your save was reset" toast
+  // on a game this size reads as a bug report, not a courtesy. Their old keys stay on disk.
   function load() {
     var existing = readContainer();
     if (existing) {
       container = existing;
-      maybeReapV3(container);                              // a later boot after a v3 migration → reap the net
       applySlotToState(activeSlotOf(container).game);
       return true;
     }
-    // No v4 container yet — migrate a legacy v3 save if present, else seed a fresh container.
-    var raw3  = U.safeLoad(V3_KEY);
-    var hasV3 = !!(raw3 && raw3.v === 3);
-    var toast = hasV3 && (raw3.formAxisSeen === undefined);   // pre-formula save → rebalance toast once
-    container = freshContainer(hasV3 ? sanitizeGame(raw3) : freshGame());
-    if (hasV3) {
-      container.migratedFrom = 'v3';
-      writeContainer(container);                           // persist the migration now; KEEP v3 (reap next boot)
-    }
     // Fresh new player: leave the container in memory only; the first save() writes it (so a
     // brand-new private-mode player isn't warned at boot before they've done anything).
+    container = freshContainer(freshGame());
     applySlotToState(activeSlotOf(container).game);
-    if (toast) fireRebalanceToast();
-    return hasV3;
+    return false;
   }
 
   // ===========================================================================================
@@ -654,12 +611,11 @@ window.GAME = window.GAME || {};
   }
 
   // powerOfGame(game) → attackPower for a slot's game WITHOUT touching live state (for list
-  // summaries). Mirrors attackPower(): START_ATTACK × CLAWS_MULT^claws × (1 + Σ FORM_BONUS).
+  // summaries). Mirrors attackPower(): SMASH.POWER[smashLevel] × formMult(activeFormId).
+  // Sanitizes first, so a corrupt slot can't produce a NaN in the slot list.
   function powerOfGame(game) {
-    var g = sanitizeGame(game), s = 0, owned = g.ownedFormIds, i;
-    for (i = 0; i < owned.length; i++) s += formBonusOf(owned[i]);
-    if (Cfg.ACTIVE_DOUBLE_COUNT) s += formBonusOf(g.activeFormId);
-    return Cfg.START_ATTACK * Math.pow(Cfg.CLAWS_MULT, g.clawsLevel) * (1 + s);
+    var g = sanitizeGame(game);
+    return Cfg.SMASH.POWER[g.smashLevel] * formMult(g.activeFormId);
   }
 
   function ensureContainer() { if (!container) container = freshContainer(freshGame()); return container; }
@@ -790,10 +746,16 @@ window.GAME = window.GAME || {};
   // A code leaves the storage sandbox entirely (clipboard / notes / email) = the only TRUE backup.
   // CRC32 = corruption detection only; self-cheating a single-player code is accepted (no leaderboard).
   // ===========================================================================================
+  // CODE_VERSION is 2 as of the W0.1 rescale. A v1 code carries pre-rescale numbers (and a
+  // `clawsLevel` field that no longer exists), so parseSlotCode REJECTS it outright — importing
+  // it would sanitize down to a fresh-ish game with a stale money balance, which is worse than
+  // an honest error because it looks like it worked.
+  function codeVersion() { return SAVE.CODE_VERSION || 1; }
+
   function exportSlotCode(id) {
     var sl = slotById(id);
     if (!sl) return null;
-    var payload = JSON.stringify({ fmt: 'gzs', v: (SAVE.CODE_VERSION || 1), exportedAt: nowMs(),
+    var payload = JSON.stringify({ fmt: 'gzs', v: codeVersion(), exportedAt: nowMs(),
                                    name: sl.name, game: sanitizeGame(sl.game) });
     return (SAVE.EXPORT_PREFIX || 'GZS1:') + U.b64u.enc(payload) + '.' + U.crc32(payload);
   }
@@ -816,6 +778,9 @@ window.GAME = window.GAME || {};
     var obj;
     try { obj = JSON.parse(payload); } catch (e) { return { ok: false, error: 'Could not read the code' }; }
     if (!obj || obj.fmt !== 'gzs' || !obj.game) return { ok: false, error: 'Not a valid save code' };
+    if (obj.v !== codeVersion()) {
+      return { ok: false, error: 'That code is from an older version of the game and can no longer be imported' };
+    }
     return { ok: true, name: (typeof obj.name === 'string' ? obj.name : 'Imported'),
              game: sanitizeGame(obj.game), exportedAt: obj.exportedAt || 0 };
   }
@@ -924,21 +889,23 @@ window.GAME = window.GAME || {};
 
   // ---- Tab builders --------------------------------------------------------------------------
 
-  // Upgrades: Stronger Atomic Breath (internal keys stay `claws*` — display name only).
-  // Subtitle shows current attack → next attack so the player sees the universal boost.
+  // Upgrades: Smash Power (the SMASH track), Titan Stride (move speed), Nova Slam.
+  // Subtitle shows current attack → next attack so the player sees exactly what a rung buys.
+  // (The "Rapid Fire Breath" attack-speed row was removed with the track in W0.1.)
   function buildUpgrades(body) {
-    var cost   = clawsCost();
+    var cost   = smashCost();
     var curPow = attackPower();
-    var f      = formDef(state.activeFormId);
-    var nxtPow = Cfg.START_ATTACK * Math.pow(Cfg.CLAWS_MULT, state.clawsLevel + 1) * collectionMult();
+    var atMax  = (state.smashLevel >= maxSmashLevel());
+    var nxtPow = atMax ? curPow
+                       : Cfg.SMASH.POWER[state.smashLevel + 1] * formMult(state.activeFormId);
     body.appendChild(hintLine(
-      'Doubles your attack — buy this and you will smash buildings in ONE hit. (Keep upgrading to one-shot the whole city.)'
+      'Raises your attack — the harder you hit, the deeper into the city you can smash in one blow.'
     ));
-    if (curPow >= CAP_HP) {
-      // Bounded-economy cap reached: one-shots everything; nothing left to upgrade.
+    if (atMax || curPow >= CAP_HP) {
+      // Bounded-economy cap reached (or the rung ladder is exhausted): nothing left to upgrade.
       body.appendChild(itemRow({
         swatch: '#36c9ff',
-        title:  'Stronger Atomic Breath · MAX',
+        title:  'Smash Power · MAX',
         sub:    U.fmt(curPow) + ' attack — one-shots EVERY building',
         tag:    'MAX'
       }));
@@ -946,42 +913,15 @@ window.GAME = window.GAME || {};
       var crosses = nxtPow >= CAP_HP;   // this buy crosses the one-shot threshold
       body.appendChild(itemRow({
         swatch: '#36c9ff',
-        title:  'Stronger Atomic Breath · Lv ' + state.clawsLevel,
+        title:  'Smash Power · Lv ' + state.smashLevel,
         sub:    crosses
           ? (U.fmt(curPow) + ' → ' + U.fmt(nxtPow) + ' · one-shots EVERY building!')
-          : (U.fmt(curPow) + ' → ' + U.fmt(nxtPow) + ' attack (×2)'),
+          : (U.fmt(curPow) + ' → ' + U.fmt(nxtPow) + ' attack'),
         button: {
           label:      '💰 ' + U.fmt(cost),
           affordable: canAfford(cost),
           disabled:   !canAfford(cost),
-          onClick:    function () { buyClaws(); }
-        }
-      }));
-    }
-
-    // Attack-Speed track — "Rapid Fire Breath". Sub shows the attacks/sec transition.
-    var asLvl  = state.atkSpeedLevel;
-    var asMax  = Cfg.ATKSPD.LEVELS;
-    var asRate = 1 / atkGateForLevel(asLvl);
-    if (asLvl >= asMax) {
-      body.appendChild(itemRow({
-        swatch: '#ffd24a',
-        title:  'Rapid Fire Breath · MAX',
-        sub:    asRate.toFixed(1) + ' attacks/sec (max)',
-        tag:    'MAX'
-      }));
-    } else {
-      var asCost = atkSpeedCost();
-      var asNext = 1 / atkGateForLevel(asLvl + 1);
-      body.appendChild(itemRow({
-        swatch: '#ffd24a',
-        title:  'Rapid Fire Breath · Lv ' + asLvl,
-        sub:    asRate.toFixed(1) + ' → ' + asNext.toFixed(1) + ' attacks/sec',
-        button: {
-          label:      '💰 ' + U.fmt(asCost),
-          affordable: canAfford(asCost),
-          disabled:   !canAfford(asCost),
-          onClick:    function () { buyAtkSpeed(); }
+          onClick:    function () { buySmash(); }
         }
       }));
     }
@@ -1043,8 +983,11 @@ window.GAME = window.GAME || {};
   //   - Immediate next unlocked tier: buy button
   //   - Later locked tiers: LOCKED tag
   function buildEvolutions(body) {
-    body.appendChild(hintLine('Each form you OWN permanently multiplies ALL your attack — wielding it hits harder still.'));
-    body.appendChild(hintLine('Collection ' + state.ownedFormIds.length + '/' + (Cfg.FORMS ? Cfg.FORMS.length : 20) + ' · ×' + collectionMult().toFixed(2) + ' power'));
+    // W0.1: the collection multiplier is gone — only the ACTIVE form multiplies damage, so the
+    // header states the ACTIVE multiplier rather than a hoarding score.
+    body.appendChild(hintLine('The form you are WIELDING multiplies your attack — later forms hit harder.'));
+    body.appendChild(hintLine('Collection ' + state.ownedFormIds.length + '/' + (Cfg.FORMS ? Cfg.FORMS.length : 20) +
+                              ' · active ×' + formMult(state.activeFormId).toFixed(2) + ' damage'));
     var forms = wyrmForms();
     for (var i = 0; i < forms.length; i++) {
       (function (f) {
@@ -1453,6 +1396,7 @@ window.GAME = window.GAME || {};
   G.Economy = {
     // power
     attackPower: attackPower,
+    formMult:    formMult,
     activeUnit:  activeUnit,
 
     // banking + combo
@@ -1460,11 +1404,9 @@ window.GAME = window.GAME || {};
     comboMult:   comboMult,
     tickCombo:   tickCombo,
 
-    // costs + purchases (v3 primary API)
-    clawsCost:     clawsCost,
-    buyClaws:      buyClaws,
-    atkSpeedCost:  atkSpeedCost,
-    buyAtkSpeed:   buyAtkSpeed,
+    // costs + purchases (W0.1 primary API — clawsCost/buyClaws/atkSpeedCost/buyAtkSpeed are GONE)
+    smashCost:     smashCost,
+    buySmash:      buySmash,
     moveSpeedCost: moveSpeedCost,
     buyMoveSpeed:  buyMoveSpeed,
     moveSpeedMult: function () { return moveMult; },
@@ -1521,8 +1463,7 @@ window.GAME = window.GAME || {};
 
     // ---- state getters (read-only views) ----
     get money()          { return state.money; },
-    get clawsLevel()     { return state.clawsLevel; },
-    get atkSpeedLevel()  { return state.atkSpeedLevel; },
+    get smashLevel()     { return state.smashLevel; },
     get moveSpeedLevel() { return state.moveSpeedLevel; },
     get finisherOwned()  { return state.finisherOwned; },
     get finaleSeen()     { return state.finaleSeen; },

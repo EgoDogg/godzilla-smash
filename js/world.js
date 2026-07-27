@@ -36,13 +36,13 @@ window.GAME = window.GAME || {};
   var Utils = G.Utils;
 
   var GRID = Config.GRID;          // { cols, rows, TILE_W, TILE_H, WZ_PX }
-  var ROW_HP = Config.ROW_HP;      // per-row HP === payout (19 tiers)
+  var ROW_HP = Config.ROW_HP;      // per-row HP === payout (12 tiers, W0.1)
   var RESPAWN = Config.RESPAWN;    // { CRUMBLE_MS, RUBBLE_MS, RUBBLE_PER_TIER, RISE_MS }
 
   // World seed — fixed so a city is reproducible across reloads/sessions.
   var WORLD_SEED = 0x9E3779B1;
 
-  // 5 visual style bands mapped across the 19 rows.
+  // 5 visual style bands mapped across the 12 HP tiers.
   var STYLE_BANDS = 5;
 
   // -------------------------------------------------------------------------
@@ -63,7 +63,7 @@ window.GAME = window.GAME || {};
     var rnd = Utils.rng(seed);
 
     var L = Config.LAYOUT;
-    // Depth band: which of the 19 HP tiers this row belongs to. `tierRows`
+    // Depth band: which of the 12 HP tiers this row belongs to. `tierRows`
     // decouples band depth from street width (falls back to the old block+street
     // period when absent) so widening streets doesn't stretch the HP curve.
     var period = L.tierRows || (L.blockD + L.street);
@@ -561,6 +561,9 @@ window.GAME = window.GAME || {};
   function hitBuilding(b, rawDamage) {
     if (!b || b.state !== 'standing') return 0;
     var dmg = Math.floor(rawDamage);   // NOT `| 0`: bitwise truncates to 32-bit
+    // Callers already deliver an integer ≥ 1 (entities.dealDamage rounds and floors at 1; DoT
+    // perTick is Math.max(1, …)), so this floor is a belt-and-braces normalizer, not the place
+    // that decides whether a sub-1.0 hit counts — that decision lives at the player-damage seam.
     if (!(dmg > 0)) return 0;
 
     b.hp -= dmg;

@@ -834,11 +834,9 @@ window.GAME = window.GAME || {};
     var g = base * scale;
     if (g < floor) g = floor;
     if (g > cap) g = cap;
-    // Attack-Speed upgrade track: asymptotic reduction toward ATKSPD.FLOOR (Config-driven).
-    // gate' = FLOOR + (gate - FLOOR) * DECAY^level. Level 0 leaves g untouched.
-    var A = Cfg.ATKSPD;
-    var lvl = (G.Economy && typeof G.Economy.atkSpeedLevel === 'number') ? G.Economy.atkSpeedLevel : 0;
-    if (A && lvl > 0) g = A.FLOOR + (g - A.FLOOR) * Math.pow(A.DECAY, lvl);
+    // (The purchasable Attack-Speed track applied an asymptotic per-level reduction here —
+    //  gate' = ATKSPD.FLOOR + (gate - ATKSPD.FLOOR) × DECAY^level. W0.1 dropped the track, so the
+    //  gate is exactly what every player used to get at level 0 and Config.ATKSPD is gone.)
     return g;
   }
 
@@ -1368,7 +1366,7 @@ window.GAME = window.GAME || {};
     // the per-hit sound that was previously unwired (only crumble fired, on destroy).
     if (targets.length && G.Audio && typeof G.Audio.smash === 'function') G.Audio.smash();
 
-    var power = (G.Economy && G.Economy.attackPower) ? G.Economy.attackPower() : Cfg.START_ATTACK;
+    var power = (G.Economy && G.Economy.attackPower) ? G.Economy.attackPower() : Cfg.SMASH.POWER[0];   // fallback = rung 0 (Economy absent — tests / pre-boot)
 
     var attackFn = ATTACK_KINDS[kindStr];
     if (typeof attackFn === 'function') {
@@ -1409,7 +1407,7 @@ window.GAME = window.GAME || {};
 
     // AoE damage with distance falloff (fireDive pattern). Money/combo flow through
     // dealDamage → World.hitBuilding → bankDestroy automatically.
-    var power = (G.Economy && G.Economy.attackPower) ? G.Economy.attackPower() : Cfg.START_ATTACK;
+    var power = (G.Economy && G.Economy.attackPower) ? G.Economy.attackPower() : Cfg.SMASH.POWER[0];   // fallback = rung 0 (Economy absent — tests / pre-boot)
     var dmgMult = FIN.DMG_MIN + (FIN.DMG_MAX - FIN.DMG_MIN) * charge;
     var near = (G.World && G.World.footprintsNear) ? G.World.footprintsNear(ccol, crow, radius + 1) : [];
     for (var i = 0; i < near.length; i++) {
@@ -1459,10 +1457,16 @@ window.GAME = window.GAME || {};
     return out;
   }
 
+  // dealDamage — every PLAYER-sourced hit funnels through here on its way to the single damage
+  // entry point (World.hitBuilding). ROUND, don't floor: post-rescale a hit is a single-digit
+  // number, so flooring threw away up to a full point of damage per hit (a 1.6-damage attack
+  // landing as 1 = a 37% silent nerf), and any sub-1.0 hit — falloff-scaled AoE edges, the
+  // cloud's ×0.4 tick — floored to 0 and became an invisible no-op that still played the FX.
+  // Math.max(1, …) keeps the "a player hit always does something" floor World.hitBuilding's
+  // `!(dmg > 0)` guard would otherwise silently swallow.
   function dealDamage(b, raw) {
     if (!b) return;
-    if (raw < 1) raw = 1;
-    raw = Math.floor(raw);   // prevent 32-bit truncation on very large floats
+    raw = Math.max(1, Math.round(raw));   // also keeps the value integral (no 32-bit truncation risk)
     FX.spawnDamageText(b, raw);
     if (G.World && G.World.hitBuilding) G.World.hitBuilding(b, raw);
   }

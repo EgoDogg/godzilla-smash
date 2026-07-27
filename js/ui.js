@@ -101,7 +101,7 @@ window.GAME = window.GAME || {};
       icon = '🦖';
     }
 
-    // Power readout (⚔) and depth (Row X/19), matching the v1 badge style.
+    // Power readout (⚔) and the one-shot-tier meter (⚡ Power N/12), in the v1 badge style.
     var pwr = '';
     if (Eco && typeof Eco.attackPower === 'function') {
       pwr = ' · ⚔ ' + Utils.fmt(Eco.attackPower());
@@ -112,14 +112,15 @@ window.GAME = window.GAME || {};
     return icon + ' ' + esc(name) + subHtml + pwr + ' · ' + depth;
   }
 
-  // True progression meter: "⚡ Power N/19" = how many of the ROW_HP building-tiers the
-  // player's current attackPower can ONE-SHOT. N reaching 19 ⟺ attackPower ≥ CAP_HP ⟺ the
-  // win-finale is unlocked (economy.js canFinale). Replaces the old "📍 Tier X/19" badge,
-  // which read off the GEOGRAPHIC frontier (maxReachedRow) and could show 19/19 while the
+  // True progression meter: "⚡ Power N/12" = how many of the ROW_HP building-tiers the
+  // player's current attackPower can ONE-SHOT. N reaching 12 ⟺ attackPower ≥ CAP_HP ⟺ the
+  // win-finale is unlocked (economy.js canFinale). Replaces the old "📍 Tier X" badge,
+  // which read off the GEOGRAPHIC frontier (maxReachedRow) and could show full while the
   // player was still at base power — a completion meter that wasn't measuring completion.
+  // The denominator is ROW_HP.length, so the W0.1 rescale (19 tiers → 12) is picked up for free.
   function depthText() {
     var Eco = G.Economy, ROW = (Config && Config.ROW_HP) ? Config.ROW_HP : [];
-    var bands = ROW.length || 19;
+    var bands = ROW.length || 12;
     if (!Eco || typeof Eco.attackPower !== 'function' || !ROW.length) return '⚡ Power 0/' + bands;
     var pow = Eco.attackPower(), n = 0;
     for (var i = 0; i < ROW.length; i++) { if (pow >= ROW[i]) n++; }

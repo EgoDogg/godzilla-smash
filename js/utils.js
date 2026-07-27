@@ -15,13 +15,19 @@ window.GAME = window.GAME || {};
   };
 
   // Compact number formatting up to trillions (handles 12B+ cleanly).
+  // W0.1 KAIJU RESCALE: the `k` threshold moved 1e3 → 1e5. The whole economy now lives in the
+  // $60–$2500 band, where abbreviating destroys the number people are actually reading — a $1330
+  // price rendered as "1.3k" is both less precise AND harder to compare against a $1250 balance.
+  // Below 1e5 we print the exact integer. M/B/T are kept: nothing reaches them today, but combo
+  // stacking and any future world could, and a silently-wrong wide number is worse than a
+  // needlessly-precise one. (No thousands separators — the HUD's fixed-width badges are tight.)
   function trim(x) { return (Math.round(x * 10) / 10).toString(); }
   U.fmt = function (n) {
     n = Math.max(0, Math.floor(n));
     if (n >= 1e12) return trim(n / 1e12) + 'T';
     if (n >= 1e9) return trim(n / 1e9) + 'B';
     if (n >= 1e6) return trim(n / 1e6) + 'M';
-    if (n >= 1e3) return trim(n / 1e3) + 'k';
+    if (n >= 1e5) return trim(n / 1e3) + 'k';
     return '' + n;
   };
 

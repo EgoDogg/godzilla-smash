@@ -56,11 +56,20 @@ window.GAME = window.GAME || {};
     G.canvas = canvas; G.ctx = ctx;
 
     if (G.Economy && G.Economy.load) G.Economy.load();        // v2 save (ignores v1)
-    // Forms-as-axis guard: FORM_BONUS must sum to 63 (→ ×64 at full 20/20). A future World-2 form
-    // added without re-balancing would silently break the clean rebate — make any drift LOUD.
-    if (G.Config && G.Config.FORM_BONUS) {
-      var _fbSum = 0; for (var _k in G.Config.FORM_BONUS) _fbSum += G.Config.FORM_BONUS[_k];
-      console.assert(Math.abs(_fbSum - 63) < 1e-9, 'FORM_BONUS sum drift: expected 63, got ' + _fbSum);
+    // SMASH-ladder integrity guard (W0.1, replaces the old FORM_BONUS-sums-to-63 assert).
+    // The whole bounded economy rests on three properties of Config.SMASH.POWER, all of which a
+    // careless retune breaks SILENTLY (a non-ascending rung makes an upgrade a downgrade; a last
+    // rung below max(ROW_HP) makes the win-finale unreachable; above it, unbuyable rungs). Assert
+    // them at boot so any drift is LOUD in the console instead of a mysterious stuck playthrough.
+    if (G.Config && G.Config.SMASH && G.Config.SMASH.POWER && G.Config.ROW_HP) {
+      var _P = G.Config.SMASH.POWER;
+      console.assert(_P.length >= 2, 'SMASH.POWER needs at least 2 rungs, got ' + _P.length);
+      var _asc = true;
+      for (var _i = 1; _i < _P.length; _i++) { if (!(_P[_i] > _P[_i - 1])) _asc = false; }
+      console.assert(_asc, 'SMASH.POWER must be strictly ascending: ' + _P.join(','));
+      var _capHp = Math.max.apply(null, G.Config.ROW_HP);
+      console.assert(_P[_P.length - 1] === _capHp,
+        'SMASH.POWER last rung must === max(ROW_HP): got ' + _P[_P.length - 1] + ' vs ' + _capHp);
     }
     if (G.iso && G.iso.attachCanvas) G.iso.attachCanvas(canvas);
     resize();

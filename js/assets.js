@@ -157,16 +157,20 @@ window.GAME = window.GAME || {};
   /* ------------------------------------------------------------------ *
    *  Building style bands                                                *
    * ------------------------------------------------------------------ */
+  // `top` = the LOWEST tier index that maps to this band. W0.1 KAIJU RESCALE: the HP ladder went
+  // 19 tiers → 12, and the old [0,2,5,9,14] thresholds were spaced for 19 — with only 12 tiers the
+  // top band (skyscraper, top:14) would have been UNREACHABLE and 'tower' would have owned the
+  // whole back half. Re-spread to [0,2,4,7,10] so all 5 visual bands are used across tiers 0..11.
   var BANDS = [
     { name: 'shack',      top: 0,  wz: 0.9, body: '#7d6b5e', roof: 'pitch', win: false,
       winCols: 0, winRows: 0, glow: '#ffcf7a', greeble: 'chimney' },
     { name: 'house',      top: 2,  wz: 1.5, body: '#8a7a6b', roof: 'pitch', win: true,
       winCols: 2, winRows: 2, glow: '#ffd98a', greeble: 'chimney' },
-    { name: 'midrise',    top: 5,  wz: 2.6, body: '#6f7c88', roof: 'flat',  win: true,
+    { name: 'midrise',    top: 4,  wz: 2.6, body: '#6f7c88', roof: 'flat',  win: true,
       winCols: 3, winRows: 5, glow: '#bfe8ff', greeble: 'tank' },
-    { name: 'tower',      top: 9,  wz: 4.0, body: '#5f6b78', roof: 'flat',  win: true,
+    { name: 'tower',      top: 7,  wz: 4.0, body: '#5f6b78', roof: 'flat',  win: true,
       winCols: 3, winRows: 8, glow: '#cde6ff', greeble: 'antenna' },
-    { name: 'skyscraper', top: 14, wz: 5.8, body: '#3a4250', roof: 'flat',  win: true,
+    { name: 'skyscraper', top: 10, wz: 5.8, body: '#3a4250', roof: 'flat',  win: true,
       winCols: 4, winRows: 11, glow: '#37d6ff', greeble: 'neon' },
   ];
 

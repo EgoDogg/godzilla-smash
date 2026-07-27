@@ -15,7 +15,7 @@ window.GAME = window.GAME || {};
   var HH = GRID.TILE_H / 2;   // 14  half-tile height (y spread per +1 col/+1 row)
   var WZ = GRID.WZ_PX;        // 40  screen pixels of rise per +1 world-Z
   var COLS = GRID.cols;       // 21
-  var ROWS = GRID.rows;       // 58
+  var ROWS = GRID.rows;       // 60
 
   // Inverse of the 2x2 iso matrix [[HW,-HW],[HH,HH]] for screen→ground (wz=0).
   //   sx = (wx-wy)*HW           → wx = sx/(2HW) + sy/(2HH)
