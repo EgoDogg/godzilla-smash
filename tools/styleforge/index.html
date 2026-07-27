@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>StyleForge — Kaiju Smash art-style bake-off</title>
+
+<!-- =====================================================================
+     FIRST SCRIPT: kill any service worker. The game ships a SW (sw.js at the
+     repo root) whose scope covers /tools/styleforge/. If it is registered it
+     will serve stale js/*.js and you will be judging yesterday's art.
+     We unregister everything and never register one; every script below is
+     also cache-busted with ?v=<Date.now()>.
+     ===================================================================== -->
+<script>
+  (function () {
+    if (!navigator.serviceWorker) return;
+    try {
+      navigator.serviceWorker.getRegistrations().then(function (rs) {
+        rs.forEach(function (r) { r.unregister(); });
+      }).catch(function () {});
+      if (window.caches && caches.keys) {
+        caches.keys().then(function (ks) { ks.forEach(function (k) { caches.delete(k); }); }).catch(function () {});
+      }
+    } catch (e) {}
+  })();
+</script>
+
+<style>
+  :root {
+    --bg: #0e1116; --panel: #161b23; --line: #2a323e; --ink: #dfe6ef;
+    --dim: #8d99a8; --hot: #ffb454;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink);
+         font: 13px/1.45 ui-monospace, SFMono-Regular, Menlo, monospace; }
+  header { padding: 10px 14px; border-bottom: 1px solid var(--line); }
+  h1 { margin: 0; font-size: 15px; letter-spacing: .04em; }
+  h1 small { color: var(--dim); font-weight: normal; letter-spacing: 0; }
+
+  #bar { position: sticky; top: 0; z-index: 5; background: var(--panel);
+         border-bottom: 1px solid var(--line); padding: 8px 14px;
+         display: flex; flex-wrap: wrap; gap: 14px; align-items: center; }
+  .grp { display: flex; align-items: center; gap: 6px; }
+  .grp > label { color: var(--dim); }
+  button { background: #222a35; color: var(--ink); border: 1px solid var(--line);
+           border-radius: 4px; padding: 3px 9px; cursor: pointer; font: inherit; }
+  button.on { background: var(--hot); color: #171717; border-color: var(--hot); }
+  select { background: #222a35; color: var(--ink); border: 1px solid var(--line);
+           border-radius: 4px; padding: 3px 6px; font: inherit; }
+  input[type=range] { width: 128px; }
+  .val { color: var(--hot); min-width: 128px; display: inline-block; }
+
+  table { border-collapse: collapse; width: 100%; }
+  th, td { border: 1px solid var(--line); padding: 6px; vertical-align: top; }
+  th.sp { color: var(--dim); font-weight: normal; text-align: center; width: 1%; }
+  td.hdr { width: 210px; }
+  .sname { font-size: 14px; color: var(--hot); }
+  .blurb { color: var(--dim); font-size: 12px; margin: 3px 0 6px; }
+  .cost { color: #7fd6a0; font-size: 11px; }
+  .cost b { color: var(--ink); }
+  canvas { display: block; margin: 0 auto; image-rendering: pixelated; background: #0a0d11; }
+  .miss { color: #ff7676; padding: 10px; }
+
+  #verdict { position: sticky; bottom: 0; background: var(--panel);
+             border-top: 1px solid var(--line); padding: 9px 14px;
+             display: flex; gap: 22px; flex-wrap: wrap; align-items: center; }
+  #picked { color: var(--hot); font-size: 14px; }
+  .q { color: var(--dim); }
+</style>
+
+<header>
+  <h1>StyleForge <small>— pick the Kaiju Smash art style. 3 styles &times; 3 dinosaurs, animated, at gameplay scale.</small></h1>
+</header>
+
+<div id="bar"></div>
+<div id="grid" style="padding:10px 14px 0">loading engine modules&hellip;</div>
+<div id="verdict"></div>
+
+<script>
+/* =====================================================================
+   Dynamic, cache-busted, ORDERED loader.
+   config -> utils -> iso -> assets  (the engine, they attach to window.GAME
+   and read GAME.Config at IIFE time, so order is load-bearing)
+   then species-data -> the three style modules.
+   style-hybrid.js is owned by another agent: a 404 or a throw must NOT
+   break the page, so every module is loaded "soft" and the grid renders
+   whatever ended up registered in STYLEFORGE.styles.
+   ===================================================================== */
+(function () {
+  var V = '?v=' + Date.now();
+  var CHAIN = [
+    { src: '../../js/config.js', hard: true },
+    { src: '../../js/utils.js', hard: true },
+    { src: '../../js/iso.js', hard: true },
+    { src: '../../js/assets.js', hard: true },
+    { src: 'species-data.js', hard: true },
+    { src: 'style-boxstack.js', hard: false },
+    { src: 'style-silhouette.js', hard: false },
+    { src: 'style-hybrid.js', hard: false }      // may not exist yet — fine
+  ];
+  var missing = [];
+  function next(i) {
+    if (i >= CHAIN.length) { boot(missing); return; }
+    var s = document.createElement('script');
+    s.src = CHAIN[i].src + V;
+    s.async = false;
+    s.onload = function () { next(i + 1); };
+    s.onerror = function () {
+      missing.push(CHAIN[i].src);
+      if (CHAIN[i].hard) {
+        document.getElementById('grid').innerHTML =
+          '<div class="miss">FATAL: could not load ' + CHAIN[i].src +
+          '. Serve the REPO ROOT (python3 -m http.server 8143) and open /tools/styleforge/.</div>';
+        return;
+      }
+      next(i + 1);
+    };
+    document.head.appendChild(s);
+  }
+  next(0);
+})();
+
+/* ===================================================================== */
+function boot(missing) {
+  'use strict';
+  var G = window.GAME, SF = window.STYLEFORGE;
+  if (!SF) { document.getElementById('grid').innerHTML = '<div class="miss">STYLEFORGE never initialised.</div>'; return; }
+
+  var SPR_W = SF.SPR_W, SPR_H = SF.SPR_H;
+  var ANCHOR_X = SF.ANCHOR_X, ANCHOR_Y = SF.ANCHOR_Y;
+
+  /* ---- state ------------------------------------------------------- */
+  var S = { facing: 2, fsm: 'walk', frame: 0, scale: 1.0, city: false, lores: false, pal: 0, play: false, pick: null };
+
+  /* ---- registered styles (feature-detected, never assumed) ---------- */
+  function styleList() {
+    var out = [], k;
+    for (k in SF.styles) {
+      if (!Object.prototype.hasOwnProperty.call(SF.styles, k)) continue;
+      var s = SF.styles[k];
+      if (!s || typeof s.build !== 'function') continue;
+      out.push({ key: k, name: s.name || k, blurb: s.blurb || '', build: s.build });
+    }
+    out.sort(function (a, b) { return a.key < b.key ? -1 : 1; });
+    return out;
+  }
+
+  /* ---- bake cache (key -> canvas), simple FIFO cap ------------------ */
+  var bakeCache = new Map();
+  var BAKE_CAP = 200;
+  var costs = {};   // styleKey -> { ms, n }
+
+  function bake(st, species, base, fsm, frame, palIdx, lores) {
+    var key = st.key + '|' + species + '|' + base + '|' + fsm + '|' + frame + '|' + palIdx + '|' + (lores ? 'L' : 'H');
+    var hit = bakeCache.get(key);
+    if (hit) return hit;
+
+    var bw = lores ? 50 : SPR_W, bh = lores ? 56 : SPR_H;
+    var cv = document.createElement('canvas');
+    cv.width = bw; cv.height = bh;
+    var c = cv.getContext('2d');
+    c.imageSmoothingEnabled = false;
+
+    var shape = null, i;
+    for (i = 0; i < SF.SPECIES.length; i++) if (SF.SPECIES[i].key === species) shape = SF.SPECIES[i].shape;
+    var pal = SF.normalizePalette(SF.PALETTES[palIdx].palette);
+
+    var t0 = performance.now();
+    try {
+      st.build(c, bw, bh, pal, shape, base, frame, fsm);
+    } catch (e) {
+      c.fillStyle = '#5a1414'; c.fillRect(0, 0, bw, bh);
+      c.fillStyle = '#ffb'; c.font = '7px monospace';
+      c.fillText(('' + e.message).slice(0, 22), 2, 12);
+      if (!cv._logged) { cv._logged = 1; console.error('[StyleForge] ' + st.key + '/' + species, e); }
+    }
+    var ms = performance.now() - t0;
+    var rec = costs[st.key] || (costs[st.key] = { ms: 0, n: 0 });
+    rec.ms += ms; rec.n++;
+
+    bakeCache.set(key, cv);
+    if (bakeCache.size > BAKE_CAP) bakeCache.delete(bakeCache.keys().next().value);
+    return cv;
+  }
+
+  /* ---- city backdrop bakes (real Assets.buildingSprite prisms) ------ */
+  var cityCache = null;
+  function city() {
+    if (cityCache) return cityCache;
+    cityCache = [];
+    for (var i = 0; i < SF.CITY.length; i++) {
+      var cv = SF.cityCanvas(SF.CITY[i]);
+      if (cv) cityCache.push({ d: SF.CITY[i], cv: cv });
+    }
+    return cityCache;
+  }
+
+  /* ---- cell paint --------------------------------------------------- */
+  function paint(cell) {
+    var sc = S.scale;
+    /* the city prisms need real elbow room either side, so the plate grows
+       when the clash test is on rather than cropping the skyline */
+    var cw = Math.round(SPR_W * sc) + (S.city ? 190 : 74);
+    var ch = Math.round(SPR_H * sc) + (S.city ? 92 : 34);
+    var cv = cell.canvas;
+    if (cv.width !== cw || cv.height !== ch) { cv.width = cw; cv.height = ch; }
+    var ctx = cv.getContext('2d');
+    ctx.imageSmoothingEnabled = false;
+    ctx.clearRect(0, 0, cw, ch);
+
+    /* backdrop */
+    ctx.fillStyle = '#10151c'; ctx.fillRect(0, 0, cw, ch);
+    var ax = cw * 0.5, ay = ch - 22;                    // sprite ground anchor
+    ctx.fillStyle = '#151b24';
+    ctx.beginPath(); ctx.moveTo(0, ay + 10); ctx.lineTo(cw, ay + 10); ctx.lineTo(cw, ch); ctx.lineTo(0, ch); ctx.closePath(); ctx.fill();
+
+    var fm = SF.FACING_MAP[S.facing & 7];
+    var i, e;
+
+    if (S.city) {
+      var B = city();
+      for (i = 0; i < B.length; i++) {
+        e = B[i]; if (!e.d.behind) continue;
+        drawBld(ctx, e, ax, ay, sc);
+      }
+    }
+
+    /* sprite blit — mirror for facings 5-7 exactly as entities.js:1553 */
+    var bk = bake(cell.style, cell.species, fm.base, S.fsm, S.frame, S.pal, S.lores);
+    var dw = SPR_W * sc, dh = SPR_H * sc;
+    var ox = ax - ANCHOR_X * sc, oy = ay - ANCHOR_Y * sc;
+    ctx.save();
+    if (fm.mir) { ctx.translate(ax, 0); ctx.scale(-1, 1); ctx.translate(-ax, 0); }
+    ctx.drawImage(bk, 0, 0, bk.width, bk.height, ox, oy, dw, dh);
+    ctx.restore();
+
+    if (S.city) {
+      var B2 = city();
+      for (i = 0; i < B2.length; i++) {
+        e = B2[i]; if (e.d.behind) continue;
+        drawBld(ctx, e, ax, ay, sc);
+      }
+    }
+  }
+
+  function drawBld(ctx, e, ax, ay, sc) {
+    var cv = e.cv, d = e.d;
+    var w = (cv._cssW || cv.width) * sc, h = (cv._cssH || cv.height) * sc;
+    var x = ax + d.dx * sc - (cv._anchorX || 0) * sc;
+    var y = ay + d.dy * sc - (cv._anchorY || 0) * sc;
+    ctx.drawImage(cv, x, y, w, h);
+  }
+
+  /* ---- grid build ---------------------------------------------------- */
+  var cells = [];
+  function buildGrid() {
+    var styles = styleList();
+    var host = document.getElementById('grid');
+    cells = [];
+    if (!styles.length) { host.innerHTML = '<div class="miss">No styles registered in STYLEFORGE.styles.</div>'; return; }
+
+    var t = document.createElement('table');
+    var hr = document.createElement('tr');
+    hr.appendChild(document.createElement('th'));
+    SF.SPECIES.forEach(function (sp) {
+      var th = document.createElement('th');
+      th.className = 'sp';
+      th.innerHTML = sp.name + '<br><span style="font-size:11px">' + sp.note + '</span>';
+      hr.appendChild(th);
+    });
+    t.appendChild(hr);
+
+    styles.forEach(function (st) {
+      var tr = document.createElement('tr');
+      var hd = document.createElement('td');
+      hd.className = 'hdr';
+      hd.innerHTML =
+        '<label style="cursor:pointer"><input type="radio" name="pick" value="' + st.key + '"> <b>PICK THIS</b></label>' +
+        '<div class="sname">' + st.name + '</div>' +
+        '<div class="blurb">' + st.blurb + '</div>' +
+        '<div class="cost" id="cost-' + st.key + '">bake cost: &mdash;</div>';
+      hd.querySelector('input').onchange = function () { S.pick = st.key; renderVerdict(); };
+      tr.appendChild(hd);
+
+      SF.SPECIES.forEach(function (sp) {
+        var td = document.createElement('td');
+        var cv = document.createElement('canvas');
+        td.appendChild(cv);
+        tr.appendChild(td);
+        cells.push({ style: st, species: sp.key, canvas: cv });
+      });
+      t.appendChild(tr);
+    });
+
+    host.innerHTML = '';
+    if (missing && missing.length) {
+      var m = document.createElement('div');
+      m.className = 'miss';
+      m.textContent = 'not loaded (page still works): ' + missing.join(', ');
+      host.appendChild(m);
+    }
+    host.appendChild(t);
+  }
+
+  /* ---- controls ------------------------------------------------------ */
+  function el(tag, cls, html) { var e = document.createElement(tag); if (cls) e.className = cls; if (html != null) e.innerHTML = html; return e; }
+
+  function buildBar() {
+    var bar = document.getElementById('bar');
+    bar.innerHTML = '';
+
+    /* facing */
+    var g1 = el('div', 'grp', '<label>facing</label>');
+    var fr = document.createElement('input');
+    fr.type = 'range'; fr.min = 0; fr.max = 7; fr.step = 1; fr.value = S.facing;
+    var fl = el('span', 'val');
+    function fup() { fl.textContent = S.facing + ' · ' + SF.FACING_MAP[S.facing].label; }
+    fr.oninput = function () { S.facing = +fr.value; fup(); repaint(); };
+    g1.appendChild(fr); g1.appendChild(fl); fup(); bar.appendChild(g1);
+
+    /* fsm */
+    var g2 = el('div', 'grp', '<label>fsm</label>');
+    SF.FSMS.forEach(function (f) {
+      var b = el('button', S.fsm === f ? 'on' : '', f);
+      b.onclick = function () {
+        S.fsm = f;
+        if (f === 'idle') S.frame = 0;
+        Array.prototype.forEach.call(g2.querySelectorAll('button'), function (x) { x.className = ''; });
+        b.className = 'on'; sync(); repaint();
+      };
+      g2.appendChild(b);
+    });
+    bar.appendChild(g2);
+
+    /* frame + play */
+    var g3 = el('div', 'grp', '<label>frame</label>');
+    var qr = document.createElement('input');
+    qr.type = 'range'; qr.min = 0; qr.max = 5; qr.step = 1; qr.value = S.frame;
+    var ql = el('span', 'val'); ql.style.minWidth = '18px';
+    qr.oninput = function () { S.frame = +qr.value; ql.textContent = S.frame; repaint(); };
+    var pb = el('button', '', '&#9654; play');
+    pb.onclick = function () {
+      S.play = !S.play; pb.className = S.play ? 'on' : '';
+      pb.innerHTML = S.play ? '&#10073;&#10073; pause' : '&#9654; play';
+    };
+    g3.appendChild(qr); g3.appendChild(ql); g3.appendChild(pb); bar.appendChild(g3);
+    ql.textContent = S.frame;
+    _frameInputs = { qr: qr, ql: ql };
+
+    /* scale */
+    var g4 = el('div', 'grp', '<label>scale</label>');
+    [0.6, 1.0, 1.6].forEach(function (v) {
+      var b = el('button', S.scale === v ? 'on' : '', v.toFixed(1) + '&times;');
+      b.onclick = function () {
+        S.scale = v;
+        Array.prototype.forEach.call(g4.querySelectorAll('button'), function (x) { x.className = ''; });
+        b.className = 'on'; repaint();
+      };
+      g4.appendChild(b);
+    });
+    bar.appendChild(g4);
+
+    /* toggles */
+    var g5 = el('div', 'grp');
+    var cb = el('button', '', 'city context');
+    cb.onclick = function () { S.city = !S.city; cb.className = S.city ? 'on' : ''; repaint(); };
+    var lb = el('button', '', 'lo-res 50&times;56 &rarr;&times;3');
+    lb.onclick = function () { S.lores = !S.lores; lb.className = S.lores ? 'on' : ''; repaint(); };
+    g5.appendChild(cb); g5.appendChild(lb); bar.appendChild(g5);
+
+    /* palette */
+    var g6 = el('div', 'grp', '<label>palette</label>');
+    var sel = document.createElement('select');
+    SF.PALETTES.forEach(function (p, i) {
+      var o = document.createElement('option'); o.value = i; o.textContent = p.name; sel.appendChild(o);
+    });
+    sel.value = S.pal;
+    sel.onchange = function () { S.pal = +sel.value; repaint(); };
+    g6.appendChild(sel); bar.appendChild(g6);
+
+    var g7 = el('div', 'grp');
+    var rb = el('button', '', 'clear bake cache');
+    rb.onclick = function () { bakeCache.clear(); costs = {}; repaint(); };
+    g7.appendChild(rb); bar.appendChild(g7);
+  }
+  var _frameInputs = null;
+  function sync() {
+    if (!_frameInputs) return;
+    _frameInputs.qr.value = S.frame; _frameInputs.ql.textContent = S.frame;
+  }
+
+  /* ---- verdict strip -------------------------------------------------- */
+  function renderVerdict() {
+    var v = document.getElementById('verdict');
+    v.innerHTML =
+      '<div>picked: <span id="picked">' + (S.pick || '&mdash; nothing yet &mdash;') + '</span></div>' +
+      '<div class="q">1 Distinguishable at a glance?</div>' +
+      '<div class="q">2 Belongs on the skyline?</div>' +
+      '<div class="q">3 Threat, not toy?</div>';
+  }
+
+  /* ---- repaint + cost readout ---------------------------------------- */
+  function repaint() {
+    for (var i = 0; i < cells.length; i++) paint(cells[i]);
+    var P = SF.PROJECTION, total = P.facings * P.states * P.species;
+    for (var k in costs) {
+      if (!Object.prototype.hasOwnProperty.call(costs, k)) continue;
+      var e = document.getElementById('cost-' + k);
+      if (!e) continue;
+      var avg = costs[k].ms / Math.max(1, costs[k].n);
+      e.innerHTML = 'bake cost: <b>' + avg.toFixed(2) + ' ms</b>/build &middot; ' +
+        costs[k].n + ' sampled &middot; projected full roster (' +
+        P.facings + '&times;' + P.states + '&times;' + P.species + ' = ' + total + ') <b>' +
+        (avg * total).toFixed(0) + ' ms</b>';
+    }
+  }
+
+  /* ---- 8 fps play loop ------------------------------------------------ *
+   * setInterval, not rAF: rAF is suspended entirely while the tab is
+   * backgrounded, so a rAF loop silently stops (and is untestable headlessly).
+   * 125ms == the 8 fps the spec asks for, exactly.                         */
+  function tick() {
+    if (!S.play) return;
+    S.frame = (S.frame + 1) % 6;
+    sync();
+    repaint();
+  }
+
+  buildBar();
+  buildGrid();
+  renderVerdict();
+  repaint();
+  setInterval(tick, 125);
+
+  window.SF_STATE = S;   // console poke-hole for verification
+}
+</script>
