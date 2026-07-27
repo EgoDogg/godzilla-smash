@@ -12,7 +12,7 @@ window.GAME.Config = {
           EXPORT_PREFIX: 'GZS1:', MAX_CODE_LEN: 20000, BACKUP_NUDGE_MS: 432000000 /* 5d */, PRESTIGE_MAX: 100 },
   // In-page console probe of the live asset version. The AUTHORITY is sw.js `CACHE`;
   // bump BOTH together to ship (game.js warns at boot if they drift out of sync).
-  CACHE_VERSION: 'gz-v32',
+  CACHE_VERSION: 'kj-s0',
 
   // --- Isometric grid (world units = tiles). Wide, open, zoomed-out city:
   //     21 cols of 2×2 blocks split by wide streets; 60 rows. TILE_*/WZ_PX are
