@@ -68,8 +68,10 @@ window.GAME = window.GAME || {};
   // sanitizeGame stays a strict ALLOWLIST: it reads only these keys, BY NAME, and never spreads raw
   // input — so an imported / migrated / corrupt save can never carry a state normal play couldn't.
   var FIELDS = [
+    // Ceiling 1e15: far above any reachable balance, but small enough that double math stays exact
+    // (1e308 survives isFinite, renders '1e+296T', and float-absorbs every purchase — W0.2 finding).
     { k: 'money', def: 0,
-      san: function (v) { return (typeof v === 'number' && isFinite(v)) ? Math.max(0, v) : 0; } },
+      san: function (v) { return (typeof v === 'number' && isFinite(v)) ? U.clamp(v, 0, 1e15) : 0; } },
 
     // Smash Power purchases — an INDEX into Config.SMASH.POWER, so the clamp MUST be the array's
     // last index. (The pre-rescale row clamped to 0..64, an exponent bound; against an indexed
@@ -81,8 +83,10 @@ window.GAME = window.GAME || {};
     { k: 'moveSpeedLevel', def: 0,                             // Move-Speed track (Config.MOVESPD)
       san: function (v) { return U.clamp(v | 0, 0, Cfg.MOVESPD.LEVELS); } },
 
+    // Boolean rows use v === true, not !!v — the string 'false' (or any truthy garbage) must not
+    // grant a paid flag (W0.2 finding).
     { k: 'finisherOwned', def: false,                          // Nova Slam unlocked (one-time)
-      san: function (v) { return !!v; } },
+      san: function (v) { return v === true; } },
 
     // MUST precede activeFormId — that row's sanitizer reads this one back out of `out`.
     { k: 'ownedFormIds', def: function () { return ['gz2014']; },
@@ -108,22 +112,26 @@ window.GAME = window.GAME || {};
       san: function (v) { return U.clamp(v | 0, 0, Cfg.GRID.rows - 1); } },
 
     { k: 'world2Unlocked', def: false,                         // capstone purchase flag
-      san: function (v) { return !!v; } },
+      san: function (v) { return v === true; } },
 
     { k: 'muted', def: false,                                  // persisted audio-mute flag
-      san: function (v) { return !!v; } },
+      san: function (v) { return v === true; } },
 
-    { k: 'lastSeen', def: 0,                                   // ms timestamp of last save
-      san: function (v) { return (typeof v === 'number' && isFinite(v)) ? v : 0; } },
+    { k: 'lastSeen', def: 0,                                   // ms timestamp of last save (never negative)
+      san: function (v) { return (typeof v === 'number' && isFinite(v)) ? Math.max(0, v) : 0; } },
 
     { k: 'finaleSeen', def: false,                             // win-finale played once
-      san: function (v) { return !!v; } },
+      san: function (v) { return v === true; } },
 
     { k: 'maxPowerSeen', def: false,                           // one-time "find the Statue" toast fired
-      san: function (v) { return !!v; } },
+      san: function (v) { return v === true; } },
 
+    // isFinite + COMBO.MAX cap: combo is clamped in play, so a save may never exceed it either
+    // (1e308 previously survived and the win card rendered '×Infinity' — W0.2 finding).
     { k: 'peakCombo', def: 1,                                  // highest combo this save (win-card stat)
-      san: function (v) { return (typeof v === 'number' && v >= 1) ? v : 1; } }
+      san: function (v) {
+        return (typeof v === 'number' && isFinite(v) && v >= 1) ? Math.min(v, Cfg.COMBO.MAX) : 1;
+      } }
   ];
 
   function fieldDefault(f) { return (typeof f.def === 'function') ? f.def() : f.def; }
@@ -494,10 +502,13 @@ window.GAME = window.GAME || {};
   // Rows are applied in declaration order and each sanitizer receives the partially-built result,
   // so a later field may depend on an earlier one (activeFormId reads ownedFormIds).
   function sanitizeGame(raw) {
-    var s = raw || {}, out = {}, i, f;
+    var s = raw || {}, out = {}, i, f, has;
     for (i = 0; i < FIELDS.length; i++) {
       f = FIELDS[i];
-      out[f.k] = f.san(s[f.k], out);
+      // Own-property read: never pick a value up off the prototype chain (unreachable via
+      // JSON.parse saves, but a live in-process caller could pass one — defense in depth).
+      has = Object.prototype.hasOwnProperty.call(s, f.k);
+      out[f.k] = f.san(has ? s[f.k] : undefined, out);
     }
     return out;
   }
@@ -529,7 +540,22 @@ window.GAME = window.GAME || {};
   function readContainer() {
     var c = U.safeLoad(KEY_V5);
     if (!c || c.v !== 5 || !Array.isArray(c.slots) || c.slots.length < 1) return null;
-    return c;
+    // Validate every slot ENTRY, not just the array (W0.2 finding: a null slot passed here, then
+    // activeSlotOf threw on .id and bricked boot until storage was cleared; a null AFTER the
+    // active slot instead crashed listSlots). Keep only object slots with a string id, drop
+    // duplicate ids (first wins — deleteSlot/switchSlot resolve by first match, so dupes alias),
+    // and cap at the configured slot count so a hand-edited container can't inflate the UI.
+    var clean = [], seen = {}, i, sl, cap = (Cfg.SAVE && Cfg.SAVE.SLOTS) || 3;
+    for (i = 0; i < c.slots.length && clean.length < cap; i++) {
+      sl = c.slots[i];
+      if (sl && typeof sl === 'object' && typeof sl.id === 'string' && !seen[sl.id]) {
+        seen[sl.id] = true;
+        clean.push(sl);
+      }
+    }
+    if (clean.length < 1) return null;
+    c.slots = clean;
+    return c;                                   // dangling activeSlot self-heals in activeSlotOf
   }
 
   // activeSlotOf(c) → the active slot, self-healing a dangling activeSlot id to the first slot.
