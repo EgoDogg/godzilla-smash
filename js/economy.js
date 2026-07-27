@@ -43,30 +43,91 @@ window.GAME = window.GAME || {};
   // Titan families = the four non-wyrm families, each as an ordered array of forms.
   var TITAN_FAMILIES = ['mothra', 'ghidorah', 'rodan', 'mecha'];
 
+  // ---- The persisted SAVE SCHEMA ---------------------------------------------------------------
+  // ONE row per persisted field. This table is the single source of truth for all five sites that
+  // used to be maintained by hand — the live `state` defaults, freshGame(), sanitizeGame(),
+  // serializeState() and applySlotToState() (all in the Save/Load section). Adding a field is one
+  // row here; previously it was five separate edits with no compiler to catch a miss, and a miss
+  // in sanitizeGame is SILENT DATA LOSS (it is an allowlist — an unlisted field is dropped on load).
+  //
+  // Row contract:
+  //   k     field name — identical in `state` and in a slot's `game`
+  //   def   default value; a FUNCTION when the value is a fresh array/object (never share a ref)
+  //   san   (raw, out) → clean value. `out` is the partially-built sanitized object, so a field MAY
+  //         depend on any field declared ABOVE it. ORDER IS THEREFORE LOAD-BEARING.
+  //   copy  optional (v) → v applied when serializing, for values that must not alias live `state`
+  //
+  // sanitizeGame stays a strict ALLOWLIST: it reads only these keys, BY NAME, and never spreads raw
+  // input — so an imported / migrated / corrupt save can never carry a state normal play couldn't.
+  var FIELDS = [
+    { k: 'money', def: 0,
+      san: function (v) { return (typeof v === 'number' && isFinite(v)) ? Math.max(0, v) : 0; } },
+
+    // Stronger-Claws purchases (each ×CLAWS_MULT = ×2 by default).
+    { k: 'clawsLevel', def: 0,
+      san: function (v) { return U.clamp(v | 0, 0, 64); } },   // normal ceiling ~28; 64 keeps attackPower finite
+
+    { k: 'atkSpeedLevel', def: 0,                              // Attack-Speed track (Config.ATKSPD)
+      san: function (v) { return U.clamp(v | 0, 0, Cfg.ATKSPD.LEVELS); } },
+
+    { k: 'moveSpeedLevel', def: 0,                             // Move-Speed track (Config.MOVESPD)
+      san: function (v) { return U.clamp(v | 0, 0, Cfg.MOVESPD.LEVELS); } },
+
+    { k: 'finisherOwned', def: false,                          // Nova Slam unlocked (one-time)
+      san: function (v) { return !!v; } },
+
+    // MUST precede activeFormId — that row's sanitizer reads this one back out of `out`.
+    { k: 'ownedFormIds', def: function () { return ['gz2014']; },
+      copy: function (v) { return v.slice(); },
+      san: function (v) {
+        var owned = [], i, id;
+        if (Array.isArray(v)) {
+          for (i = 0; i < v.length; i++) {
+            id = v[i];
+            if (formDef(id) && owned.indexOf(id) === -1) owned.push(id);
+          }
+        }
+        if (owned.indexOf('gz2014') === -1) owned.unshift('gz2014');   // gz2014 is always owned
+        return owned;
+      } },
+
+    { k: 'activeFormId', def: 'gz2014',
+      san: function (v, out) {
+        return (typeof v === 'string' && out.ownedFormIds.indexOf(v) !== -1) ? v : 'gz2014';
+      } },
+
+    { k: 'maxReachedRow', def: 0,                              // frontier depth
+      san: function (v) { return U.clamp(v | 0, 0, Cfg.GRID.rows - 1); } },
+
+    { k: 'world2Unlocked', def: false,                         // capstone purchase flag
+      san: function (v) { return !!v; } },
+
+    { k: 'muted', def: false,                                  // persisted audio-mute flag
+      san: function (v) { return !!v; } },
+
+    { k: 'lastSeen', def: 0,                                   // ms timestamp of last save
+      san: function (v) { return (typeof v === 'number' && isFinite(v)) ? v : 0; } },
+
+    { k: 'finaleSeen', def: false,                             // win-finale played once
+      san: function (v) { return !!v; } },
+
+    { k: 'maxPowerSeen', def: false,                           // one-time "find the Statue" toast fired
+      san: function (v) { return !!v; } },
+
+    // Always true: a fresh player never sees the gz-v26 rebalance toast. A pre-formula save LACKS
+    // the key entirely, which is what fireRebalanceToast() detects — it reads RAW, not sanitized.
+    { k: 'formAxisSeen', def: true,
+      san: function () { return true; } },
+
+    { k: 'peakCombo', def: 1,                                  // highest combo this save (win-card stat)
+      san: function (v) { return (typeof v === 'number' && v >= 1) ? v : 1; } }
+  ];
+
+  function fieldDefault(f) { return (typeof f.def === 'function') ? f.def() : f.def; }
+
   // ---- Persistent state ----------------------------------------------------------------------
-  // ownedFormIds  : array of form ids the player owns
-  // activeFormId  : the id of the currently active form
-  // clawsLevel    : Stronger-Claws purchases (each ×CLAWS_MULT = ×2 by default)
-  // maxReachedRow : frontier depth
-  // world2Unlocked: capstone purchase flag
-  // muted         : persisted audio-mute flag
-  var state = {
-    money:          0,
-    clawsLevel:     0,
-    atkSpeedLevel:  0,          // Attack-Speed upgrade track (Config.ATKSPD), 0..LEVELS
-    moveSpeedLevel: 0,          // Move-Speed upgrade track (Config.MOVESPD), 0..LEVELS
-    finisherOwned:  false,      // Nova Slam charged finisher unlocked (one-time)
-    ownedFormIds:   ['gz2014'],
-    activeFormId:   'gz2014',
-    maxReachedRow:  0,
-    world2Unlocked: false,
-    muted:          false,
-    lastSeen:       0,          // ms timestamp of last save (for a future offline-income floor)
-    finaleSeen:     false,      // win-finale played once (attackPower>=CAP_HP + statue destroyed)
-    maxPowerSeen:   false,      // one-time "find the Statue" toast fired (attackPower first >= CAP_HP)
-    formAxisSeen:   true,       // forms-as-axis rebalance ack'd (default true → fresh players never toast; a pre-formula save lacks the field → toast once)
-    peakCombo:      1           // highest combo multiplier reached this save (win-card stat)
-  };
+  // Built from FIELDS so the live defaults can never drift from the persisted schema.
+  var state = freshGame();
 
   // HUD dirty flag — UI polls and repaints when set.
   var hudDirty = true;
@@ -433,59 +494,36 @@ window.GAME = window.GAME || {};
     return 's' + t.toString(36) + '-' + r.toString(36).slice(2, 8);
   }
 
-  // freshGame() — the 15 default persisted fields (mirrors the initial `state` defaults).
+  // freshGame() — the default persisted fields, straight off the FIELDS schema.
   function freshGame() {
-    return {
-      money: 0, clawsLevel: 0, atkSpeedLevel: 0, moveSpeedLevel: 0, finisherOwned: false,
-      ownedFormIds: ['gz2014'], activeFormId: 'gz2014', maxReachedRow: 0,
-      world2Unlocked: false, muted: false, lastSeen: 0, finaleSeen: false,
-      maxPowerSeen: false, formAxisSeen: true, peakCombo: 1
-    };
+    var g = {}, i;
+    for (i = 0; i < FIELDS.length; i++) g[FIELDS[i].k] = fieldDefault(FIELDS[i]);
+    return g;
   }
 
-  // sanitizeGame(raw) → a FRESH clean game object. An ALLOWLIST build: reads ONLY the 15 known
-  // fields BY NAME (never spreads raw → prototype-pollution-proof) and clamps every one, so an
-  // imported / migrated / corrupt save can never carry a state a normal play session couldn't.
+  // sanitizeGame(raw) → a FRESH clean game object. An ALLOWLIST build: reads ONLY the FIELDS keys
+  // BY NAME (never spreads raw → prototype-pollution-proof) and clamps every one, so an imported /
+  // migrated / corrupt save can never carry a state a normal play session couldn't reach.
+  // Rows are applied in declaration order and each sanitizer receives the partially-built result,
+  // so a later field may depend on an earlier one (activeFormId reads ownedFormIds).
   function sanitizeGame(raw) {
-    var s = raw || {};
-    var owned = [];
-    if (Array.isArray(s.ownedFormIds)) {
-      for (var i = 0; i < s.ownedFormIds.length; i++) {
-        var id = s.ownedFormIds[i];
-        if (formDef(id) && owned.indexOf(id) === -1) owned.push(id);
-      }
+    var s = raw || {}, out = {}, i, f;
+    for (i = 0; i < FIELDS.length; i++) {
+      f = FIELDS[i];
+      out[f.k] = f.san(s[f.k], out);
     }
-    if (owned.indexOf('gz2014') === -1) owned.unshift('gz2014');   // gz2014 is always owned
-    var active = (typeof s.activeFormId === 'string' && owned.indexOf(s.activeFormId) !== -1) ? s.activeFormId : 'gz2014';
-    return {
-      money:          (typeof s.money === 'number' && isFinite(s.money)) ? Math.max(0, s.money) : 0,
-      clawsLevel:     U.clamp(s.clawsLevel | 0, 0, 64),   // normal ceiling ~28; 64 keeps attackPower finite
-      atkSpeedLevel:  U.clamp(s.atkSpeedLevel | 0, 0, Cfg.ATKSPD.LEVELS),
-      moveSpeedLevel: U.clamp(s.moveSpeedLevel | 0, 0, Cfg.MOVESPD.LEVELS),
-      finisherOwned:  !!s.finisherOwned,
-      ownedFormIds:   owned,
-      activeFormId:   active,
-      maxReachedRow:  U.clamp(s.maxReachedRow | 0, 0, Cfg.GRID.rows - 1),
-      world2Unlocked: !!s.world2Unlocked,
-      muted:          !!s.muted,
-      lastSeen:       (typeof s.lastSeen === 'number' && isFinite(s.lastSeen)) ? s.lastSeen : 0,
-      finaleSeen:     !!s.finaleSeen,
-      maxPowerSeen:   !!s.maxPowerSeen,
-      formAxisSeen:   true,
-      peakCombo:      (typeof s.peakCombo === 'number' && s.peakCombo >= 1) ? s.peakCombo : 1
-    };
+    return out;
   }
 
-  // serializeState() → the 15 flat fields read out of live `state` (for writing into a slot).
+  // serializeState() → the persisted fields read out of live `state` (for writing into a slot).
+  // Rows carrying `copy` are deep-copied so a written slot never aliases live state.
   function serializeState() {
-    return {
-      money: state.money, clawsLevel: state.clawsLevel, atkSpeedLevel: state.atkSpeedLevel,
-      moveSpeedLevel: state.moveSpeedLevel, finisherOwned: state.finisherOwned,
-      ownedFormIds: state.ownedFormIds.slice(), activeFormId: state.activeFormId,
-      maxReachedRow: state.maxReachedRow, world2Unlocked: state.world2Unlocked,
-      muted: state.muted, lastSeen: state.lastSeen, finaleSeen: state.finaleSeen,
-      maxPowerSeen: state.maxPowerSeen, formAxisSeen: state.formAxisSeen, peakCombo: state.peakCombo
-    };
+    var g = {}, i, f;
+    for (i = 0; i < FIELDS.length; i++) {
+      f = FIELDS[i];
+      g[f.k] = f.copy ? f.copy(state[f.k]) : state[f.k];
+    }
+    return g;
   }
 
   function makeSlot(name, game, now) {
@@ -532,22 +570,8 @@ window.GAME = window.GAME || {};
   // applySlotToState(game) → sanitize the slot's game, assign into live `state`, recompute the
   // memoized multipliers. ALWAYS sanitizes, so no apply path can install a state a load couldn't.
   function applySlotToState(game) {
-    var g = sanitizeGame(game);
-    state.money          = g.money;
-    state.clawsLevel     = g.clawsLevel;
-    state.atkSpeedLevel  = g.atkSpeedLevel;
-    state.moveSpeedLevel = g.moveSpeedLevel;
-    state.finisherOwned  = g.finisherOwned;
-    state.ownedFormIds   = g.ownedFormIds;
-    state.activeFormId   = g.activeFormId;
-    state.maxReachedRow  = g.maxReachedRow;
-    state.world2Unlocked = g.world2Unlocked;
-    state.muted          = g.muted;
-    state.lastSeen       = g.lastSeen;
-    state.finaleSeen     = g.finaleSeen;
-    state.maxPowerSeen   = g.maxPowerSeen;
-    state.formAxisSeen   = g.formAxisSeen;
-    state.peakCombo      = g.peakCombo;
+    var g = sanitizeGame(game), i, k;
+    for (i = 0; i < FIELDS.length; i++) { k = FIELDS[i].k; state[k] = g[k]; }
     recalcMoveMult();
     recomputeCollMult();
     hudDirty = true;
