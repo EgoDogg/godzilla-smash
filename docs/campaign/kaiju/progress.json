@@ -1,0 +1,33 @@
+{
+  "campaign": "kaiju-smash-mvp",
+  "plan": "~/.claude/plans/users-mgitk-downloads-godzilla-smash-au-dreamy-lemon.md",
+  "branch": "kaiju-smash",
+  "_halt": null,
+  "_gates": {
+    "art_style": { "open": true, "holder": "Mike", "unblocks": ["W1", "W2.art", "W3.art"], "staged_by": "W0.3", "verdict": null },
+    "week_advance": { "note": "every week arms only on Mike's go / STEER directive" },
+    "mvp_merge": { "open": true, "holder": "Mike", "note": "kaiju-smash -> main only with explicit approval" }
+  },
+  "units": [
+    { "id": "W0.0", "title": "Save field-table refactor (FIELDS drives all 5 sites)", "passes": true,
+      "evidence": "586e3a1 · 43/43 adversarial parity byte-exact vs HEAD, boot round-trip byte-exact, key order preserved, browser boot clean" },
+    { "id": "W0.1", "title": "Economy rescale (HP 2-95, SMASH.POWER track, per-form mult) + save v5 fresh-start", "passes": false, "model": "opus-medium" },
+    { "id": "W0.2", "title": "Fable verify fleet: v5 sanitize boundary + progression-curve simulation", "passes": false, "model": "fable" },
+    { "id": "W0.3", "title": "StyleForge: harness + 3 styles x 3 species (hybrid rig = shipping candidate)", "passes": false, "model": "opus-medium" },
+    { "id": "W0.4", "title": "Ship 0: tag kj-s0, stage preview + StyleForge grid, notify Mike, PARK at art gate", "passes": false, "model": "fable" },
+    { "id": "W1.1", "title": "World/level architecture: worlddata + generators registry + level lifecycle (PARITY GATE first)", "passes": false, "gated_on": "art_style+week_advance" },
+    { "id": "W1.2", "title": "Player HP + damage (combat.js, i-frames, knockback, slip, damage vignette, HUD bar)", "passes": false, "gated_on": "week_advance" },
+    { "id": "W1.3", "title": "Hazards (hazards.js pooled, sky/buildings/enemy sources, telegraphs, depth-sort)", "passes": false, "gated_on": "week_advance" },
+    { "id": "W1.4", "title": "Ship 1: kj-s1 levels + death", "passes": false, "gated_on": "week_advance" },
+    { "id": "W2.1", "title": "Gauntlet enemies (enemies.js, building duck-type, defeat-4 gate)", "passes": false, "gated_on": "week_advance" },
+    { "id": "W2.2", "title": "Charms + notches (charms.js, Charms tab, 3 effect hooks, notch ramp $64->$100 cap 20)", "passes": false, "gated_on": "week_advance" },
+    { "id": "W2.3", "title": "The shade (coin drop, merge, proximity reclaim, beacon retarget)", "passes": false, "gated_on": "week_advance" },
+    { "id": "W2.4", "title": "Art species batch 1 (parallel, approved style)", "passes": false, "gated_on": "art_style" },
+    { "id": "W2.5", "title": "Ship 2: kj-s2 full loop", "passes": false, "gated_on": "week_advance" },
+    { "id": "W3.1", "title": "Finish 12-dino roster + mixed unlocks (1 starter / 8 bought / 3 earned)", "passes": false, "gated_on": "week_advance" },
+    { "id": "W3.2", "title": "Teleport ($500 tab, gauntlet-blocked) + Map ($340 canvas minimap)", "passes": false, "gated_on": "week_advance" },
+    { "id": "W3.3", "title": "Biosaurus boss (statue promoted, wave-runner boss:true, hydra re-skin)", "passes": false, "gated_on": "week_advance" },
+    { "id": "W3.4", "title": "Tuning pass + in-product rename to Kaiju Smash", "passes": false, "gated_on": "week_advance" },
+    { "id": "W3.5", "title": "Ship 3 = MVP: kj-s3 -> merge to main", "passes": false, "gated_on": "mvp_merge" }
+  ]
+}
