@@ -28,8 +28,17 @@ The Unity campaign is PARKED on `unity-port` (`ccb1026`) — do not touch it.
 3. Re-ground: refute the unit's spec vs current HEAD before executing.
 4. Per-unit gate: `node --check` every edited js · fresh-port browser boot clean · save round-trip OK · commit + tag + ledger flip.
 
+## ART STYLE — DECIDED 2026-07-27: **`silhouette`** (Rim-Lit Silhouette)
+Mike picked it at facing 0 (S) in the gvk-blue palette, city context on — overriding the hybrid
+recommendation. `tools/styleforge/style-silhouette.js` is the shipping source; it registers into
+`archetypes.js`'s dispatch rather than being ported. Do NOT build the bone rig.
+Before scaling to 12 species: (1) fix SE/NE — near-identical outlines by construction, they need
+authored point lists, not the x-squash derivation; (2) prove 5–6 dark masses stay distinguishable
+before committing to all 12; (3) move the form-progression signal into accents/rim/eye, since the
+body collapses to one tone. See `progress.json _gates.art_style.consequences`.
+
 ## WEEK MAP
-- **W0 (ARMED, autonomous):** W0.1 economy rescale + v5 → W0.2 Fable verify fleet → W0.3 StyleForge (3 styles × 3 species) → W0.4 ship `kj-s0`, notify, PARK at the **art gate** (Mike picks the style).
+- **W0 ✅ SHIPPED `kj-s0`:** economy rescale + v5 → Fable verify fleet → StyleForge → art gate CLOSED.
 - **W1 (gated):** level architecture (parity gate first) + player HP + hazards → `kj-s1`.
 - **W2 (gated):** gauntlet enemies + charms/notches + shade; art species batches in parallel → `kj-s2`.
 - **W3 (gated):** finish roster + Teleport + Map + Biosaurus + tuning + rename → `kj-s3` = MVP → merge to `main` (Mike-gated).

@@ -4,7 +4,16 @@
   "branch": "kaiju-smash",
   "_halt": null,
   "_gates": {
-    "art_style": { "open": true, "holder": "Mike", "unblocks": ["W1", "W2.art", "W3.art"], "staged_by": "W0.3", "verdict": null,
+    "art_style": { "open": false, "holder": "Mike", "unblocks": ["W1", "W2.art", "W3.art"], "staged_by": "W0.3",
+      "verdict": "silhouette",
+      "verdict_context": "2026-07-27, judged at facing 0 (S — box-stack's worst angle) in the gvk-blue palette, walk animating, 1.0x, city context ON. Overrides the hybrid recommendation; Mike's call on a taste decision, tested under the flagged conditions.",
+      "consequences": [
+        "DE-RISKED: the rig engine is no longer built, so plan Risk 4 (no partial credit until substantially complete) is MOOT. Silhouette degrades gracefully and is the cheapest bake by 4x (0.30ms/build, 254ms projected full roster).",
+        "NEW COST: facings are NOT analytic (that was hybrid's win). Silhouette authors E + S + N per species and derives SE/NE by x-squash -> ~3 authored point lists x 12 species = ~36. Budget this in W2/W3 art batches.",
+        "KNOWN DEFECT to fix first: SE/NE outlines are near-identical by construction (the squash derivation cannot separate them); only eye-suppression differentiates today. NE/N need authored point lists.",
+        "SCALING RISK to prove EARLY: 3 dark masses separate fine; 12 must too. Species differentiation leans on accent shapes + the eye glow. Prove with a 5-6 species batch BEFORE committing to all 12.",
+        "PALETTE SIGNAL: skin/skinDark/skinLight collapse toward one mass tone, so form-progression can no longer read through body palette -- move that signal into accents/rim/eye."
+      ],
       "how_to_judge": "serve repo root on a FRESH port -> /tools/styleforge/ -> city context ON, walk playing, 1.0x, cycle facings+palettes -> pick a radio; also play /index.html (Ship 0 = rescaled economy on old art). Answer via chat or STEER: boxstack | hybrid | silhouette (+ any feel notes on the 30-min pacing)" },
     "week_advance": { "note": "every week arms only on Mike's go / STEER directive" },
     "mvp_merge": { "open": true, "holder": "Mike", "note": "kaiju-smash -> main only with explicit approval" }
